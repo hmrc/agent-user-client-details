@@ -6,8 +6,9 @@ val appName = "agent-user-client-details"
 val silencerVersion = "1.7.7"
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
+  .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .settings(
+    PlayKeys.playDefaultPort         := 9449,
     majorVersion                     := 0,
     scalaVersion                     := "2.12.15",
     libraryDependencies              ++= AppDependencies.compile ++ AppDependencies.test,
