@@ -5,6 +5,19 @@ val appName = "agent-user-client-details"
 
 val silencerVersion = "1.7.7"
 
+lazy val scoverageSettings = {
+  import scoverage.ScoverageKeys
+  Seq(
+    // Semicolon-separated list of regexs matching classes to exclude
+    ScoverageKeys.coverageExcludedPackages :=
+      """uk\.gov\.hmrc\.BuildInfo;.*\.Routes;.*\.RoutesPrefix;AppConfig*;.*Filters?;MicroserviceAuditConnector;Module;GraphiteStartUp;.*\.Reverse[^.]*""",
+    ScoverageKeys.coverageMinimumStmtTotal := 90.00,
+    ScoverageKeys.coverageFailOnMinimum := true,
+    ScoverageKeys.coverageHighlighting := true,
+    Test / parallelExecution := false
+  )
+}
+
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .settings(
