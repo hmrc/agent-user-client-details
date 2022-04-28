@@ -14,26 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails.config
+package uk.gov.hmrc.agentuserclientdetails.model
 
-import org.scalatest.matchers.should
-import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.libs.json.{Format, Json}
 
-class AppConfigTest extends AnyWordSpecLike with should.Matchers {
+case class DesError(code: String, reason: String)
 
-  private val env = Environment.simple()
-  private val configuration = Configuration.load(env)
-  private val appConfig = new AppConfig(new ServicesConfig(configuration))
-
-
-  "App config" should {
-    "give correct app name" in {
-      appConfig.appName shouldBe "agent-user-client-details"
-    }
-  }
-
-
-
+object DesError {
+  implicit val format: Format[DesError] = Json.format[DesError]
 }

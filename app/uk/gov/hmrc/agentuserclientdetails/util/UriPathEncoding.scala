@@ -14,26 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails.config
+package uk.gov.hmrc.agentuserclientdetails.util
 
-import org.scalatest.matchers.should
-import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.utils.UriEncoding
 
-class AppConfigTest extends AnyWordSpecLike with should.Matchers {
+import java.nio.charset.StandardCharsets
 
-  private val env = Environment.simple()
-  private val configuration = Configuration.load(env)
-  private val appConfig = new AppConfig(new ServicesConfig(configuration))
+object UriPathEncoding {
 
+  def encodePathSegments(pathSegments: String*): String =
+    pathSegments.map(encodePathSegment).mkString("/", "/", "")
 
-  "App config" should {
-    "give correct app name" in {
-      appConfig.appName shouldBe "agent-user-client-details"
-    }
-  }
-
-
+  def encodePathSegment(pathSegment: String): String =
+    UriEncoding.encodePathSegment(pathSegment, StandardCharsets.UTF_8.name)
 
 }

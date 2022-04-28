@@ -14,26 +14,15 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails.config
+package uk.gov.hmrc.agentuserclientdetails.model
 
-import org.scalatest.matchers.should
-import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.libs.json.{Json, Reads}
+import uk.gov.hmrc.domain.Nino
 
-class AppConfigTest extends AnyWordSpecLike with should.Matchers {
+case class NinoDesResponse(nino: Nino)
 
-  private val env = Environment.simple()
-  private val configuration = Configuration.load(env)
-  private val appConfig = new AppConfig(new ServicesConfig(configuration))
+case class NinoNotFound() extends Exception
 
-
-  "App config" should {
-    "give correct app name" in {
-      appConfig.appName shouldBe "agent-user-client-details"
-    }
-  }
-
-
-
+object NinoDesResponse {
+  implicit val reads: Reads[NinoDesResponse] = Json.reads
 }
