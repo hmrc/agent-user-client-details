@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import uk.gov.hmrc.agentuserclientdetails.model.{NinoNotFound, VatCustomerDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import play.api.Logger
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Service, Vrn}
@@ -54,21 +54,10 @@ class ClientNameService @Inject()(
 
   def getItsaTradingName(mtdItId: MtdItId)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     desConnector
-      .getNinoFor(mtdItId)
-      .flatMap { maybeNino =>
-        val nino = maybeNino.getOrElse(throw NinoNotFound())
-        desConnector
-          .getTradingNameForNino(nino)
-          .flatMap {
-            case Some(n) if n.nonEmpty => Future.successful(Some(n))
-            case _                     => getCitizenName(nino)
-          }
-      }
-      .recover {
-        case e => {
-          logger.error(s"Unable to translate MtdItId: ${e.getMessage}")
-          None
-        }
+      .getTradingNameForMtdItId(mtdItId)
+      .recover { case e =>
+        logger.error(s"Unable to translate MtdItId: ${e.getMessage}")
+        None
       }
 
   def getCitizenName(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =

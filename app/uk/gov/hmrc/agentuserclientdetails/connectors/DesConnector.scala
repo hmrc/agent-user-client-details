@@ -26,10 +26,9 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, NinoDesResponse, VatCustomerDetails, VatDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, VatCustomerDetails, VatDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.agentuserclientdetails.util.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 
@@ -43,9 +42,7 @@ trait DesConnector {
 
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse]
 
-  def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]]
-
-  def getTradingNameForNino(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
+  def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
   def getVatCustomerDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]]
 }
@@ -95,34 +92,18 @@ class DesConnectorImpl @Inject()(
     }
   }
 
-  def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
-    val url = s"$baseUrl/registration/business-details/mtdbsa/${UriEncoding.encodePathSegment(mtdbsa.value, "UTF-8")}"
-    agentCacheProvider.clientNinoCache(mtdbsa.value) {
-      getWithDesIfHeaders("GetRegistrationBusinessDetailsByMtdbsa", url).map { response =>
-        response.status match {
-          case status if is2xx(status) => response.json.asOpt[NinoDesResponse].map(_.nino)
-          case status if is4xx(status) =>
-            logger.warn(s"4xx response from getNinoFor ${response.body}")
-            None
-          case other =>
-            throw UpstreamErrorResponse(s"unexpected error during 'getNinoFor', statusCode=$other", other, other)
-        }
-      }
-    }
-  }
-
-  def getTradingNameForNino(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
+  def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
     val url =
-      s"$baseUrl/registration/business-details/nino/${UriEncoding.encodePathSegment(nino.value, "UTF-8")}"
-    agentCacheProvider.tradingNameCache(nino.value) {
-      getWithDesIfHeaders("GetTradingNameByNino", url).map { response =>
+      s"$baseUrl/registration/business-details/mtdbsa/${UriEncoding.encodePathSegment(mtdbsa.value, "UTF-8")}"
+    agentCacheProvider.tradingNameCache(mtdbsa.value) {
+      getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
         response.status match {
           case status if is2xx(status) => (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
           case status if is4xx(status) =>
-            logger.warn(s"4xx response from getTradingNameForNino ${response.body}")
+            logger.warn(s"4xx response from getTradingNameForMtdItId ${response.body}")
             None
           case other =>
-            throw UpstreamErrorResponse(s"unexpected error during 'getTradingNameForNino', statusCode=$other", other, other)
+            throw UpstreamErrorResponse(s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other", other, other)
         }
       }
     }
