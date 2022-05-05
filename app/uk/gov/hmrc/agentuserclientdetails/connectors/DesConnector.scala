@@ -22,12 +22,11 @@ import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.{NOT_FOUND, OK}
 import play.api.libs.json.Reads._
-import play.api.libs.json.Writes
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{BusinessDetails, CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, DesRegistrationRequest, Individual, NinoDesResponse, VatCustomerDetails, VatDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, NinoDesResponse, VatCustomerDetails, VatDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.agentuserclientdetails.util.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.domain.Nino
@@ -40,13 +39,9 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[DesConnectorImpl])
 trait DesConnector {
 
-  def getBusinessDetails(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[BusinessDetails]]
-
   def getVatDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatDetails]]
 
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse]
-
-  def getBusinessName(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]]
 
@@ -66,20 +61,6 @@ class DesConnectorImpl @Inject()(
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private val baseUrl: String = appConfig.desBaseUrl
-
-  def getBusinessDetails(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[BusinessDetails]] = {
-    val url = s"$baseUrl/registration/business-details/nino/${encodePathSegment(nino.value)}"
-    getWithDesIfHeaders("getRegistrationBusinessDetailsByNino", url).map { response =>
-      response.status match {
-        case status if is2xx(status) => response.json.asOpt[BusinessDetails]
-        case status if is4xx(status) =>
-          logger.warn(s"4xx response for getBusinessDetails ${response.body}")
-          None
-        case other =>
-          throw UpstreamErrorResponse(s"unexpected error during 'getBusinessDetails', statusCode=$other", other, other)
-      }
-    }
-  }
 
   def getVatDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatDetails]] = {
     val url = s"$baseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information"
@@ -113,36 +94,6 @@ class DesConnectorImpl @Inject()(
       CgtSubscriptionResponse(result)
     }
   }
-
-  def getBusinessName(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    monitor("ConsumedAPI-DES-GetAgentRegistration-POST") {
-      val url = s"$baseUrl/registration/individual/utr/${UriEncoding.encodePathSegment(utr.value, "UTF-8")}"
-
-      httpClient
-        .POST[DesRegistrationRequest, HttpResponse](
-          url,
-          body = DesRegistrationRequest(isAnAgent = false),
-          headers = desIfHeaders.outboundHeaders(viaIF = false))(
-          implicitly[Writes[DesRegistrationRequest]],
-          implicitly[HttpReads[HttpResponse]],
-          hc,
-          ec
-        )
-        .map { response =>
-          response.status match {
-            case status if is2xx(status) =>
-              val isIndividual = (response.json \ "isAnIndividual").as[Boolean]
-              if (isIndividual) {
-                (response.json \ "individual").asOpt[Individual].flatMap(_.name)
-              } else {
-                (response.json \ "organisation" \ "organisationName").asOpt[String]
-              }
-
-            case other =>
-              throw UpstreamErrorResponse(s"unexpected error during 'getBusinessName', statusCode=$other", other, other)
-          }
-        }
-    }
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]] = {
     val url = s"$baseUrl/registration/business-details/mtdbsa/${UriEncoding.encodePathSegment(mtdbsa.value, "UTF-8")}"

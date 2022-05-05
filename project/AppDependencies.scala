@@ -14,9 +14,7 @@ object AppDependencies {
     "uk.gov.hmrc"             %% "agent-kenshoo-monitoring"   % "4.8.0-play-28",
     "uk.gov.hmrc"             %% "play-scheduling-play-28"    % "8.0.0",
     "com.github.blemale"      %% "scaffeine"                  % "4.0.1",
-    "net.codingwell"          %% "scala-guice"                % "4.2.9",
-    "com.typesafe.play"       %% "play-json-joda"             % "2.9.2",
-
+    "net.codingwell"          %% "scala-guice"                % "4.2.9"
   )
 
   val test = Seq(

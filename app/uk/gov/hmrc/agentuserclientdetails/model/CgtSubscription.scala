@@ -18,18 +18,6 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json._
 
-case class CgtAddressDetails(
-                              addressLine1: String,
-                              addressLine2: Option[String] = None,
-                              addressLine3: Option[String] = None,
-                              addressLine4: Option[String] = None,
-                              countryCode: String,
-                              postalCode: Option[String] = None)
-
-case object CgtAddressDetails {
-  implicit val format: Format[CgtAddressDetails] = Json.format[CgtAddressDetails]
-}
-
 case class IndividualName(firstName: String, lastName: String)
 
 case object IndividualName {
@@ -81,7 +69,7 @@ object TypeOfPersonDetails {
   }
 }
 
-case class SubscriptionDetails(typeOfPersonDetails: TypeOfPersonDetails, addressDetails: CgtAddressDetails)
+case class SubscriptionDetails(typeOfPersonDetails: TypeOfPersonDetails)
 
 object SubscriptionDetails {
   implicit val format: Format[SubscriptionDetails] = Json.format[SubscriptionDetails]
