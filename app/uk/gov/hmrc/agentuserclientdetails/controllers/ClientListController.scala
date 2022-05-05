@@ -20,9 +20,8 @@ import org.joda.time.DateTime
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
-import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorker
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -32,7 +31,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class ClientListController @Inject()(
                                            cc: ControllerComponents,
                                            workItemRepo: FriendlyNameWorkItemRepository,
-                                           clientNameFetchWorker: FriendlyNameWorker,
                                            espConnector: EnrolmentStoreProxyConnector
                                          )(implicit ec: ExecutionContext)
     extends BackendController(cc) {

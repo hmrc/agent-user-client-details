@@ -27,10 +27,10 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{BusinessDetails, CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, DesRegistrationRequest, Individual, InvalidTrust, MtdItIdDesResponse, NinoDesResponse, PptSubscription, TrustName, TrustResponse, VatCustomerDetails, VatDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{BusinessDetails, CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, DesRegistrationRequest, Individual, InvalidTrust, NinoDesResponse, PptSubscription, TrustName, TrustResponse, VatCustomerDetails, VatDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.agentuserclientdetails.util.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.domain.{Nino, TaxIdentifier}
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 
@@ -52,8 +52,6 @@ trait DesConnector {
   def getBusinessName(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
   def getNinoFor(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Nino]]
-
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]]
 
   def getTradingNameForNino(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
@@ -107,9 +105,9 @@ class DesConnectorImpl @Inject()(
   //IF API#1495 Agent Known Fact Check (Trusts)
   def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] = {
 
-    val url = getTrustNameUrl(trustTaxIdentifier, appConfig.desIFEnabled)
+    val url = getTrustNameUrl(trustTaxIdentifier)
 
-    getWithDesIfHeaders("getTrustName", url, appConfig.desIFEnabled).map { response =>
+    getWithDesIfHeaders("getTrustName", url).map { response =>
       response.status match {
         case status if is2xx(status) =>
           TrustResponse(Right(TrustName((response.json \ "trustDetails" \ "trustName").as[String])))
@@ -191,22 +189,6 @@ class DesConnectorImpl @Inject()(
     }
   }
 
-  def getMtdIdFor(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[MtdItId]] = {
-    val url = s"$baseUrl/registration/business-details/nino/${UriEncoding.encodePathSegment(nino.value, "UTF-8")}"
-    agentCacheProvider.clientMtdItIdCache(nino.value) {
-      getWithDesIfHeaders("GetRegistrationBusinessDetailsByNino", url).map { response =>
-        response.status match {
-          case status if is2xx(status) => response.json.asOpt[MtdItIdDesResponse].map(_.mtdbsa)
-          case status if is4xx(status) =>
-            logger.warn(s"4xx response from getMtdItIdFor ${response.body}")
-            None
-          case other =>
-            throw UpstreamErrorResponse(s"unexpected error during 'getMtdIdFor', statusCode=$other", other, other)
-        }
-      }
-    }
-  }
-
   def getTradingNameForNino(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
     val url =
       s"$baseUrl/registration/business-details/nino/${UriEncoding.encodePathSegment(nino.value, "UTF-8")}"
@@ -245,7 +227,7 @@ class DesConnectorImpl @Inject()(
   def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
     val url = s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
     agentCacheProvider.pptSubscriptionCache(pptRef.value) {
-      getWithDesIfHeaders("GetPptSubscriptionDisplay", url, true).map { response =>
+      getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
         response.status match {
           case status if is2xx(status) =>
             Some(response.json)
@@ -263,30 +245,17 @@ class DesConnectorImpl @Inject()(
   def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
     getPptSubscriptionRawJson(pptRef).map(_.flatMap(_.asOpt[PptSubscription](PptSubscription.reads)))
 
-  private def getWithDesIfHeaders(apiName: String, url: String, viaIf: Boolean = false)(
+  private def getWithDesIfHeaders(apiName: String, url: String)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIf, Some(apiName)))(implicitly[HttpReads[HttpResponse]], hc, ec)
-    }
-
-  private def getAgentRecordUrl(agentId: TaxIdentifier) =
-    agentId match {
-      case Arn(arn) =>
-        val encodedArn = UriEncoding.encodePathSegment(arn, "UTF-8")
-        s"$baseUrl/registration/personal-details/arn/$encodedArn"
-      case Utr(utr) =>
-        val encodedUtr = UriEncoding.encodePathSegment(utr, "UTF-8")
-        s"$baseUrl/registration/personal-details/utr/$encodedUtr"
-      case _ =>
-        throw new Exception(s"The client identifier $agentId is not supported.")
+      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = true, Some(apiName)))(implicitly[HttpReads[HttpResponse]], hc, ec)
     }
 
   private val utrPattern = "^\\d{10}$"
 
-  private def getTrustNameUrl(trustTaxIdentifier: String, ifEnabled: Boolean): String =
-    if (!ifEnabled) s"$baseUrl/trusts/agent-known-fact-check/$trustTaxIdentifier"
-    else if (trustTaxIdentifier.matches(utrPattern))
+  private def getTrustNameUrl(trustTaxIdentifier: String): String =
+    if (trustTaxIdentifier.matches(utrPattern))
       s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/$trustTaxIdentifier"
     else s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/$trustTaxIdentifier"
 }

@@ -42,8 +42,6 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
   val ifAuthTokenAPI1712: String = getConf("if.authorization-token.API1712")
   val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
 
-  val desIFEnabled: Boolean = servicesConfig.getBoolean("des-if.enabled")
-
   val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
   val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
 }
