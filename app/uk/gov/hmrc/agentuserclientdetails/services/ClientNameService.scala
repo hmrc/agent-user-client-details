@@ -20,7 +20,7 @@ import uk.gov.hmrc.agentuserclientdetails.model.{NinoNotFound, VatCustomerDetail
 import play.api.Logger
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Service, Vrn}
-import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 
@@ -32,6 +32,7 @@ case class ClientNameNotFound() extends Exception
 class ClientNameService @Inject()(
                                    citizenDetailsConnector: CitizenDetailsConnector,
                                    desConnector: DesConnector,
+                                   ifConnector: IfConnector,
                                    agentCacheProvider: AgentCacheProvider) {
 
   private val trustCache = agentCacheProvider.trustResponseCache
@@ -89,7 +90,7 @@ class ClientNameService @Inject()(
 
   def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     trustCache(trustTaxIdentifier) {
-      desConnector.getTrustName(trustTaxIdentifier)
+      ifConnector.getTrustName(trustTaxIdentifier)
     }.map(_.response).map {
       case Right(trustName) => Some(trustName.name)
       case Left(invalidTrust) =>
@@ -112,5 +113,5 @@ class ClientNameService @Inject()(
     }
 
   def getPptCustomerName(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    desConnector.getPptSubscription(pptRef).map(_.map(_.customerName))
+    ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))
 }

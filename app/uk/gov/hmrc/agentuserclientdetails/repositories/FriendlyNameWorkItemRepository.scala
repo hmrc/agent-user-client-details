@@ -19,14 +19,15 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import org.joda.time.DateTime
 import play.api.Configuration
 import play.api.libs.json._
-import reactivemongo.api.DB
+import reactivemongo.api.{Cursor, DB}
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.workitem.{WorkItem, _}
+import reactivemongo.play.json.ImplicitBSONHandlers.{BSONObjectIDFormat, JsObjectDocumentWriter}
 
 import javax.inject.Inject
+import scala.concurrent.{ExecutionContext, Future}
 
 case class FriendlyNameWorkItemRepository @Inject()(
                                  configuration: Configuration)(implicit mongo: () => DB)
@@ -51,4 +52,19 @@ case class FriendlyNameWorkItemRepository @Inject()(
   }
 
   override def now: DateTime = DateTime.now
+
+  def totalTodo(implicit ec: ExecutionContext): Future[Int] = count(ToDo)
+  def totalFailed(implicit ec: ExecutionContext): Future[Int] = count(Failed)
+  def totalOutstanding(implicit ec: ExecutionContext): Future[Int] = for {
+    todo <- totalTodo
+    failed <- totalFailed
+  } yield todo + failed
+
+  def queryByGroupId(groupId: String, limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
+    collection
+      .find(selector = Json.obj("item.groupId" -> JsString(groupId)), projection = None)
+      .cursor[WorkItem[FriendlyNameWorkItem]]()
+      .collect[Seq](limit, Cursor.FailOnError())
+  }
+
 }

@@ -19,8 +19,6 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
-import org.joda.time.LocalDate
-import org.joda.time.format._
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{JsPath, Reads}
@@ -34,18 +32,6 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-case class CitizenDateOfBirth(dateOfBirth: Option[LocalDate])
-
-object CitizenDateOfBirth {
-  val format = DateTimeFormat.forPattern("ddMMyyyy")
-  implicit val reads: Reads[CitizenDateOfBirth] =
-    (JsPath \ "dateOfBirth")
-      .readNullable[String]
-      .map {
-        case Some(dob) => CitizenDateOfBirth(Some(LocalDate.parse(dob, format)))
-        case None      => CitizenDateOfBirth(None)
-      }
-}
 case class Citizen(firstName: Option[String], lastName: Option[String]) {
   lazy val name: Option[String] = {
     val n = Seq(firstName, lastName).collect({ case Some(x) => x }).mkString(" ")

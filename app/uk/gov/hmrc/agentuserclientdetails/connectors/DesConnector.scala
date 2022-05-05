@@ -22,12 +22,12 @@ import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.{NOT_FOUND, OK}
 import play.api.libs.json.Reads._
-import play.api.libs.json.{JsValue, Writes}
+import play.api.libs.json.Writes
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{BusinessDetails, CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, DesRegistrationRequest, Individual, InvalidTrust, NinoDesResponse, PptSubscription, TrustName, TrustResponse, VatCustomerDetails, VatDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{BusinessDetails, CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, DesRegistrationRequest, Individual, NinoDesResponse, VatCustomerDetails, VatDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.agentuserclientdetails.util.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.domain.Nino
@@ -36,7 +36,6 @@ import uk.gov.hmrc.http._
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 @ImplementedBy(classOf[DesConnectorImpl])
 trait DesConnector {
@@ -44,8 +43,6 @@ trait DesConnector {
   def getBusinessDetails(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[BusinessDetails]]
 
   def getVatDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatDetails]]
-  //IF
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse]
 
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse]
 
@@ -56,10 +53,6 @@ trait DesConnector {
   def getTradingNameForNino(nino: Nino)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
   def getVatCustomerDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]]
-  //IF
-  def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]]
-  //IF
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]]
 }
 
 @Singleton
@@ -98,28 +91,6 @@ class DesConnectorImpl @Inject()(
           None
         case other =>
           throw UpstreamErrorResponse(response.body, other, other)
-      }
-    }
-  }
-
-  //IF API#1495 Agent Known Fact Check (Trusts)
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] = {
-
-    val url = getTrustNameUrl(trustTaxIdentifier)
-
-    getWithDesIfHeaders("getTrustName", url).map { response =>
-      response.status match {
-        case status if is2xx(status) =>
-          TrustResponse(Right(TrustName((response.json \ "trustDetails" \ "trustName").as[String])))
-        case status if is4xx(status) =>
-          val invalidTrust = Try(((response.json \ "code").as[String], (response.json \ "reason").as[String])).toEither
-            .fold(ex => {
-              logger.error(s"${response.body}, ${ex.getMessage}")
-              InvalidTrust(status.toString, ex.getMessage)
-            }, t => InvalidTrust(t._1, t._2))
-          TrustResponse(Left(invalidTrust))
-        case other =>
-          throw UpstreamErrorResponse(s"unexpected status during retrieving TrustName, error=${response.body}", other, other)
       }
     }
   }
@@ -223,39 +194,10 @@ class DesConnectorImpl @Inject()(
     }
   }
 
-  //IF API#1712 PPT Subscription Display
-  def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
-    val url = s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
-    agentCacheProvider.pptSubscriptionCache(pptRef.value) {
-      getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            Some(response.json)
-          case status if is4xx(status) =>
-            logger.warn(s"$status response from getPptSubscriptionDisplay ${response.body}")
-            None
-          case other =>
-            throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay, status = $other", other)
-        }
-      }
-    }
-  }
-
-  //IF API#1712 PPT Subscription Display
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
-    getPptSubscriptionRawJson(pptRef).map(_.flatMap(_.asOpt[PptSubscription](PptSubscription.reads)))
-
   private def getWithDesIfHeaders(apiName: String, url: String)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
       httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = true, Some(apiName)))(implicitly[HttpReads[HttpResponse]], hc, ec)
     }
-
-  private val utrPattern = "^\\d{10}$"
-
-  private def getTrustNameUrl(trustTaxIdentifier: String): String =
-    if (trustTaxIdentifier.matches(utrPattern))
-      s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/$trustTaxIdentifier"
-    else s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/$trustTaxIdentifier"
 }

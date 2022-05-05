@@ -1,3 +1,4 @@
 # microservice specific routes
 
-GET        /groupid/:groupid/client-list  uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsForGroupId(groupid: String)
+GET        /groupid/:groupid/client-list             uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsForGroupId(groupid: String)
+GET        /groupid/:groupid/outstanding-work-items  uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForGroupId(groupid: String)
