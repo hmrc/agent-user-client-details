@@ -16,16 +16,21 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import play.api.http.Status
+import play.api.test.Helpers._
+import play.api.test.{FakeRequest, Helpers}
 
-@Singleton()
-class MicroserviceHelloWorldController @Inject()(cc: ControllerComponents)
-    extends BackendController(cc) {
+class FriendlyNameControllerSpec extends AnyWordSpec with Matchers {
 
-  def hello(): Action[AnyContent] = Action.async { implicit request =>
-    Future.successful(Ok("Hello world"))
-  }
+//  private val fakeRequest = FakeRequest("GET", "/")
+//  private val controller = new FriendlyNameController(Helpers.stubControllerComponents())
+//
+//  "GET /" should {
+//    "return 200" in {
+//      val result = controller.hello()(fakeRequest)
+//      status(result) shouldBe Status.OK
+//    }
+//  }
 }
