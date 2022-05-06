@@ -75,7 +75,7 @@ object SubscriptionDetails {
   implicit val format: Format[SubscriptionDetails] = Json.format[SubscriptionDetails]
 }
 
-case class CgtSubscription(regime: String, subscriptionDetails: SubscriptionDetails)
+case class CgtSubscription(subscriptionDetails: SubscriptionDetails)
 
 object CgtSubscription {
   implicit val format: Format[CgtSubscription] = Json.format[CgtSubscription]

@@ -67,4 +67,10 @@ case class FriendlyNameWorkItemRepository @Inject()(
       .collect[Seq](limit, Cursor.FailOnError())
   }
 
+  def queryPermanentlyFailedByGroupId(groupId: String, limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
+    collection
+      .find(selector = Json.obj("item.groupId" -> JsString(groupId), "status" -> JsString(PermanentlyFailed.name)), projection = None)
+      .cursor[WorkItem[FriendlyNameWorkItem]]()
+      .collect[Seq](limit, Cursor.FailOnError())
+  }
 }

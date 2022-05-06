@@ -37,9 +37,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DesConnectorImpl])
 trait DesConnector {
-
-  def getVatDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatDetails]]
-
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse]
 
   def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
@@ -58,20 +55,6 @@ class DesConnectorImpl @Inject()(
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private val baseUrl: String = appConfig.desBaseUrl
-
-  def getVatDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatDetails]] = {
-    val url = s"$baseUrl/vat/customer/vrn/${encodePathSegment(vrn.value)}/information"
-    getWithDesIfHeaders("GetVatCustomerInformation", url).map { response =>
-      response.status match {
-        case OK => response.json.asOpt[VatDetails]
-        case NOT_FOUND =>
-          logger.info(s"${response.status} response for getVatDetails ${response.body}")
-          None
-        case other =>
-          throw UpstreamErrorResponse(response.body, other, other)
-      }
-    }
-  }
 
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] = {
 

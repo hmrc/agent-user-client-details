@@ -44,4 +44,7 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
 
   val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
   val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
+
+  val workItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.available-before-seconds")
+  val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
 }

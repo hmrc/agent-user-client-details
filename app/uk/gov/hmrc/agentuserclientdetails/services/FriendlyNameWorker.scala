@@ -23,11 +23,11 @@ import org.joda.time.DateTime
 import play.api.Logging
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import reactivemongo.api.commands.WriteResult
-import uk.gov.hmrc.agentmtdidentifiers.model.Service
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
+import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.workitem._
@@ -85,7 +85,10 @@ class FriendlyNameWorker @Inject()(
   def pullWorkItemWhile(continue: => Boolean)(
     implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     if (continue) {
-      workItemRepository.pullOutstanding(failedBefore = DateTime.now().minusMinutes(1), availableBefore = DateTime.now()) // TODO configure these time parameters
+      workItemRepository.pullOutstanding(
+        failedBefore = DateTime.now().minusSeconds(appConfig.workItemRepoFailedBeforeSeconds),
+        availableBefore = DateTime.now().minusSeconds(appConfig.workItemRepoAvailableBeforeSeconds)
+      )
     } else {
       Future.successful(None)
     }
@@ -95,8 +98,8 @@ class FriendlyNameWorker @Inject()(
    */
   def processItem(workItem: WorkItem[FriendlyNameWorkItem])(implicit hc: HeaderCarrier): Future[Unit] = {
     val groupId = workItem.item.groupId
-    val enrolmentKey = workItem.item.enrolment.service
     val clientId = workItem.item.enrolment.identifiers.head.value
+    val enrolmentKey = EnrolmentKey.enrolmentKey(workItem.item.enrolment.service, clientId)
     // TODO handle case when identifier is empty and/or there is more than one identifier
     // TODO handle case where the service ID provided is not valid.
 
@@ -115,7 +118,10 @@ class FriendlyNameWorker @Inject()(
         // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
         throttledFetchFriendlyName(clientId, enrolmentKey).transformWith {
           case Failure(e) =>
-            logger.info(s"Fetch of friendly name for enrolment failed. Reason: ${e.getMessage}. This will be retried.")
+            e match {
+              case UpstreamErrorResponse(_, status, _, _) => logger.info(s"Fetch of friendly name for enrolment failed. Status: ${status}. This will be retried.")
+              case e => logger.info(s"Fetch of friendly name for enrolment failed. Reason: ${e.getMessage}. This will be retried.")
+            }
             workItemRepository.complete(workItem.id, Failed).map(_ => ())
           case Success(None) =>
             // A successful call returning None means the lookup succeeded but there is no name available.
@@ -142,7 +148,7 @@ class FriendlyNameWorker @Inject()(
   private[services] def throttledFetchFriendlyName(clientId: String, service: String)(
     implicit hc: HeaderCarrier): Future[Option[String]] = {
     clientNameThrottler.throttledStartingFrom(DateTime.now()) {
-      clientNameService.getClientNameByService(clientId, Service.forId(service))
+      clientNameService.getClientNameByService(clientId, service)
     }
   }
 

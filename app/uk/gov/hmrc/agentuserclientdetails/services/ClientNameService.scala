@@ -40,10 +40,10 @@ class ClientNameService @Inject()(
 
   private val logger = Logger(getClass)
 
-  def getClientNameByService(clientId: String, service: Service)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    service.id match {
+  def getClientNameByService(clientId: String, service: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+    service match {
       case HMRCMTDIT     => getItsaTradingName(MtdItId(clientId))
-      case HMRCPIR       => getCitizenName(Nino(clientId))
+      case "HMRC-PT"     => getCitizenName(Nino(clientId))
       case HMRCMTDVAT    => getVatName(Vrn(clientId))
       case HMRCTERSORG   => getTrustName(clientId)
       case HMRCTERSNTORG => getTrustName(clientId)
