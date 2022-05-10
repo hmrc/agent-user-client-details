@@ -18,7 +18,11 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.{Format, Json}
 
-case class FriendlyNameWorkItem(groupId: String, enrolment: Enrolment)
+case class FriendlyNameWorkItem(
+  groupId: String,
+  enrolment: Enrolment,
+  sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
+)
 
 object FriendlyNameWorkItem {
   implicit val format: Format[FriendlyNameWorkItem] = Json.format[FriendlyNameWorkItem]
