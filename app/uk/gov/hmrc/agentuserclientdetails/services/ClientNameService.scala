@@ -49,7 +49,7 @@ class ClientNameService @Inject()(
       case HMRCTERSNTORG => getTrustName(clientId)
       case HMRCCGTPD     => getCgtName(CgtRef(clientId))
       case HMRCPPTORG    => getPptCustomerName(PptRef(clientId))
-      case _             => Future successful None
+      case _             => Future.failed(ClientNameService.InvalidServiceIdException(service))
     }
 
   def getItsaTradingName(mtdItId: MtdItId)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
@@ -102,4 +102,8 @@ class ClientNameService @Inject()(
 
   def getPptCustomerName(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))
+}
+
+object ClientNameService {
+  case class InvalidServiceIdException(serviceId: String) extends RuntimeException
 }
