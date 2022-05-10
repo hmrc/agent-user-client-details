@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.joda.time.DateTime
-import play.api.{Environment, Logging, Mode}
+import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -25,7 +25,6 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnecto
 import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
-import uk.gov.hmrc.http.UpstreamErrorResponse.Upstream4xxResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
@@ -34,20 +33,16 @@ import scala.util.{Failure, Success}
 
 @Singleton()
 class ClientListController @Inject()(
-                                           cc: ControllerComponents,
-                                           workItemRepo: FriendlyNameWorkItemRepository,
-                                           espConnector: EnrolmentStoreProxyConnector,
-                                           val env: Environment
-                                         )(implicit ec: ExecutionContext)
+                                      cc: ControllerComponents,
+                                      workItemRepo: FriendlyNameWorkItemRepository,
+                                      espConnector: EnrolmentStoreProxyConnector,
+                                      appConfig: AppConfig
+                                    )(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
-
-  private val isLocalEnv = {
-    if (env.mode.equals(Mode.Test)) false else env.mode.equals(Mode.Dev)
-  }
 
   def getClientsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
     def makeWorkItem(enrolment: Enrolment)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
-      val mSessionId: Option[String] = if (isLocalEnv) hc.sessionId.map(_.value) else None // only required for local testing against stubs
+      val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, enrolment, mSessionId)
     }
 
