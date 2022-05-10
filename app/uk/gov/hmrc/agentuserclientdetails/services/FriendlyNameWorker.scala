@@ -61,7 +61,8 @@ class FriendlyNameWorker @Inject()(
 
   def cancel(): Unit = running.set(false)
 
-  def start(implicit hc: HeaderCarrier): Future[Unit] = {
+  def start(): Future[Unit] = {
+    implicit val hc = HeaderCarrier()
     running.get() match {
       case true =>
         logger.info("Work processing triggered but was already running.")
@@ -73,7 +74,9 @@ class FriendlyNameWorker @Inject()(
         val processWorkItems: Iteratee[WorkItem[FriendlyNameWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) => processItem(item) }
         val result = workItems.run(processWorkItems)
         result.onComplete {
-          case _ => running.set(false)
+          case _ =>
+            logger.info("Work processing finished.")
+            running.set(false)
         }
         result
     }
@@ -99,7 +102,8 @@ class FriendlyNameWorker @Inject()(
   def processItem(workItem: WorkItem[FriendlyNameWorkItem])(implicit hc: HeaderCarrier): Future[Unit] = {
     val groupId = workItem.item.groupId
     val clientId = workItem.item.enrolment.identifiers.head.value
-    val enrolmentKey = EnrolmentKey.enrolmentKey(workItem.item.enrolment.service, clientId)
+    val service = workItem.item.enrolment.service
+    val enrolmentKey = EnrolmentKey.enrolmentKey(service, clientId)
     // TODO handle case when identifier is empty and/or there is more than one identifier
     // TODO handle case where the service ID provided is not valid.
 
@@ -116,13 +120,7 @@ class FriendlyNameWorker @Inject()(
         }
       case wi if wi.item.enrolment.friendlyName.isEmpty =>
         // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
-        throttledFetchFriendlyName(clientId, enrolmentKey).transformWith {
-          case Failure(e) =>
-            e match {
-              case UpstreamErrorResponse(_, status, _, _) => logger.info(s"Fetch of friendly name for enrolment failed. Status: ${status}. This will be retried.")
-              case e => logger.info(s"Fetch of friendly name for enrolment failed. Reason: ${e.getMessage}. This will be retried.")
-            }
-            workItemRepository.complete(workItem.id, Failed).map(_ => ())
+        throttledFetchFriendlyName(clientId, service).transformWith {
           case Success(None) =>
             // A successful call returning None means the lookup succeeded but there is no name available.
             // There is no point in retrying; we set the status as permanently failed.
@@ -141,6 +139,16 @@ class FriendlyNameWorker @Inject()(
                 _ = logger.info("Friendly name retrieved but could not be updated via ES19: scheduling retry")
               } yield ()
             }
+          case Failure(ClientNameService.InvalidServiceIdException(serviceId)) =>
+            // Caused by an invalid service ID. There is no point in retrying; we set the status as permanently failed.
+            logger.info(s"Service ID ${serviceId} is invalid or unsupported: marking enrolment as permanently failed.")
+            workItemRepository.complete(workItem.id, PermanentlyFailed).map(_ => ())
+          case Failure(e) =>
+            e match {
+              case UpstreamErrorResponse(_, status, _, _) => logger.info(s"Fetch of friendly name for enrolment failed. Status: ${status}. This will be retried.")
+              case e => logger.info(s"Fetch of friendly name for enrolment failed. Reason: ${e.getMessage}. This will be retried.")
+            }
+            workItemRepository.complete(workItem.id, Failed).map(_ => ())
         }
     }
   }
@@ -159,6 +167,7 @@ class FriendlyNameWorker @Inject()(
         case e@UpstreamErrorResponse(_, status, _, _) =>
           logger.info(s"$status status received from ES19.")
           throw e
+
         case e =>
           logger.info(s"Error received when calling ES19: $e")
           throw e

@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import java.net.URL
 import com.codahale.metrics.MetricRegistry
+import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
@@ -39,11 +40,22 @@ object ES19Request {
   implicit val format: Format[ES19Request] = Json.format[ES19Request]
 }
 
+@ImplementedBy(classOf[EnrolmentStoreProxyConnectorImpl])
+trait EnrolmentStoreProxyConnector {
+
+  //ES3 - Query Enrolments allocated to a Group
+  def getEnrolmentsForGroupId(groupId: String)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
+
+  //ES19 - Update an enrolment's friendly name
+  def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext): Future[Unit]
+}
+
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(http: HttpClient, agentCacheProvider: AgentCacheProvider, metrics: Metrics)(implicit appConfig: AppConfig)
-    extends HttpAPIMonitor
-    with Logging {
+class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCacheProvider: AgentCacheProvider, metrics: Metrics)(implicit appConfig: AppConfig)
+    extends EnrolmentStoreProxyConnector with HttpAPIMonitor with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)

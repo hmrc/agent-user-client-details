@@ -22,6 +22,7 @@ import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorker
+import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,14 +38,13 @@ class AgentUserClientDetailsMain @Inject()(
       actorSystem.terminate()
     })
 
-  actorSystem.scheduler.schedule(initialDelay = 1.seconds, interval = 5.second) {
+  actorSystem.scheduler.schedule(initialDelay = 1.seconds, interval = 10.second) {
     friendlyNameWorker.running.get() match {
       case true =>
-        logger.info("Friendly name fetching job was already running, so I did not trigger it again.")
+        logger.debug("Friendly name fetching job was already running, so I did not trigger it again.")
       case false =>
-        logger.info("Friendly name fetching job was not running, so I triggered it.")
-        //      friendlyNameWorker.start(hc = ???) // TODO! How are we going to get a header carrier here?
-        logger.error("Scheduled job: IMPLEMENT ME")
+        logger.debug("Friendly name fetching job triggered.")
+        friendlyNameWorker.start()
     }
   }
 }
