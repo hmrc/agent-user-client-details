@@ -61,16 +61,16 @@ case class FriendlyNameWorkItemRepository @Inject()(
     failed <- totalFailed
   } yield todo + failed
 
-  def queryByGroupId(groupId: String, limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
+  /**
+   * Query by groupId and optionally by status (leave status as None to include all statuses)
+   */
+  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
+    val selector = status match {
+      case Some(statuses) => Json.obj("item.groupId" -> JsString(groupId), "status" -> Json.obj("$in" -> JsArray(statuses.map(s => JsString(s.name)))))
+      case None => Json.obj("item.groupId" -> JsString(groupId))
+    }
     collection
-      .find(selector = Json.obj("item.groupId" -> JsString(groupId)), projection = None)
-      .cursor[WorkItem[FriendlyNameWorkItem]]()
-      .collect[Seq](limit, Cursor.FailOnError())
-  }
-
-  def queryPermanentlyFailedByGroupId(groupId: String, limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
-    collection
-      .find(selector = Json.obj("item.groupId" -> JsString(groupId), "status" -> JsString(PermanentlyFailed.name)), projection = None)
+      .find(selector, projection = None)
       .cursor[WorkItem[FriendlyNameWorkItem]]()
       .collect[Seq](limit, Cursor.FailOnError())
   }
