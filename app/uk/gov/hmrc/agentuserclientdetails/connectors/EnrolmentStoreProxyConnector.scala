@@ -92,10 +92,9 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
     monitor(s"ConsumedAPI-ES-updateEnrolmentFriendlyName-PUT") {
       http.PUT[ES19Request, HttpResponse](url.toString, ES19Request(friendlyName)).map { response =>
         response.status match {
-          case Status.NO_CONTENT => ()
           case status if is2xx(status) =>
-            logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
-            ()
+            if (status != Status.NO_CONTENT) logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
+            es3cache.invalidate(groupId)
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }

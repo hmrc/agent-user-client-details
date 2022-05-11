@@ -46,10 +46,12 @@ trait KenshooCacheMetrics {
 
 trait Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T]
+  def invalidate(key: String)(implicit ec: ExecutionContext): Unit
 }
 
 class DoNotCache[T] extends Cache[T] {
   def apply(key: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[T] = body
+  def invalidate(key: String)(implicit ec: ExecutionContext): Unit = ()
 }
 
 class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit metrics: Metrics)
@@ -77,10 +79,13 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
             underlying.put(key, v)
         }
     }
+
+  def invalidate(key: String)(implicit ec: ExecutionContext): Unit =
+    underlying.invalidate(key)
 }
 
 @Singleton
-class AgentCacheProvider @Inject()(val environment: Environment, configuration: Configuration, servicesConfig: ServicesConfig)(
+class AgentCacheProvider @Inject()(val environment: Environment, configuration: Configuration)(
   implicit metrics: Metrics) {
 
   val runModeConfiguration: Configuration = configuration

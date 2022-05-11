@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentuserclientdetails.config
 
 import javax.inject.{Inject, Singleton}
-import play.api.Configuration
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
@@ -31,7 +30,7 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
 
   val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
 
-  val enrolmentStoreProxyUrl = servicesConfig.baseUrl("enrolment-store-proxy")
+  val enrolmentStoreProxyUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
 
   val desBaseUrl: String = baseUrl("des")
   val desEnvironment: String = getConf("des.environment")
@@ -47,4 +46,6 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
 
   val workItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.available-before-seconds")
   val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
+
+  val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
 }

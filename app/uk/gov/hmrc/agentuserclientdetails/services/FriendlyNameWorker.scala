@@ -25,11 +25,11 @@ import play.api.libs.iteratee.{Enumerator, Iteratee}
 import reactivemongo.api.commands.WriteResult
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
 import uk.gov.hmrc.workitem._
 
 import javax.inject.Inject
@@ -62,7 +62,6 @@ class FriendlyNameWorker @Inject()(
   def cancel(): Unit = running.set(false)
 
   def start(): Future[Unit] = {
-    implicit val hc = HeaderCarrier()
     running.get() match {
       case true =>
         logger.info("Work processing triggered but was already running.")
@@ -99,7 +98,8 @@ class FriendlyNameWorker @Inject()(
   /*
    Main logic
    */
-  def processItem(workItem: WorkItem[FriendlyNameWorkItem])(implicit hc: HeaderCarrier): Future[Unit] = {
+  def processItem(workItem: WorkItem[FriendlyNameWorkItem]): Future[Unit] = {
+    implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId))
     val groupId = workItem.item.groupId
     val clientId = workItem.item.enrolment.identifiers.head.value
     val service = workItem.item.enrolment.service
@@ -127,7 +127,7 @@ class FriendlyNameWorker @Inject()(
             logger.info("No friendly name is available: marking enrolment as permanently failed.")
             workItemRepository.complete(workItem.id, PermanentlyFailed).map(_ => ())
           case Success(Some(friendlyName)) =>
-            throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.enrolment.friendlyName).transformWith {
+            throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
               case Success(_) =>
                 logger.info("Friendly name retrieved and updated via ES19")
                 workItemRepository.complete(workItem.id, Succeeded).map(_ => ())

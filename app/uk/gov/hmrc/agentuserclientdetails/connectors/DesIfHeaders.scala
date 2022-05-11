@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.http.HeaderCarrier
 
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
@@ -28,6 +29,7 @@ class DesIfHeaders @Inject()(appConfig: AppConfig) extends Logging {
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
   private val Authorization = "Authorization"
+  private val SessionId = "X-Session-ID"
 
   private lazy val desEnvironment: String = appConfig.desEnvironment
   private lazy val desAuthorizationToken: String = appConfig.desAuthToken
@@ -35,12 +37,16 @@ class DesIfHeaders @Inject()(appConfig: AppConfig) extends Logging {
   private lazy val ifAuthTokenAPI1712: String = appConfig.ifAuthTokenAPI1712
   private lazy val ifAuthTokenAPI1495: String = appConfig.ifAuthTokenAPI1495
 
-  def outboundHeaders(viaIF: Boolean, apiName: Option[String] = None): Seq[(String, String)] = {
+  // Note that the implicit header carrier passed-in can in most cases be an empty one.
+  // Only when testing locally against stubs we need to have one in order that we may include a session id.
+  def outboundHeaders(viaIF: Boolean, apiName: Option[String] = None)(implicit hc: HeaderCarrier): Seq[(String, String)] = {
 
     val baseHeaders = Seq(
       Environment   -> s"${if (viaIF) { ifEnvironment } else { desEnvironment }}",
-      CorrelationId -> UUID.randomUUID().toString
-    )
+      CorrelationId -> UUID.randomUUID().toString,
+    ) ++ hc.sessionId.toSeq.map { sessionId =>
+      SessionId -> sessionId.value
+    }
 
     if (viaIF) {
       apiName.fold(baseHeaders) {
