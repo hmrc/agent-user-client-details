@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.util
 
+import uk.gov.hmrc.agentuserclientdetails.model.Enrolment
+
 object EnrolmentKey {
   def enrolmentKey(serviceId: String, clientId: String): String = serviceId match {
     case "HMRC-MTD-IT"     => "HMRC-MTD-IT~MTDITID~" + clientId
@@ -28,5 +30,7 @@ object EnrolmentKey {
     case "HMRC-PT"         => "HMRC-PT~NINO~" + clientId // TODO Check: is this correct for HMRC-PT (IRV)?
     case _                 => throw new IllegalArgumentException(s"Service not supported: $serviceId")
   }
+
+  def enrolmentKeys(enrolment: Enrolment): Seq[String] = enrolment.identifiers.map(identifier => enrolmentKey(enrolment.service, identifier.value))
 
 }

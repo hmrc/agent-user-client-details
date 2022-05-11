@@ -25,6 +25,7 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
+import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -46,19 +47,27 @@ class ClientListController @Inject()(
       val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, enrolment, mSessionId)
     }
-
     espConnector.getEnrolmentsForGroupId(groupId).transformWith {
       // if friendly names are populated for all enrolments, return 200
       case Success(enrolments) if enrolments.forall(_.friendlyName.nonEmpty) =>
         logger.info(s"${enrolments.length} enrolments found for groupId $groupId. No friendly name lookups needed.")
         Future.successful(Ok(Json.toJson(enrolments)))
-      // otherwise create work items to retrieve the missing names and return 202
+      // Otherwise ...
       case Success(enrolments) =>
-        val needFriendlyName = enrolments.filter(_.friendlyName.isEmpty)
-        logger.info(s"${enrolments.length} enrolments found for groupId $groupId. ${needFriendlyName.length} friendly name lookups needed.")
-        workItemRepo.pushNew(needFriendlyName.map(enrolment => makeWorkItem(enrolment)), DateTime.now())
-          .map(_ => Accepted(Json.toJson(enrolments)))
-        // TODO: If some names are missing but they are marked as permanently failed return 200 anyway?
+        val enrolmentsWithoutFriendlyName = enrolments.filter(_.friendlyName.isEmpty)
+        // We don't want to retry 'permanently failed' enrolments (Those with no name available in DES/IF, or if
+        // we know that the call will not succeed if tried again). In this case simply return blank friendly names.
+        excludePermanentlyFailed(groupId, enrolmentsWithoutFriendlyName).flatMap { todoEnrolments =>
+          val nPermanentlyFailed = enrolmentsWithoutFriendlyName.length - todoEnrolments.length
+          logger.info(s"Client list request for groupId $groupId. Found: ${enrolments.length}, permanently failed: $nPermanentlyFailed, friendly name lookups needed: ${todoEnrolments.length}.")
+          if (todoEnrolments.isEmpty) {
+            Future.successful(Ok(Json.toJson(enrolments)))
+          } else {
+            // create work items to retrieve the missing names and return 202
+            workItemRepo.pushNew(todoEnrolments.map(enrolment => makeWorkItem(enrolment)), DateTime.now())
+              .map(_ => Accepted(Json.toJson(enrolments)))
+          }
+        }
       case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
         Future.successful(NotFound)
       case Failure(uer: UpstreamErrorResponse) =>
@@ -69,7 +78,6 @@ class ClientListController @Inject()(
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
     workItemRepo.queryByGroupId(groupId).map { wis =>
       Ok(Json.toJson[Seq[Enrolment]](wis.map(_.item.enrolment)))
-//      Ok(Json.obj("count" -> JsNumber(wis.length)))
     }
   }
 
@@ -88,4 +96,10 @@ class ClientListController @Inject()(
         InternalServerError(Json.toJson(result.writeErrors))
     }
   }
+
+  private def excludePermanentlyFailed(groupId: String, enrolments: Seq[Enrolment]): Future[Seq[Enrolment]] =
+    workItemRepo.queryPermanentlyFailedByGroupId(groupId).map { permanentlyFailedWorkItems =>
+      val permanentlyFailedEnrolmentKeys = permanentlyFailedWorkItems.map(_.item.enrolment).map(EnrolmentKey.enrolmentKeys)
+      enrolments.filterNot(enrolment => permanentlyFailedEnrolmentKeys.contains(EnrolmentKey.enrolmentKeys(enrolment)))
+    }
 }
