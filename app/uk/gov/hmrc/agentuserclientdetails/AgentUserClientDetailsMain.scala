@@ -21,6 +21,8 @@ import akka.actor.ActorSystem
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import play.api.Logging
+import play.api.libs.json.{JsArray, Json}
+import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorker
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -30,7 +32,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class AgentUserClientDetailsMain @Inject()(
                            actorSystem: ActorSystem,
                            lifecycle: ApplicationLifecycle,
-                           friendlyNameWorker: FriendlyNameWorker)(implicit val ec: ExecutionContext)
+                           friendlyNameWorker: FriendlyNameWorker,
+                           workItemRepository: FriendlyNameWorkItemRepository)(implicit val ec: ExecutionContext)
   extends Logging {
 
   lifecycle.addStopHook(() =>
@@ -45,6 +48,23 @@ class AgentUserClientDetailsMain @Inject()(
       case false =>
         logger.debug("Friendly name fetching job triggered.")
         friendlyNameWorker.start()
+    }
+  }
+
+  actorSystem.scheduler.schedule(initialDelay = 10.seconds, interval = 5.minute) {
+    logger.info("Starting work item repository cleanup.")
+    workItemRepository.cleanup().map {
+      case result if result.ok =>
+        logger.info(s"Cleanup of work item repository complete. ${result.n} work items deleted.")
+      case result if !result.ok =>
+        logger.error(s"Cleanup of work item repository finished with errors. ${result.n} work items deleted, ${result.writeErrors.length} write errors.")
+    }
+  }
+
+  actorSystem.scheduler.schedule(initialDelay = 5.seconds, interval = 1.minute) {
+    logger.info("Starting work item repository cleanup.")
+    workItemRepository.collectStats.map { stats =>
+      logger.info(s"Work item repository stats: ${Json.toJson(stats)}")
     }
   }
 }

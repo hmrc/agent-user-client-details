@@ -18,8 +18,9 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.joda.time.DateTime
 import play.api.Logging
-import play.api.libs.json.Json
+import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import reactivemongo.api.commands.WriteError
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem}
@@ -72,4 +73,19 @@ class ClientListController @Inject()(
     }
   }
 
+  def getWorkItemStats: Action[AnyContent] = Action.async { implicit request =>
+    workItemRepo.collectStats.map { stats =>
+      Ok(Json.toJson(stats))
+    }
+  }
+
+  def cleanupWorkItems: Action[AnyContent] = Action.async { implicit request =>
+    implicit val writeErrorFormat = Json.format[WriteError]
+    workItemRepo.cleanup.map {
+      case result if result.ok =>
+        Ok(JsNumber(result.n))
+      case result if !result.ok =>
+        InternalServerError(Json.toJson(result.writeErrors))
+    }
+  }
 }
