@@ -26,7 +26,6 @@ import reactivemongo.api.commands.WriteResult
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
@@ -37,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class FriendlyNameWorker @Inject()(
-                                       workItemRepository: FriendlyNameWorkItemRepository,
+                                       workItemService: WorkItemService,
                                        esConnector: EnrolmentStoreProxyConnector,
                                        serviceInstances: ServiceInstances,
                                        clientNameService: ClientNameService,
@@ -45,14 +44,14 @@ class FriendlyNameWorker @Inject()(
                                        appConfig: AppConfig)(implicit ec: ExecutionContext)
   extends Logging {
 
-  val clientNameThrottler: ThrottledWorkItemProcessor =
+  lazy val clientNameThrottler: ThrottledWorkItemProcessor =
     new ThrottledWorkItemProcessor("client-name-fetching", actorSystem, rateLimit = Some(Rate.parse(appConfig.clientNameFetchThrottlingRate))) {
-      def instanceCount: Int = serviceInstances.instanceCount
+      def instanceCount: Int = Option(serviceInstances).fold(1)(_.instanceCount) // must handle serviceInstances == null case (can happen in testing)
     }
 
-  val es19Throttler: ThrottledWorkItemProcessor =
+  lazy val es19Throttler: ThrottledWorkItemProcessor =
     new ThrottledWorkItemProcessor("es19-update-friendly-name", actorSystem, rateLimit = Some(Rate.parse(appConfig.es19ThrottlingRate))) {
-      def instanceCount: Int = serviceInstances.instanceCount
+      def instanceCount: Int = Option(serviceInstances).fold(1)(_.instanceCount) // must handle serviceInstances == null case (can happen in testing)
     }
 
   val running = new AtomicBoolean(false)
@@ -81,13 +80,13 @@ class FriendlyNameWorker @Inject()(
     }
   }
 
-  def removeAll(implicit hc: HeaderCarrier): Future[WriteResult] =
-    workItemRepository.removeAll()
+  def removeAll: Future[WriteResult] =
+    workItemService.removeAll()
 
   def pullWorkItemWhile(continue: => Boolean)(
     implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     if (continue) {
-      workItemRepository.pullOutstanding(
+      workItemService.pullOutstanding(
         failedBefore = DateTime.now().minusSeconds(appConfig.workItemRepoFailedBeforeSeconds),
         availableBefore = DateTime.now().minusSeconds(appConfig.workItemRepoAvailableBeforeSeconds)
       )
@@ -113,10 +112,10 @@ class FriendlyNameWorker @Inject()(
         throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.enrolment.friendlyName).transformWith {
           case Success(_) =>
             logger.info("Previously fetched friendly name updated via ES19 successfully.")
-            workItemRepository.complete(workItem.id, Succeeded).map(_ => ())
+            workItemService.complete(workItem.id, Succeeded).map(_ => ())
           case Failure(_) =>
             logger.info("Previously fetched friendly name update via ES19 failed. This will be retried.")
-            workItemRepository.complete(workItem.id, Failed).map(_ => ())
+            workItemService.complete(workItem.id, Failed).map(_ => ())
         }
       case wi if wi.item.enrolment.friendlyName.isEmpty =>
         // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
@@ -125,44 +124,44 @@ class FriendlyNameWorker @Inject()(
             // A successful call returning None means the lookup succeeded but there is no name available.
             // There is no point in retrying; we set the status as permanently failed.
             logger.info("No friendly name is available: marking enrolment as permanently failed.")
-            workItemRepository.complete(workItem.id, PermanentlyFailed).map(_ => ())
+            workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
           case Success(Some(friendlyName)) =>
             throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
               case Success(_) =>
                 logger.info("Friendly name retrieved and updated via ES19")
-                workItemRepository.complete(workItem.id, Succeeded).map(_ => ())
+                workItemService.complete(workItem.id, Succeeded).map(_ => ())
               case Failure(_) => for {
                 // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
-                _ <- workItemRepository.pushNew(wi.item.copy(enrolment = wi.item.enrolment.copy(friendlyName = friendlyName)), DateTime.now())
+                _ <- workItemService.pushNew(Seq(wi.item.copy(enrolment = wi.item.enrolment.copy(friendlyName = friendlyName))), DateTime.now(), ToDo)
                 // mark the old work item as duplicate
-                _ <- workItemRepository.complete(workItem.id, Duplicate)
+                _ <- workItemService.complete(workItem.id, Duplicate)
                 _ = logger.info("Friendly name retrieved but could not be updated via ES19: scheduling retry")
               } yield ()
             }
           case Failure(ClientNameService.InvalidServiceIdException(serviceId)) =>
             // Caused by an invalid service ID. There is no point in retrying; we set the status as permanently failed.
             logger.info(s"Service ID ${serviceId} is invalid or unsupported: marking enrolment as permanently failed.")
-            workItemRepository.complete(workItem.id, PermanentlyFailed).map(_ => ())
+            workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
           case Failure(e) =>
             e match {
               case UpstreamErrorResponse(_, status, _, _) => logger.info(s"Fetch of friendly name for enrolment failed. Status: ${status}. This will be retried.")
               case e => logger.info(s"Fetch of friendly name for enrolment failed. Reason: ${e.getMessage}. This will be retried.")
             }
-            workItemRepository.complete(workItem.id, Failed).map(_ => ())
+            workItemService.complete(workItem.id, Failed).map(_ => ())
         }
     }
   }
 
   private[services] def throttledFetchFriendlyName(clientId: String, service: String)(
     implicit hc: HeaderCarrier): Future[Option[String]] = {
-    clientNameThrottler.throttledStartingFrom(DateTime.now()) {
-      clientNameService.getClientNameByService(clientId, service)
-    }
+    def f(): Future[Option[String]] = clientNameService.getClientNameByService(clientId, service)
+    if (appConfig.enableThrottling) clientNameThrottler.throttledStartingFrom(DateTime.now())(f())
+    else f()
   }
 
   private[services] def throttledUpdateFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(
     implicit hc: HeaderCarrier): Future[Unit] = {
-    es19Throttler.throttledStartingFrom(DateTime.now()) {
+    def f(): Future[Unit] =
       esConnector.updateEnrolmentFriendlyName(groupId, enrolmentKey, friendlyName).recover {
         case e@UpstreamErrorResponse(_, status, _, _) =>
           logger.info(s"$status status received from ES19.")
@@ -172,6 +171,7 @@ class FriendlyNameWorker @Inject()(
           logger.info(s"Error received when calling ES19: $e")
           throw e
       }
-    }
+    if (appConfig.enableThrottling) es19Throttler.throttledStartingFrom(DateTime.now())(f())
+    else f()
   }
 }

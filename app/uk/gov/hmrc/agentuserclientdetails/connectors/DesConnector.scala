@@ -20,7 +20,6 @@ import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
-import play.api.http.Status.{NOT_FOUND, OK}
 import play.api.libs.json.Reads._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
@@ -28,7 +27,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, VatCustomerDetails, VatDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
-import uk.gov.hmrc.agentuserclientdetails.util.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 

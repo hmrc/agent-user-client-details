@@ -27,7 +27,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscriptionResponse, TrustResponse, VatCustomerDetails}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

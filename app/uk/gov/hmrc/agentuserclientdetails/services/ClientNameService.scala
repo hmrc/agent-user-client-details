@@ -35,8 +35,8 @@ class ClientNameService @Inject()(
                                    ifConnector: IfConnector,
                                    agentCacheProvider: AgentCacheProvider) {
 
-  private val trustCache = agentCacheProvider.trustResponseCache
-  private val cgtCache = agentCacheProvider.cgtSubscriptionCache
+  private def trustCache = agentCacheProvider.trustResponseCache
+  private def cgtCache = agentCacheProvider.cgtSubscriptionCache
 
   private val logger = Logger(getClass)
 

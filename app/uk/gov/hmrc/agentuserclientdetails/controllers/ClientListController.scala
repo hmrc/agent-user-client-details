@@ -24,11 +24,11 @@ import reactivemongo.api.commands.WriteError
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
+import uk.gov.hmrc.agentuserclientdetails.services.WorkItemService
 import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.workitem.PermanentlyFailed
+import uk.gov.hmrc.workitem.{PermanentlyFailed, ToDo}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -37,7 +37,7 @@ import scala.util.{Failure, Success}
 @Singleton()
 class ClientListController @Inject()(
                                       cc: ControllerComponents,
-                                      workItemRepo: FriendlyNameWorkItemRepository,
+                                      workItemService: WorkItemService,
                                       espConnector: EnrolmentStoreProxyConnector,
                                       appConfig: AppConfig
                                     )(implicit ec: ExecutionContext)
@@ -57,7 +57,7 @@ class ClientListController @Inject()(
       case Success(enrolments) =>
         val esWithNoFriendlyName = enrolments.filter(_.friendlyName.isEmpty)
         for {
-          wisAlreadyInRepo <- workItemRepo.query(groupId, None)
+          wisAlreadyInRepo <- workItemService.query(groupId, None)
           esAlreadyInRepo = wisAlreadyInRepo.map(_.item.enrolment)
           esPermanentlyFailed = wisAlreadyInRepo.filter(_.status == PermanentlyFailed).map(_.item.enrolment)
           // We don't want to retry 'permanently failed' enrolments (Those with no name available in DES/IF, or if
@@ -66,7 +66,7 @@ class ClientListController @Inject()(
           // We don't want to add to the work items anything that is already in it (whether to-do, failed, duplicate etc.)
           toBeAdded = setDifference(esWantingName, esAlreadyInRepo)
           _ = logger.info(s"Client list request for groupId $groupId. Found: ${enrolments.length}, of which ${esWithNoFriendlyName.length} without a friendly name. (${esAlreadyInRepo.length} work items already in repository, of which ${esPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)")
-          _ <- workItemRepo.pushNew(toBeAdded.map(enrolment => makeWorkItem(enrolment)), DateTime.now())
+          _ <- workItemService.pushNew(toBeAdded.map(enrolment => makeWorkItem(enrolment)), DateTime.now(), ToDo)
         } yield {
           if (esWantingName.isEmpty)
             Ok(Json.toJson(enrolments))
@@ -81,20 +81,20 @@ class ClientListController @Inject()(
   }
 
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { _ =>
-    workItemRepo.query(groupId, None).map { wis =>
+    workItemService.query(groupId, None).map { wis =>
       Ok(Json.toJson[Seq[Enrolment]](wis.map(_.item.enrolment)))
     }
   }
 
   def getWorkItemStats: Action[AnyContent] = Action.async { _ =>
-    workItemRepo.collectStats.map { stats =>
+    workItemService.collectStats.map { stats =>
       Ok(Json.toJson(stats))
     }
   }
 
   def cleanupWorkItems: Action[AnyContent] = Action.async { _ =>
     implicit val writeErrorFormat = Json.format[WriteError]
-    workItemRepo.cleanup.map {
+    workItemService.cleanup.map {
       case result if result.ok =>
         Ok(JsNumber(result.n))
       case result if !result.ok =>
@@ -109,20 +109,4 @@ class ClientListController @Inject()(
     val e2eks = e2s.map(EnrolmentKey.enrolmentKeys)
     e1s.filterNot(enrolment => e2eks.contains(EnrolmentKey.enrolmentKeys(enrolment)))
   }
-
-  private def excludePermanentlyFailed(groupId: String, enrolments: Seq[Enrolment]): Future[Seq[Enrolment]] =
-    if (enrolments.isEmpty) Future.successful(Seq.empty)
-    else workItemRepo.query(groupId, Some(Seq(PermanentlyFailed))).map { permanentlyFailedWorkItems =>
-      val permanentlyFailedEnrolmentKeys = permanentlyFailedWorkItems.map(_.item.enrolment).map(EnrolmentKey.enrolmentKeys)
-      enrolments.filterNot(enrolment => permanentlyFailedEnrolmentKeys.contains(EnrolmentKey.enrolmentKeys(enrolment)))
-    }
-
-  private def excludeAnythingAlreadyInRepo(groupId: String, enrolments: Seq[Enrolment]): Future[Seq[Enrolment]] = {
-    if (enrolments.isEmpty) Future.successful(Seq.empty)
-    else workItemRepo.query(groupId, None).map { existingWorkItems =>
-      val existingEnrolmentKeys = existingWorkItems.map(_.item.enrolment).map(EnrolmentKey.enrolmentKeys)
-      enrolments.filterNot(enrolment => existingEnrolmentKeys.contains(EnrolmentKey.enrolmentKeys(enrolment)))
-    }
-  }
-
 }

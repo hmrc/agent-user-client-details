@@ -22,7 +22,6 @@ import com.typesafe.config.Config
 import org.scalamock.scalatest.MockFactory
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 trait FakeCache extends MockFactory {
   val mockConfig: Config = mock[Config]
