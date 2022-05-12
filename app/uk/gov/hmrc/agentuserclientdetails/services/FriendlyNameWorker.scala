@@ -64,17 +64,17 @@ class FriendlyNameWorker @Inject()(
   def start(): Future[Unit] = {
     running.get() match {
       case true =>
-        logger.info("Work processing triggered but was already running.")
+        logger.debug("Work processing triggered but was already running.")
         Future.successful(())
       case false =>
-        logger.info("Work processing triggered. Starting...")
+        logger.debug("Work processing triggered. Starting...")
         running.set(true)
         val workItems: Enumerator[WorkItem[FriendlyNameWorkItem]] = Enumerator.generateM(pullWorkItemWhile(continue))
         val processWorkItems: Iteratee[WorkItem[FriendlyNameWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) => processItem(item) }
         val result = workItems.run(processWorkItems)
         result.onComplete {
           case _ =>
-            logger.info("Work processing finished.")
+            logger.debug("Work processing finished.")
             running.set(false)
         }
         result

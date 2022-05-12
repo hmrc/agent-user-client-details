@@ -18,14 +18,17 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.joda.time.DateTime
 import play.api.Logging
-import play.api.libs.json.Json
+import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import reactivemongo.api.commands.WriteError
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
+import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.workitem.PermanentlyFailed
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,19 +48,31 @@ class ClientListController @Inject()(
       val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, enrolment, mSessionId)
     }
-
     espConnector.getEnrolmentsForGroupId(groupId).transformWith {
       // if friendly names are populated for all enrolments, return 200
       case Success(enrolments) if enrolments.forall(_.friendlyName.nonEmpty) =>
         logger.info(s"${enrolments.length} enrolments found for groupId $groupId. No friendly name lookups needed.")
         Future.successful(Ok(Json.toJson(enrolments)))
-      // otherwise create work items to retrieve the missing names and return 202
+      // Otherwise ...
       case Success(enrolments) =>
-        val needFriendlyName = enrolments.filter(_.friendlyName.isEmpty)
-        logger.info(s"${enrolments.length} enrolments found for groupId $groupId. ${needFriendlyName.length} friendly name lookups needed.")
-        workItemRepo.pushNew(needFriendlyName.map(enrolment => makeWorkItem(enrolment)), DateTime.now())
-          .map(_ => Accepted(Json.toJson(enrolments)))
-        // TODO: If some names are missing but they are marked as permanently failed return 200 anyway?
+        val esWithNoFriendlyName = enrolments.filter(_.friendlyName.isEmpty)
+        for {
+          wisAlreadyInRepo <- workItemRepo.query(groupId, None)
+          esAlreadyInRepo = wisAlreadyInRepo.map(_.item.enrolment)
+          esPermanentlyFailed = wisAlreadyInRepo.filter(_.status == PermanentlyFailed).map(_.item.enrolment)
+          // We don't want to retry 'permanently failed' enrolments (Those with no name available in DES/IF, or if
+          // we know that the call will not succeed if tried again). In this case simply return blank friendly names.
+          esWantingName = setDifference(esWithNoFriendlyName, esPermanentlyFailed)
+          // We don't want to add to the work items anything that is already in it (whether to-do, failed, duplicate etc.)
+          toBeAdded = setDifference(esWantingName, esAlreadyInRepo)
+          _ = logger.info(s"Client list request for groupId $groupId. Found: ${enrolments.length}, of which ${esWithNoFriendlyName.length} without a friendly name. (${esAlreadyInRepo.length} work items already in repository, of which ${esPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)")
+          _ <- workItemRepo.pushNew(toBeAdded.map(enrolment => makeWorkItem(enrolment)), DateTime.now())
+        } yield {
+          if (esWantingName.isEmpty)
+            Ok(Json.toJson(enrolments))
+          else
+            Accepted(Json.toJson(enrolments))
+        }
       case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
         Future.successful(NotFound)
       case Failure(uer: UpstreamErrorResponse) =>
@@ -65,10 +80,48 @@ class ClientListController @Inject()(
     }
   }
 
-  def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
-    workItemRepo.queryByGroupId(groupId).map { wis =>
+  def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { _ =>
+    workItemRepo.query(groupId, None).map { wis =>
       Ok(Json.toJson[Seq[Enrolment]](wis.map(_.item.enrolment)))
-//      Ok(Json.obj("count" -> JsNumber(wis.length)))
+    }
+  }
+
+  def getWorkItemStats: Action[AnyContent] = Action.async { _ =>
+    workItemRepo.collectStats.map { stats =>
+      Ok(Json.toJson(stats))
+    }
+  }
+
+  def cleanupWorkItems: Action[AnyContent] = Action.async { _ =>
+    implicit val writeErrorFormat = Json.format[WriteError]
+    workItemRepo.cleanup.map {
+      case result if result.ok =>
+        Ok(JsNumber(result.n))
+      case result if !result.ok =>
+        InternalServerError(Json.toJson(result.writeErrors))
+    }
+  }
+
+  /*
+  Perform set difference based on enrolment keys.
+   */
+  private def setDifference(e1s: Seq[Enrolment], e2s: Seq[Enrolment]): Seq[Enrolment] = {
+    val e2eks = e2s.map(EnrolmentKey.enrolmentKeys)
+    e1s.filterNot(enrolment => e2eks.contains(EnrolmentKey.enrolmentKeys(enrolment)))
+  }
+
+  private def excludePermanentlyFailed(groupId: String, enrolments: Seq[Enrolment]): Future[Seq[Enrolment]] =
+    if (enrolments.isEmpty) Future.successful(Seq.empty)
+    else workItemRepo.query(groupId, Some(Seq(PermanentlyFailed))).map { permanentlyFailedWorkItems =>
+      val permanentlyFailedEnrolmentKeys = permanentlyFailedWorkItems.map(_.item.enrolment).map(EnrolmentKey.enrolmentKeys)
+      enrolments.filterNot(enrolment => permanentlyFailedEnrolmentKeys.contains(EnrolmentKey.enrolmentKeys(enrolment)))
+    }
+
+  private def excludeAnythingAlreadyInRepo(groupId: String, enrolments: Seq[Enrolment]): Future[Seq[Enrolment]] = {
+    if (enrolments.isEmpty) Future.successful(Seq.empty)
+    else workItemRepo.query(groupId, None).map { existingWorkItems =>
+      val existingEnrolmentKeys = existingWorkItems.map(_.item.enrolment).map(EnrolmentKey.enrolmentKeys)
+      enrolments.filterNot(enrolment => existingEnrolmentKeys.contains(EnrolmentKey.enrolmentKeys(enrolment)))
     }
   }
 

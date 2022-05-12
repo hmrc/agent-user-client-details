@@ -29,7 +29,6 @@ trait FakeCache extends MockFactory {
   val mockConfiguration = new Configuration(mockConfig)
   val mockEnv: Environment = mock[Environment]
   implicit val mockMetrics: Metrics = mock[Metrics]
-  val mockServicesConfig: ServicesConfig = mock[ServicesConfig]
 
   (mockMetrics.defaultRegistry _).expects().returns(new MetricRegistry()).anyNumberOfTimes()
 
@@ -37,5 +36,5 @@ trait FakeCache extends MockFactory {
   (mockConfig.getString(_: String)).expects("agent.cache.expires").returns("1 hour")
   (mockConfig.getBoolean(_: String)).expects("agent.cache.enabled").returns(true)
 
-  val agentCacheProvider: AgentCacheProvider = new AgentCacheProvider(mockEnv, mockConfiguration, mockServicesConfig)
+  val agentCacheProvider: AgentCacheProvider = new AgentCacheProvider(mockEnv, mockConfiguration)
 }
