@@ -16,27 +16,25 @@
 
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
+import com.typesafe.config.Config
 import org.joda.time.DateTime
-import play.api.Configuration
 import play.api.libs.json._
-import reactivemongo.api.commands.WriteResult
-import reactivemongo.api.{Cursor, DB}
+import reactivemongo.api.DB
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.workitem.{WorkItem, _}
-import reactivemongo.play.json.ImplicitBSONHandlers.{BSONObjectIDFormat, JsObjectDocumentWriter}
+import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
 
 case class FriendlyNameWorkItemRepository @Inject()(
-                                 configuration: Configuration)(implicit mongo: () => DB)
+                                 config: Config)(implicit mongo: () => DB)
   extends WorkItemRepository[FriendlyNameWorkItem, BSONObjectID](
     "client-name-work-items",
     mongo,
     WorkItem.workItemMongoFormat[FriendlyNameWorkItem],
-    configuration.underlying) {
+    config) {
 
   implicit val dateFormats: Format[DateTime] =
     ReactiveMongoFormats.dateTimeFormats
@@ -54,53 +52,4 @@ case class FriendlyNameWorkItemRepository @Inject()(
 
   override def now: DateTime = DateTime.now
 
-  def totalTodo(implicit ec: ExecutionContext): Future[Int] = count(ToDo)
-  def totalFailed(implicit ec: ExecutionContext): Future[Int] = count(Failed)
-  def totalOutstanding(implicit ec: ExecutionContext): Future[Int] = for {
-    todo <- totalTodo
-    failed <- totalFailed
-  } yield todo + failed
-
-  /**
-   * Query by groupId and optionally by status (leave status as None to include all statuses)
-   */
-  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
-    val selector = status match {
-      case Some(statuses) => Json.obj("item.groupId" -> JsString(groupId), "status" -> Json.obj("$in" -> JsArray(statuses.map(s => JsString(s.name)))))
-      case None => Json.obj("item.groupId" -> JsString(groupId))
-    }
-    collection
-      .find(selector, projection = None)
-      .cursor[WorkItem[FriendlyNameWorkItem]]()
-      .collect[Seq](limit, Cursor.FailOnError())
-  }
-
-  /**
-   * Removes any items that have been marked as successful or duplicated.
-   */
-  def cleanup()(implicit ec: ExecutionContext): Future[WriteResult] = {
-    this.remove(
-      "status" -> Json.obj("$in" -> JsArray(Seq(JsString(Succeeded.name), JsString(Duplicate.name))))
-    )
-  }
-
-  /**
-   * Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
-   */
-  def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
-    import collection.BatchCommands.AggregationFramework.{Group, GroupFunction, SumAll}
-    collection
-      .aggregateWith[JsObject]()(_ => (Group(JsString("$status"))("count" -> (SumAll: GroupFunction)), List.empty))
-      .collect[Seq](-1, Cursor.FailOnError())
-      .map { resultsJs =>
-        // TODO is there a neater way to write the parsing logic below?
-        val elems = resultsJs
-          .map(jso => (jso \ "_id") -> (jso \ "count"))
-          .map {
-            case (JsDefined(JsString(status)), JsDefined(JsNumber(count))) => status -> count.toInt
-            case _ => throw new RuntimeException("Malformed repository stats encountered.")
-          }
-        Map(elems: _*)
-      }
-  }
 }

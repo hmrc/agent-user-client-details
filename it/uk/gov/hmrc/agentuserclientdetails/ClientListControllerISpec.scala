@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails
 
+import com.typesafe.config.Config
 import org.joda.time.DateTime
-import org.scalamock.function.FunctionAdapter3
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -36,6 +36,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.{PermanentlyFailed, ProcessingStatus, WorkItem}
 import org.scalatest.concurrent.ScalaFutures
+import uk.gov.hmrc.agentuserclientdetails.services.{WorkItemService, WorkItemServiceImpl}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -50,9 +51,12 @@ class ClientListControllerISpec extends AnyWordSpec
   with MockFactory {
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
-  lazy val config = app.injector.instanceOf[Configuration]
+  lazy val config = app.injector.instanceOf[Config]
+  lazy val configuration = app.injector.instanceOf[Configuration]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
+
   lazy val wir = FriendlyNameWorkItemRepository(config)
+  lazy val wis = new WorkItemServiceImpl(wir)
 
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -78,7 +82,7 @@ class ClientListControllerISpec extends AnyWordSpec
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wir, esp, appConfig)
+      val clc = new ClientListController(cc, wis, esp, appConfig)
       val result = clc.getClientsForGroupId(testGroupId)(request).futureValue
       result.header.status shouldBe 200
       // TODO check content
@@ -88,7 +92,7 @@ class ClientListControllerISpec extends AnyWordSpec
       (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.failed(UpstreamErrorResponse("", 404)))
-      val clc = new ClientListController(cc, wir, esp, appConfig)
+      val clc = new ClientListController(cc, wis, esp, appConfig)
       val request = FakeRequest("GET", "")
       val result = clc.getClientsForGroupId(badGroupId)(request).futureValue
       result.header.status shouldBe 404
@@ -99,20 +103,20 @@ class ClientListControllerISpec extends AnyWordSpec
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wir, esp, appConfig)
+      val clc = new ClientListController(cc, wis, esp, appConfig)
       val result = clc.getClientsForGroupId(testGroupId)(request).futureValue
       result.header.status shouldBe 202
       // TODO check content
     }
     "respond with 200 status if any of the retrieved enrolments don't have a friendly name but they have been tried before and marked as permanently failed" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      wir.pushNew(enrolmentsWithoutSomeFriendlyNames.filter(_.friendlyName.isEmpty).map(FriendlyNameWorkItem(testGroupId, _)), DateTime.now(), (_: FriendlyNameWorkItem) => PermanentlyFailed).futureValue
+      wis.pushNew(enrolmentsWithoutSomeFriendlyNames.filter(_.friendlyName.isEmpty).map(FriendlyNameWorkItem(testGroupId, _)), DateTime.now(), PermanentlyFailed).futureValue
 
       (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wir, esp, appConfig)
+      val clc = new ClientListController(cc, wis, esp, appConfig)
       val result = clc.getClientsForGroupId(testGroupId)(request).futureValue
       result.header.status shouldBe 200
       // TODO check content

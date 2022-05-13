@@ -21,10 +21,8 @@ import akka.actor.ActorSystem
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import play.api.Logging
-import play.api.libs.json.{JsArray, Json}
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
-import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorker
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.libs.json.Json
+import uk.gov.hmrc.agentuserclientdetails.services.{FriendlyNameWorker, WorkItemService}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +31,7 @@ class AgentUserClientDetailsMain @Inject()(
                            actorSystem: ActorSystem,
                            lifecycle: ApplicationLifecycle,
                            friendlyNameWorker: FriendlyNameWorker,
-                           workItemRepository: FriendlyNameWorkItemRepository)(implicit val ec: ExecutionContext)
+                           workItemService: WorkItemService)(implicit val ec: ExecutionContext)
   extends Logging {
 
   lifecycle.addStopHook(() =>
@@ -53,7 +51,7 @@ class AgentUserClientDetailsMain @Inject()(
 
   actorSystem.scheduler.schedule(initialDelay = 10.seconds, interval = 5.minute) {
     logger.info("Starting work item repository cleanup.")
-    workItemRepository.cleanup().map {
+    workItemService.cleanup().map {
       case result if result.ok =>
         logger.info(s"Cleanup of work item repository complete. ${result.n} work items deleted.")
       case result if !result.ok =>
@@ -63,7 +61,7 @@ class AgentUserClientDetailsMain @Inject()(
 
   actorSystem.scheduler.schedule(initialDelay = 5.seconds, interval = 1.minute) {
     logger.info("Starting work item repository cleanup.")
-    workItemRepository.collectStats.map { stats =>
+    workItemService.collectStats.map { stats =>
       logger.info(s"Work item repository stats: ${Json.toJson(stats)}")
     }
   }

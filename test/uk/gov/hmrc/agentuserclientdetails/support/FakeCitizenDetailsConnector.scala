@@ -16,23 +16,23 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import uk.gov.hmrc.agentuserclientdetails.connectors.{Citizen, CitizenDetailsConnector, IfConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{Citizen, CitizenDetailsConnector}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeCitizenDetailsConnector extends CitizenDetailsConnector {
+case object FakeCitizenDetailsConnector extends CitizenDetailsConnector {
   def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
     Future.successful(Some(Citizen(Some("Tom"), Some("Client"))))
 }
 
-class FailingCitizenDetailsConnector(status: Int) extends CitizenDetailsConnector {
+case class FailingCitizenDetailsConnector(status: Int) extends CitizenDetailsConnector {
   def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
-class NotFoundCitizenDetailsConnector extends CitizenDetailsConnector {
+  case object NotFoundCitizenDetailsConnector extends CitizenDetailsConnector {
   def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
     Future.successful(None)
 }

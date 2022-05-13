@@ -18,12 +18,12 @@ package uk.gov.hmrc.agentuserclientdetails.support
 
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, IndividualName, OrganisationName, SubscriptionDetails, TypeOfPersonDetails, VatCustomerDetails, VatDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, IndividualName, SubscriptionDetails, TypeOfPersonDetails, VatCustomerDetails}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeDesConnector extends DesConnector {
+case object FakeDesConnector extends DesConnector {
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] =
     Future.successful(
       CgtSubscriptionResponse(
@@ -45,7 +45,7 @@ class FakeDesConnector extends DesConnector {
     Future.successful(Some(VatCustomerDetails(Some("VAT Client"), None, Some("VAT Client"))))
 }
 
-class FailingDesConnector(status: Int) extends DesConnector {
+case class FailingDesConnector(status: Int) extends DesConnector {
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
@@ -54,7 +54,7 @@ class FailingDesConnector(status: Int) extends DesConnector {
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
-class NotFoundDesConnector extends DesConnector {
+case object NotFoundDesConnector extends DesConnector {
   def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] =
     Future.successful(
       CgtSubscriptionResponse(

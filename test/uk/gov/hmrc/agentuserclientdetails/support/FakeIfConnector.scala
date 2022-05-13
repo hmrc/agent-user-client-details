@@ -24,7 +24,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class FakeIfConnector extends IfConnector {
+case object FakeIfConnector extends IfConnector {
   def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] =
     Future.successful(TrustResponse(Right(TrustName("Trust Client"))))
   def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] =
@@ -46,7 +46,7 @@ class FakeIfConnector extends IfConnector {
     Future.successful(Some(PptSubscription("PPT Client")))
 }
 
-class FailingIfConnector(status: Int) extends IfConnector {
+case class FailingIfConnector(status: Int) extends IfConnector {
   def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] =
@@ -55,7 +55,7 @@ class FailingIfConnector(status: Int) extends IfConnector {
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
-class NotFoundIfConnector extends IfConnector {
+case object NotFoundIfConnector extends IfConnector {
   def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] =
     Future.successful(TrustResponse(Left(InvalidTrust("404", "Not found"))))
   def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] =

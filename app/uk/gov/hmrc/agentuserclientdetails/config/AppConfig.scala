@@ -16,17 +16,45 @@
 
 package uk.gov.hmrc.agentuserclientdetails.config
 
+import com.google.inject.ImplementedBy
+
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+@ImplementedBy(classOf[AppConfigImpl])
+trait AppConfig {
+
+  val appName: String = "agent-user-client-details"
+
+  val citizenDetailsBaseUrl: String
+
+  val enrolmentStoreProxyUrl: String
+
+  val desBaseUrl: String
+  val desEnvironment: String
+  val desAuthToken: String
+
+  val ifPlatformBaseUrl: String
+  val ifEnvironment: String
+  val ifAuthTokenAPI1712: String
+  val ifAuthTokenAPI1495: String
+
+  val enableThrottling: Boolean
+  val clientNameFetchThrottlingRate: String
+  val es19ThrottlingRate: String
+
+  val workItemRepoAvailableBeforeSeconds: Int
+  val workItemRepoFailedBeforeSeconds: Int
+
+  val stubsCompatibilityMode: Boolean
+}
+
 @Singleton
-class AppConfig @Inject()(servicesConfig: ServicesConfig) {
+class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig {
 
   private def getConf(key: String) =
     servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
   private def baseUrl(key: String) = servicesConfig.baseUrl(key)
-
-  val appName: String = "agent-user-client-details"
 
   val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
 
@@ -41,6 +69,7 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
   val ifAuthTokenAPI1712: String = getConf("if.authorization-token.API1712")
   val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
 
+  val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
   val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
   val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
 
