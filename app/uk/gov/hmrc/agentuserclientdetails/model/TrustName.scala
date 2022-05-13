@@ -31,18 +31,3 @@ object InvalidTrust {
 }
 
 case class TrustResponse(response: Either[InvalidTrust, TrustName])
-
-object TrustResponse {
-  implicit val format: Format[TrustResponse] = new Format[TrustResponse] {
-    override def writes(trustResponse: TrustResponse): JsValue = trustResponse.response match {
-      case Right(trustName)   => Json.toJson(trustName)
-      case Left(invalidTrust) => Json.toJson(invalidTrust)
-    }
-
-    override def reads(json: JsValue): JsResult[TrustResponse] =
-      json.asOpt[TrustName] match {
-        case Some(name) => JsSuccess(TrustResponse(Right(name)))
-        case None       => JsSuccess(TrustResponse(Left(json.as[InvalidTrust])))
-      }
-  }
-}

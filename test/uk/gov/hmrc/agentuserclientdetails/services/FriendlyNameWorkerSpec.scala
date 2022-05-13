@@ -152,7 +152,6 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
       (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Succeeded, *).once()
     }
-
   }
 }
 
