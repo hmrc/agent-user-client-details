@@ -25,7 +25,7 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, VatCustomerDetails, VatDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, VatCustomerDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
@@ -111,6 +111,6 @@ class DesConnectorImpl @Inject()(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = true, Some(apiName)))(implicitly[HttpReads[HttpResponse]], hc, ec)
+      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = false, Some(apiName)))(implicitly[HttpReads[HttpResponse]], hc, ec)
     }
 }

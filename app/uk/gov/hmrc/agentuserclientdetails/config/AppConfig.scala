@@ -46,6 +46,14 @@ trait AppConfig {
   val workItemRepoAvailableBeforeSeconds: Int
   val workItemRepoFailedBeforeSeconds: Int
 
+
+  val jobRestartRepoQueueInitialDelaySeconds: Int
+  val jobRestartRepoQueueIntervalSeconds: Int
+  val jobRepoCleanupIntervalSeconds: Int
+  val jobRepoCleanupInitialDelaySeconds: Int
+  val jobLogRepoStatsQueueInitialDelaySeconds: Int
+  val jobLogRepoStatsQueueIntervalSeconds: Int
+
   val stubsCompatibilityMode: Boolean
 }
 
@@ -77,4 +85,11 @@ class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig 
   val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
 
   val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
+
+  val jobRestartRepoQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.initialDelaySeconds")
+  val jobRestartRepoQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.intervalSeconds")
+  val jobRepoCleanupInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.initialDelaySeconds")
+  val jobRepoCleanupIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.intervalSeconds")
+  val jobLogRepoStatsQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.initialDelaySeconds")
+  val jobLogRepoStatsQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
 }

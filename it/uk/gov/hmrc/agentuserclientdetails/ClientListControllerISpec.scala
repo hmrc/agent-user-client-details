@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails
 
 import com.typesafe.config.Config
 import org.joda.time.DateTime
+import org.joda.time.convert.DurationConverter
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -26,7 +27,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Configuration
 import play.api.mvc.ControllerComponents
-import play.api.test.FakeRequest
+import play.api.test.{DefaultAwaitTimeout, FakeRequest, ResultExtractors}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController
@@ -34,9 +35,12 @@ import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.workitem.{PermanentlyFailed, ProcessingStatus, WorkItem}
+import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
 import org.scalatest.concurrent.ScalaFutures
-import uk.gov.hmrc.agentuserclientdetails.services.{WorkItemService, WorkItemServiceImpl}
+import play.api.libs.json.Json
+import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
+import play.test.Helpers
+import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -61,6 +65,7 @@ class ClientListControllerISpec extends AnyWordSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
+  val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
   val badGroupId = "XINV-ALID-GROU-PIDX"
   val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
   val enrolment2 = Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
@@ -121,11 +126,51 @@ class ClientListControllerISpec extends AnyWordSpec
       result.header.status shouldBe 200
       // TODO check content
     }
-//    "add work items to the repo for any enrolments that don't have a friendly name" in {
-//      ???
-//    }
-//    "don't add work items to the repo if they have been already added" in {
-//      ???
-//    }
+
+    //    "add work items to the repo for any enrolments that don't have a friendly name" in {
+    //      ???
+    //    }
+    //    "don't add work items to the repo if they have been already added" in {
+    //      ???
+    //    }
+  }
+
+  "/work-items/clean" should {
+    "trigger cleanup of work items when requested" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), Succeeded).futureValue
+      val result = clc.cleanupWorkItems(request).futureValue
+      result.header.status shouldBe 200
+      wis.collectStats.futureValue.values.sum shouldBe 0
+    }
+  }
+
+  "/work-items/stats" should {
+    "collect repository stats when requested" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), ToDo).futureValue
+      val result = clc.getWorkItemStats(request)
+      result.futureValue.header.status shouldBe 200
+      contentAsJson(result).as[Map[String, Int]].values.sum shouldBe 1
+    }
+  }
+
+  "/groupid/:groupid/outstanding-work-items" should {
+    "query repository by groupId" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), ToDo).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment3)), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, enrolment2)), DateTime.now(), ToDo).futureValue
+      val result = clc.getOutstandingWorkItemsForGroupId(testGroupId)(request)
+      result.futureValue.header.status shouldBe 200
+      contentAsJson(result).as[Seq[Enrolment]].toSet shouldBe Set(enrolment1)
+    }
+
   }
 }

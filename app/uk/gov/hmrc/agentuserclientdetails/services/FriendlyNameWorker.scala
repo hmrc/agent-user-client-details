@@ -17,12 +17,9 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import akka.actor.ActorSystem
-
-import java.util.concurrent.atomic.AtomicBoolean
 import org.joda.time.DateTime
 import play.api.Logging
 import play.api.libs.iteratee.{Enumerator, Iteratee}
-import reactivemongo.api.commands.WriteResult
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
@@ -31,6 +28,7 @@ import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkI
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
 import uk.gov.hmrc.workitem._
 
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -79,9 +77,6 @@ class FriendlyNameWorker @Inject()(
         result
     }
   }
-
-  def removeAll: Future[WriteResult] =
-    workItemService.removeAll()
 
   def pullWorkItemWhile(continue: => Boolean)(
     implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =

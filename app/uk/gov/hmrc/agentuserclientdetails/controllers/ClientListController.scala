@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.services.WorkItemService
 import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.workitem.{PermanentlyFailed, ToDo}
+import uk.gov.hmrc.workitem.{Failed, PermanentlyFailed, ProcessingStatus, ToDo}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -82,7 +82,7 @@ class ClientListController @Inject()(
 
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { _ =>
     workItemService.query(groupId, None).map { wis =>
-      Ok(Json.toJson[Seq[Enrolment]](wis.map(_.item.enrolment)))
+      Ok(Json.toJson[Seq[Enrolment]](wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.enrolment)))
     }
   }
 

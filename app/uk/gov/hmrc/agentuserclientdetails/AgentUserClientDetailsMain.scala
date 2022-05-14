@@ -22,6 +22,7 @@ import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import play.api.Logging
 import play.api.libs.json.Json
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.{FriendlyNameWorker, WorkItemService}
 
 import scala.concurrent.duration.DurationInt
@@ -31,7 +32,8 @@ class AgentUserClientDetailsMain @Inject()(
                            actorSystem: ActorSystem,
                            lifecycle: ApplicationLifecycle,
                            friendlyNameWorker: FriendlyNameWorker,
-                           workItemService: WorkItemService)(implicit val ec: ExecutionContext)
+                           workItemService: WorkItemService,
+                           appConfig: AppConfig)(implicit val ec: ExecutionContext)
   extends Logging {
 
   lifecycle.addStopHook(() =>
@@ -39,7 +41,7 @@ class AgentUserClientDetailsMain @Inject()(
       actorSystem.terminate()
     })
 
-  actorSystem.scheduler.schedule(initialDelay = 1.seconds, interval = 10.second) {
+  actorSystem.scheduler.schedule(initialDelay = appConfig.jobRestartRepoQueueInitialDelaySeconds.seconds, interval = appConfig.jobRestartRepoQueueIntervalSeconds.second) {
     friendlyNameWorker.running.get() match {
       case true =>
         logger.debug("Friendly name fetching job was already running, so I did not trigger it again.")
@@ -49,7 +51,7 @@ class AgentUserClientDetailsMain @Inject()(
     }
   }
 
-  actorSystem.scheduler.schedule(initialDelay = 10.seconds, interval = 5.minute) {
+  actorSystem.scheduler.schedule(initialDelay = appConfig.jobRepoCleanupInitialDelaySeconds.seconds, interval = appConfig.jobRepoCleanupIntervalSeconds.seconds) {
     logger.info("Starting work item repository cleanup.")
     workItemService.cleanup().map {
       case result if result.ok =>
@@ -59,7 +61,7 @@ class AgentUserClientDetailsMain @Inject()(
     }
   }
 
-  actorSystem.scheduler.schedule(initialDelay = 5.seconds, interval = 1.minute) {
+  actorSystem.scheduler.schedule(initialDelay = appConfig.jobLogRepoStatsQueueInitialDelaySeconds.seconds, interval = appConfig.jobLogRepoStatsQueueIntervalSeconds.seconds) {
     logger.info("Starting work item repository cleanup.")
     workItemService.collectStats.map { stats =>
       logger.info(s"Work item repository stats: ${Json.toJson(stats)}")

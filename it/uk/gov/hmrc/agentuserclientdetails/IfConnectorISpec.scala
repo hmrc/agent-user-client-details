@@ -16,17 +16,23 @@
 
 package uk.gov.hmrc.agentuserclientdetails
 
+import com.kenshoo.play.metrics.Metrics
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
-import uk.gov.hmrc.agentuserclientdetails.connectors.IfConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{PptSubscription, TrustResponse}
-import uk.gov.hmrc.http.HeaderCarrier
+import play.api.http.Status
+import play.api.libs.json.Json
+import uk.gov.hmrc.agentmtdidentifiers.model.{PptRef, Urn, Utr}
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.connectors.{DesIfHeaders, IfConnectorImpl}
+import uk.gov.hmrc.agentuserclientdetails.model.{PptSubscription, TrustName, TrustResponse}
+import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 class IfConnectorISpec extends AnyWordSpec
   with Matchers
@@ -35,21 +41,72 @@ class IfConnectorISpec extends AnyWordSpec
   with GuiceOneServerPerSuite
   with MockFactory {
 
-  lazy val ifConnector = app.injector.instanceOf[IfConnector]
+  lazy val appConfig = app.injector.instanceOf[AppConfig]
+  lazy val cache = app.injector.instanceOf[AgentCacheProvider]
+  lazy val metrics = app.injector.instanceOf[Metrics]
+  lazy val desIfHeaders = app.injector.instanceOf[DesIfHeaders]
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
+  def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
+    (mockHttpClient.GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+      .when(url, *, *, *, *, *)
+      .returns(Future.successful(response))
+
   "IfConnector" should {
-    "getTrustName" in {
-      ifConnector.getTrustName("testId").futureValue should matchPattern {
-        case _: TrustResponse =>
-          // TODO implement meaningful tests
-      }
+    "getTrustName (URN)" in {
+      val testUrn = Urn("XXTRUST12345678")
+      val httpClient = stub[HttpClient]
+      val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
+      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}", mockResponse)(httpClient)
+      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      ifConnector.getTrustName(testUrn.value).futureValue shouldBe TrustResponse(Right(TrustName("Friendly Trust")))
     }
-    "getPptSubscription" in {
-      ifConnector.getPptSubscription(PptRef("XAPPT0000012345")).futureValue should matchPattern {
-        case _: Option[_] =>
-          // TODO implement meaningful tests
-      }
+    "getTrustName (UTR)" in {
+      val testUtr = Utr("4937455253")
+      val httpClient = stub[HttpClient]
+      val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
+      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}", mockResponse)(httpClient)
+      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      ifConnector.getTrustName(testUtr.value).futureValue shouldBe TrustResponse(Right(TrustName("Friendly Trust")))
+    }
+    "getPptSubscription (individual)" in {
+      val testPptRef = PptRef("XAPPT0000012345")
+      val httpClient = stub[HttpClient]
+      val responseJson = Json.parse(s"""{
+                                       |"legalEntityDetails": {
+                                       |  "dateOfApplication": "2021-10-12",
+                                       |  "customerDetails": {
+                                       |    "customerType": "Individual",
+                                       |      "individualDetails": {
+                                       |        "firstName": "Bill",
+                                       |        "lastName": "Sikes"
+                                       |      }
+                                       |    }
+                                       |  }
+                                       |}""".stripMargin)
+      val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
+      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display", mockResponse)(httpClient)
+      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Bill Sikes"))
+    }
+    "getPptSubscription (organisation)" in {
+      val testPptRef = PptRef("XAPPT0000012346")
+      val httpClient = stub[HttpClient]
+      val responseJson = Json.parse(s"""{
+                                       |"legalEntityDetails": {
+                                       |  "dateOfApplication": "2021-10-12",
+                                       |  "customerDetails": {
+                                       |    "customerType": "Organisation",
+                                       |      "organisationDetails": {
+                                       |        "organisationName": "Friendly Organisation"
+                                       |      }
+                                       |    }
+                                       |  }
+                                       |}""".stripMargin)
+      val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
+      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display", mockResponse)(httpClient)
+      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Friendly Organisation"))
     }
   }
 }

@@ -29,12 +29,9 @@ object Enrolment {
   implicit val format: Format[Enrolment] = Json.format[Enrolment]
 }
 
-case class Identifier(key: String, value: String) {
-  override def toString: String = s"${key.toUpperCase}~${value.replace(" ", "")}"
-}
+case class Identifier(key: String, value: String)
 
 object Identifier {
   implicit val format: Format[Identifier] = Json.format[Identifier]
-  implicit val ordering: Ordering[Identifier] = Ordering.by(_.key)
 }
 
