@@ -6,3 +6,4 @@ POST       /work-items/clean                         uk.gov.hmrc.agentuserclient
 GET        /work-items/stats                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getWorkItemStats
 
 GET        /arn/:arn/agent-size                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getAgentSize(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/user-check                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.userCheck(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)

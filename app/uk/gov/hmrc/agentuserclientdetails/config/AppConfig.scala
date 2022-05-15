@@ -59,6 +59,8 @@ trait AppConfig {
   val stubsCompatibilityMode: Boolean
 
   val agentsizeRefreshDuration: Duration
+
+  val userGroupsSearchUrl: String
 }
 
 @Singleton
@@ -98,4 +100,6 @@ class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig 
   lazy val jobLogRepoStatsQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
 
   lazy val agentsizeRefreshDuration: Duration = servicesConfig.getDuration("agentsize.refreshduration")
+
+  lazy val userGroupsSearchUrl: String = servicesConfig.baseUrl("users-groups-search")
 }

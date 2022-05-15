@@ -43,4 +43,5 @@ class TestAppConfig extends AppConfig {
   val jobLogRepoStatsQueueInitialDelaySeconds: Int = 60
   val jobLogRepoStatsQueueIntervalSeconds: Int = 60
   override val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
+  override val userGroupsSearchUrl: String = ""
 }
