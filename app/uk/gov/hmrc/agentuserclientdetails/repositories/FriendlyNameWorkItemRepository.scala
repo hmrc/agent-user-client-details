@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.joda.time.DateTime
 import play.api.libs.json._
 import reactivemongo.api.DB
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
@@ -51,5 +52,12 @@ case class FriendlyNameWorkItemRepository @Inject()(
   }
 
   override def now: DateTime = DateTime.now
+
+  override def indexes: Seq[Index] = super.indexes ++ Seq(
+    Index(
+      key = Seq("item.groupId" -> IndexType.Ascending),
+      unique = true,
+      background = true)
+  )
 
 }

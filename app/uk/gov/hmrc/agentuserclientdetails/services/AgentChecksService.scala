@@ -22,6 +22,7 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.workitem._
 
 import java.time.LocalDateTime
 import javax.inject.{Inject, Singleton}
@@ -29,9 +30,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AgentChecksService @Inject() (appConfig: AppConfig, agentSizeRepository: AgentSizeRepository,
-                                    enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector, usersGroupsSearchConnector: UsersGroupsSearchConnector) extends Logging {
+                                    enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector, usersGroupsSearchConnector: UsersGroupsSearchConnector,
+                                    workItemService: WorkItemService) extends Logging {
 
   private val ENROLMENT_STATE_ACTIVATED = "Activated"
+  private val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
 
   def getAgentSize(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Option[AgentSize]] = {
     agentSizeRepository.get(arn) flatMap {
@@ -60,6 +63,24 @@ class AgentChecksService @Inject() (appConfig: AppConfig, agentSizeRepository: A
           usersGroupsSearchConnector.getGroupUsers(groupId)
       }
     } yield groupUsers.size
+  }
+
+  def outstandingWorkItemsExist(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Boolean] = {
+    for {
+      _ <- Future.successful(logger.debug("Fetching work items"))
+      maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
+      workItems <- maybeGroupId match {
+        case None =>
+          Future.successful(Seq.empty)
+        case Some(groupId) =>
+          workItemService.query(groupId, None)
+      }
+    } yield {
+      workItems match {
+        case items if items.exists(item => outstandingProcessingStatuses.contains(item.status)) => true
+        case _ => false
+      }
+    }
   }
 
   private def withinRefreshDuration(refreshedDateTime: LocalDateTime): Boolean = {

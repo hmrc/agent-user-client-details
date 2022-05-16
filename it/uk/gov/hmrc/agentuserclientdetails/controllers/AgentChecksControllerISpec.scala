@@ -60,6 +60,7 @@ class AgentChecksControllerISpec extends BaseIntegrationSpec with DefaultPlayMon
 
     lazy val urlGetAgentSize = s"$baseUrl/agent-user-client-details/arn/$arn/agent-size"
     lazy val urlUserCheck = s"$baseUrl/agent-user-client-details/arn/$arn/user-check"
+    lazy val urlWorkItemsExist = s"$baseUrl/agent-user-client-details/arn/$arn/work-items-exist"
   }
 
   "Agent Size" when {
@@ -237,6 +238,54 @@ class AgentChecksControllerISpec extends BaseIntegrationSpec with DefaultPlayMon
       }
     }
 
+  }
+
+  "Work Items exist" when {
+
+    "group for ARN does not exist" should {
+      s"return $NO_CONTENT" in new TestScope {
+        mockPrincipalGroupIdResponseWithoutException(None)
+
+        wsClient.url(urlWorkItemsExist).get().futureValue
+          .status shouldBe NO_CONTENT
+      }
+    }
+
+    s"ES proxy connector throws upstream error $NOT_FOUND while getting group of ARN" should {
+      s"return $NOT_FOUND" in new TestScope {
+        mockPrincipalGroupIdResponseWithException(UpstreamErrorResponse("not found message", 404, 404))
+
+        wsClient.url(urlWorkItemsExist).get().futureValue
+          .status shouldBe NOT_FOUND
+      }
+    }
+
+    s"ES proxy connector throws upstream error $UNAUTHORIZED while getting group of ARN" should {
+      s"return $UNAUTHORIZED" in new TestScope {
+        mockPrincipalGroupIdResponseWithException(UpstreamErrorResponse("unauthorized message", 401, 401))
+
+        wsClient.url(urlWorkItemsExist).get().futureValue
+          .status shouldBe UNAUTHORIZED
+      }
+    }
+
+    s"ES proxy connector throws upstream error 5xx while getting group of ARN" should {
+      s"return $INTERNAL_SERVER_ERROR" in new TestScope {
+        mockPrincipalGroupIdResponseWithException(UpstreamErrorResponse("backend problem message", 502, 502))
+
+        wsClient.url(urlWorkItemsExist).get().futureValue
+          .status shouldBe INTERNAL_SERVER_ERROR
+      }
+    }
+
+    s"ES proxy connector throws runtime exception while getting group of ARN" should {
+      s"return $INTERNAL_SERVER_ERROR" in new TestScope {
+        mockPrincipalGroupIdResponseWithException(new RuntimeException("something unexpected"))
+
+        wsClient.url(urlWorkItemsExist).get().futureValue
+          .status shouldBe INTERNAL_SERVER_ERROR
+      }
+    }
   }
 
   private def extractAgentSizeFrom(body: String) = (Json.parse(body) \ "agent-size").get.as[Int]
