@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentuserclientdetails
 
 import com.typesafe.config.Config
 import org.joda.time.DateTime
-import org.joda.time.convert.DurationConverter
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
@@ -26,21 +25,20 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Configuration
+import play.api.http.Status
 import play.api.mvc.ControllerComponents
-import play.api.test.{DefaultAwaitTimeout, FakeRequest, ResultExtractors}
+import play.api.test.FakeRequest
+import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController
 import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
+import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
-import org.scalatest.concurrent.ScalaFutures
-import play.api.libs.json.Json
-import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
-import play.test.Helpers
-import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
@@ -65,6 +63,9 @@ class ClientListControllerISpec extends AnyWordSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
+  val testArn = Arn("BARN9706518")
+  val unknownArn = Arn("SARN4216517")
+  val badArn = Arn("XARN0000BAD")
   val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
   val badGroupId = "XINV-ALID-GROU-PIDX"
   val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
@@ -133,6 +134,41 @@ class ClientListControllerISpec extends AnyWordSpec
     //    "don't add work items to the repo if they have been already added" in {
     //      ???
     //    }
+  }
+
+  "/arn/:arn/client-list" should {
+    "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(*, *, *)
+        .returning(Future.successful(enrolmentsWithFriendlyNames))
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      val result = clc.getClientsForArn(testArn.value)(request).futureValue
+      result.header.status shouldBe 200
+    }
+
+    "respond with 400 status if given an ARN in invalid format" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      val result = clc.getClientsForArn(badArn.value)(request).futureValue
+      result.header.status shouldBe Status.BAD_REQUEST
+    }
+
+    "respond with 404 status if given a valid but non-existent ARN" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(unknownArn, *, *)
+        .returning(Future.successful(None))
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      val result = clc.getClientsForArn(unknownArn.value)(request).futureValue
+      result.header.status shouldBe Status.NOT_FOUND
+    }
   }
 
   "/work-items/clean" should {

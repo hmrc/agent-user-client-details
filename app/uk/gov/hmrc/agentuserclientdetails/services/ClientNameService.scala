@@ -16,11 +16,11 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import play.api.Logger
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
-import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Service, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector}
+import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
 
