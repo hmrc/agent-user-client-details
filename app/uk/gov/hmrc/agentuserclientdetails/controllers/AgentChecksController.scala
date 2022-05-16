@@ -30,7 +30,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton()
-class AgentChecksController @Inject()(agentChecksService: AgentChecksService, cc: ControllerComponents)(implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
+class AgentChecksController @Inject()(agentChecksService: AgentChecksService, cc: ControllerComponents)
+                                     (implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     agentChecksService.getAgentSize(arn).transformWith {
@@ -56,6 +57,24 @@ class AgentChecksController @Inject()(agentChecksService: AgentChecksService, cc
   def userCheck(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     agentChecksService.userCheck(arn).transformWith {
       case Success(count) => if (count > 1 ) Future.successful(NoContent) else Future.successful(Forbidden)
+      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
+        logger.warn(s"Details for Arn not found: ${uer.message}")
+        Future.successful(NotFound)
+      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED =>
+        logger.warn(s"Request was not authorized: ${uer.message}")
+        Future.successful(Unauthorized)
+      case Failure(uer: UpstreamErrorResponse) =>
+        logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
+        Future.successful(InternalServerError)
+      case Failure(ex: Exception) =>
+        logger.warn(s"Error encountered: ${ex.getMessage}")
+        Future.successful(InternalServerError)
+    }
+  }
+
+  def outstandingWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    agentChecksService.outstandingWorkItemsExist(arn).transformWith {
+      case Success(workItemsExist) => if (workItemsExist) Future.successful(Ok) else Future.successful(NoContent)
       case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
         logger.warn(s"Details for Arn not found: ${uer.message}")
         Future.successful(NotFound)
