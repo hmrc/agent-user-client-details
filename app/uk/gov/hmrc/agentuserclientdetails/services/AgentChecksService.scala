@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -28,7 +28,8 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentChecksService @Inject() (appConfig: AppConfig, agentSizeRepository: AgentSizeRepository, enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) extends Logging {
+class AgentChecksService @Inject() (appConfig: AppConfig, agentSizeRepository: AgentSizeRepository,
+                                    enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector, usersGroupsSearchConnector: UsersGroupsSearchConnector) extends Logging {
 
   private val ENROLMENT_STATE_ACTIVATED = "Activated"
 
@@ -47,6 +48,18 @@ class AgentChecksService @Inject() (appConfig: AppConfig, agentSizeRepository: A
           }
         } yield maybeAgentSize
     }
+  }
+
+  def userCheck(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Int] = {
+    for {
+      maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
+      groupUsers <- maybeGroupId match {
+        case None =>
+          Future.successful(Seq.empty)
+        case Some(groupId) =>
+          usersGroupsSearchConnector.getGroupUsers(groupId)
+      }
+    } yield groupUsers.size
   }
 
   private def withinRefreshDuration(refreshedDateTime: LocalDateTime): Boolean = {
