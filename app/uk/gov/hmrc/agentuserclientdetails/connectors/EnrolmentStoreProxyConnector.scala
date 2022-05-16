@@ -26,6 +26,7 @@ import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
@@ -42,6 +43,9 @@ object ES19Request {
 
 @ImplementedBy(classOf[EnrolmentStoreProxyConnectorImpl])
 trait EnrolmentStoreProxyConnector {
+
+  // ES1 - principal
+  def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
   //ES3 - Query Enrolments allocated to a Group
   def getEnrolmentsForGroupId(groupId: String)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
@@ -61,6 +65,37 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
 
   private val es3cache = agentCacheProvider.es3Cache
+
+  // ES1 - principal
+  def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
+    val enrolmentKeyPrefix = "HMRC-AS-AGENT~AgentReferenceNumber"
+    val enrolmentKey = enrolmentKeyPrefix + "~" + arn.value
+    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
+
+    monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
+      es3cache(arn.value) {
+        http.GET[HttpResponse](url.toString)
+      }.map { response =>
+        response.status match {
+          case Status.NO_CONTENT =>
+            logger.warn(s"UNKNOWN_ARN $arn")
+            None
+          case Status.OK =>
+            val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
+            if (groupIds.isEmpty) {
+              logger.warn(s"UNKNOWN_ARN $arn")
+              None
+            } else {
+              if (groupIds.lengthCompare(1) > 0)
+                logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
+              groupIds.headOption
+            }
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
+  }
 
   //ES3 - Query Enrolments allocated to a Group
   def getEnrolmentsForGroupId(groupId: String)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]] = {

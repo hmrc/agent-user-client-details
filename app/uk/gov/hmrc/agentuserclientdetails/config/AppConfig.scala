@@ -21,6 +21,8 @@ import com.google.inject.ImplementedBy
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import scala.concurrent.duration.Duration
+
 @ImplementedBy(classOf[AppConfigImpl])
 trait AppConfig {
 
@@ -55,41 +57,45 @@ trait AppConfig {
   val jobLogRepoStatsQueueIntervalSeconds: Int
 
   val stubsCompatibilityMode: Boolean
+
+  val agentsizeRefreshDuration: Duration
 }
 
 @Singleton
 class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig {
 
-  private def getConf(key: String) =
-    servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
+  private def getConf(key: String) = servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
+
   private def baseUrl(key: String) = servicesConfig.baseUrl(key)
 
-  val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
+  lazy val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
 
-  val enrolmentStoreProxyUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
+  lazy val enrolmentStoreProxyUrl: String = baseUrl("enrolment-store-proxy")
 
-  val desBaseUrl: String = baseUrl("des")
-  val desEnvironment: String = getConf("des.environment")
-  val desAuthToken: String = getConf("des.authorization-token")
+  lazy val desBaseUrl: String = baseUrl("des")
+  lazy val desEnvironment: String = getConf("des.environment")
+  lazy val desAuthToken: String = getConf("des.authorization-token")
 
-  val ifPlatformBaseUrl: String = baseUrl("if")
-  val ifEnvironment: String = getConf("if.environment")
-  val ifAuthTokenAPI1712: String = getConf("if.authorization-token.API1712")
-  val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
+  lazy val ifPlatformBaseUrl: String = baseUrl("if")
+  lazy val ifEnvironment: String = getConf("if.environment")
+  lazy val ifAuthTokenAPI1712: String = getConf("if.authorization-token.API1712")
+  lazy val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
 
-  val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
-  val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
-  val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
+  lazy val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
+  lazy val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
+  lazy val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
 
-  val workItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.available-before-seconds")
-  val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
+  lazy val workItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.available-before-seconds")
+  lazy val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
 
-  val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
+  lazy val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
 
-  val jobRestartRepoQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.initialDelaySeconds")
-  val jobRestartRepoQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.intervalSeconds")
-  val jobRepoCleanupInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.initialDelaySeconds")
-  val jobRepoCleanupIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.intervalSeconds")
-  val jobLogRepoStatsQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.initialDelaySeconds")
-  val jobLogRepoStatsQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
+  lazy val jobRestartRepoQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.initialDelaySeconds")
+  lazy val jobRestartRepoQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.intervalSeconds")
+  lazy val jobRepoCleanupInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.initialDelaySeconds")
+  lazy val jobRepoCleanupIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.intervalSeconds")
+  lazy val jobLogRepoStatsQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.initialDelaySeconds")
+  lazy val jobLogRepoStatsQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
+
+  lazy val agentsizeRefreshDuration: Duration = servicesConfig.getDuration("agentsize.refreshduration")
 }

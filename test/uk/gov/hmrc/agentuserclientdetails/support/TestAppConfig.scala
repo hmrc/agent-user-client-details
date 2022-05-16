@@ -18,6 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.support
 
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 
+import scala.concurrent.duration.{DAYS, Duration}
+
 class TestAppConfig extends AppConfig {
   val citizenDetailsBaseUrl: String = ""
   val enrolmentStoreProxyUrl: String = ""
@@ -40,4 +42,5 @@ class TestAppConfig extends AppConfig {
   val jobRepoCleanupInitialDelaySeconds: Int = 300
   val jobLogRepoStatsQueueInitialDelaySeconds: Int = 60
   val jobLogRepoStatsQueueIntervalSeconds: Int = 60
+  override val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
 }
