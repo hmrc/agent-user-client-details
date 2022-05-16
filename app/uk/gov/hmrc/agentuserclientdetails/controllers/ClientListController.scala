@@ -19,8 +19,9 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import org.joda.time.DateTime
 import play.api.Logging
 import play.api.libs.json.{JsNumber, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import reactivemongo.api.commands.WriteError
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem}
@@ -42,6 +43,8 @@ class ClientListController @Inject()(
                                       appConfig: AppConfig
                                     )(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
+
+  def getClientsForArn(arn: String): Action[AnyContent] = adaptForArn(getClientsForGroupId)(arn)
 
   def getClientsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
     def makeWorkItem(enrolment: Enrolment)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
@@ -80,6 +83,8 @@ class ClientListController @Inject()(
     }
   }
 
+  def getOutstandingWorkItemsForArn(arn: String): Action[AnyContent] = adaptForArn(getOutstandingWorkItemsForGroupId)(arn)
+
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { _ =>
     workItemService.query(groupId, None).map { wis =>
       Ok(Json.toJson[Seq[Enrolment]](wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.enrolment)))
@@ -108,5 +113,20 @@ class ClientListController @Inject()(
   private def setDifference(e1s: Seq[Enrolment], e2s: Seq[Enrolment]): Seq[Enrolment] = {
     val e2eks = e2s.map(EnrolmentKey.enrolmentKeys)
     e1s.filterNot(enrolment => e2eks.contains(EnrolmentKey.enrolmentKeys(enrolment)))
+  }
+
+  private def adaptForArn(groupIdAction: String => Action[AnyContent])(arn: String): Action[AnyContent] = Action.async { implicit request =>
+    if (!Arn.isValid(arn)) {
+      logger.error(s"Invalid ARN: $arn")
+      Future.successful(BadRequest)
+    } else espConnector.getPrincipalGroupIdFor(Arn(arn)).transformWith {
+      case Success(Some(groupId)) => groupIdAction(groupId).apply(request)
+      case Success(None) =>
+        logger.error(s"ARN $arn not found.")
+        Future.successful(NotFound): Future[Result]
+      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND => Future.successful(NotFound)
+      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED => Future.successful(Unauthorized)
+      case Failure(_) => Future.successful(InternalServerError)
+    }
   }
 }
