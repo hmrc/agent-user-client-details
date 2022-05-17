@@ -74,7 +74,7 @@ class AgentChecksControllerISpec extends BaseIntegrationSpec with DefaultPlayMon
         val response: WSResponse = wsClient.url(urlGetAgentSize).get().futureValue
 
         response.status shouldBe OK
-        extractAgentSizeFrom(response.body) shouldBe 3
+        extractClientCountFrom(response.body) shouldBe 3
       }
     }
 
@@ -117,7 +117,7 @@ class AgentChecksControllerISpec extends BaseIntegrationSpec with DefaultPlayMon
         val response: WSResponse = wsClient.url(urlGetAgentSize).get().futureValue
 
         response.status shouldBe OK
-        extractAgentSizeFrom(response.body) shouldBe 0
+        extractClientCountFrom(response.body) shouldBe 0
       }
     }
 
@@ -288,7 +288,7 @@ class AgentChecksControllerISpec extends BaseIntegrationSpec with DefaultPlayMon
     }
   }
 
-  private def extractAgentSizeFrom(body: String) = (Json.parse(body) \ "agent-size").get.as[Int]
+  private def extractClientCountFrom(body: String) = (Json.parse(body) \ "client-count").get.as[Int]
 
   override protected def repository: PlayMongoRepository[AgentSize] = new AgentSizeRepositoryImpl(mongoComponent)
 
