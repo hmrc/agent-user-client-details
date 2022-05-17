@@ -23,7 +23,7 @@ import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
+import uk.gov.hmrc.agentuserclientdetails.util.{EnrolmentKey, StatusUtil}
 import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
 import uk.gov.hmrc.workitem._
@@ -133,16 +133,12 @@ class FriendlyNameWorker @Inject()(
                 _ = logger.info("Friendly name retrieved but could not be updated via ES19: scheduling retry")
               } yield ()
             }
-          case Failure(ClientNameService.InvalidServiceIdException(serviceId)) =>
-            // Caused by an invalid service ID. There is no point in retrying; we set the status as permanently failed.
-            logger.info(s"Service ID ${serviceId} is invalid or unsupported: marking enrolment as permanently failed.")
+          case Failure(e) if StatusUtil.isRetryable(e) =>
+            logger.info(s"Fetch of friendly name failed. Reason: ${e.getMessage}. This will be retried.")
+          workItemService.complete(workItem.id, Failed).map(_ => ())
+          case Failure(e) => // non-retryable failure
+            logger.info(s"Fetch of friendly name permanently failed. Reason: ${e.getMessage}.")
             workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
-          case Failure(e) =>
-            e match {
-              case UpstreamErrorResponse(_, status, _, _) => logger.info(s"Fetch of friendly name for enrolment failed. Status: ${status}. This will be retried.")
-              case e => logger.info(s"Fetch of friendly name for enrolment failed. Reason: ${e.getMessage}. This will be retried.")
-            }
-            workItemService.complete(workItem.id, Failed).map(_ => ())
         }
     }
   }

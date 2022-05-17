@@ -18,27 +18,23 @@ package uk.gov.hmrc.agentuserclientdetails.support
 
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, IndividualName, SubscriptionDetails, TypeOfPersonDetails, VatCustomerDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscription, IndividualName, SubscriptionDetails, TypeOfPersonDetails, VatCustomerDetails}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case object FakeDesConnector extends DesConnector {
-  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] =
-    Future.successful(
-      CgtSubscriptionResponse(
-        Right(
-          CgtSubscription(
-            SubscriptionDetails(
-              TypeOfPersonDetails(
-                "Individual",
-                Left(IndividualName("CGT", "Client"))
-              )
-            )
+  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]] =
+    Future.successful(Some(
+      CgtSubscription(
+        SubscriptionDetails(
+          TypeOfPersonDetails(
+            "Individual",
+            Left(IndividualName("CGT", "Client"))
           )
         )
       )
-    )
+    ))
   def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.successful(Some("IT Client"))
   def getVatCustomerDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] =
@@ -46,7 +42,7 @@ case object FakeDesConnector extends DesConnector {
 }
 
 case class FailingDesConnector(status: Int) extends DesConnector {
-  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] =
+  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
@@ -55,12 +51,8 @@ case class FailingDesConnector(status: Int) extends DesConnector {
 }
 
 case object NotFoundDesConnector extends DesConnector {
-  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] =
-    Future.successful(
-      CgtSubscriptionResponse(
-        Left(CgtError(404, Seq.empty))
-      )
-    )
+  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]] =
+    Future.successful(None)
   def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.successful(None)
   def getVatCustomerDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] =

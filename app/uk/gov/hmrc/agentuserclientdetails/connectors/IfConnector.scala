@@ -20,27 +20,22 @@ import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Reads._
-import play.api.libs.json.JsValue
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{InvalidTrust, PptSubscription, TrustName, TrustResponse}
+import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
 @ImplementedBy(classOf[IfConnectorImpl])
 trait IfConnector {
-
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse]
-
-  def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]]
-
+  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
   def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]]
 }
 
@@ -55,21 +50,15 @@ class IfConnectorImpl @Inject()(
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   //IF API#1495 Agent Known Fact Check (Trusts)
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] = {
+  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
 
     val url = getTrustNameUrl(trustTaxIdentifier)
 
     getWithDesIfHeaders("getTrustName", url).map { response =>
       response.status match {
         case status if is2xx(status) =>
-          TrustResponse(Right(TrustName((response.json \ "trustDetails" \ "trustName").as[String])))
-        case status if is4xx(status) =>
-          val invalidTrust = Try(((response.json \ "code").as[String], (response.json \ "reason").as[String])).toEither
-            .fold(ex => {
-              logger.error(s"${response.body}, ${ex.getMessage}")
-              InvalidTrust(status.toString, ex.getMessage)
-            }, t => InvalidTrust(t._1, t._2))
-          TrustResponse(Left(invalidTrust))
+          Some((response.json \ "trustDetails" \ "trustName").as[String])
+        case NOT_FOUND => None
         case other =>
           throw UpstreamErrorResponse(s"unexpected status during retrieving TrustName, error=${response.body}", other, other)
       }
@@ -77,26 +66,20 @@ class IfConnectorImpl @Inject()(
   }
 
   //IF API#1712 PPT Subscription Display
-  def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
+  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] = {
     val url = s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
     agentCacheProvider.pptSubscriptionCache(pptRef.value) {
       getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
         response.status match {
           case status if is2xx(status) =>
-            Some(response.json)
-          case status if is4xx(status) =>
-            logger.warn(s"$status response from getPptSubscriptionDisplay ${response.body}")
-            None
+            Some(response.json.as[PptSubscription](PptSubscription.reads))
+          case NOT_FOUND => None
           case other =>
-            throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay, status = $other", other)
+            throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay: ${response.body}", other)
         }
       }
     }
   }
-
-  //IF API#1712 PPT Subscription Display
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
-    getPptSubscriptionRawJson(pptRef).map(_.flatMap(_.asOpt[PptSubscription](PptSubscription.reads)))
 
   private def getWithDesIfHeaders(apiName: String, url: String)(
     implicit hc: HeaderCarrier,

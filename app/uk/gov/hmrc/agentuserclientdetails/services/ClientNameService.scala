@@ -16,13 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import play.api.Logger
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
+import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,8 +37,6 @@ class ClientNameService @Inject()(
   private def trustCache = agentCacheProvider.trustResponseCache
   private def cgtCache = agentCacheProvider.cgtSubscriptionCache
 
-  private val logger = Logger(getClass)
-
   def getClientNameByService(clientId: String, service: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     service match {
       case HMRCMTDIT     => getItsaTradingName(MtdItId(clientId))
@@ -53,12 +50,7 @@ class ClientNameService @Inject()(
     }
 
   def getItsaTradingName(mtdItId: MtdItId)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    desConnector
-      .getTradingNameForMtdItId(mtdItId)
-      .recover { case e =>
-        logger.error(s"Unable to translate MtdItId: ${e.getMessage}")
-        None
-      }
+    desConnector.getTradingNameForMtdItId(mtdItId)
 
   def getCitizenName(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     citizenDetailsConnector.getCitizenDetails(nino).map(_.flatMap(_.name))
@@ -72,33 +64,21 @@ class ClientNameService @Inject()(
           .orElse(customerDetails.organisationName)
           .orElse(customerDetails.individual.map(_.name))
       }
-      .recover {
-        case _: NotFoundException => None
-      }
 
   def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     trustCache(trustTaxIdentifier) {
       ifConnector.getTrustName(trustTaxIdentifier)
-    }.map(_.response).map {
-      case Right(trustName) => Some(trustName.name)
-      case Left(invalidTrust) =>
-        logger.warn(s"error during retrieving trust name for: $trustTaxIdentifier , error: $invalidTrust")
-        None
     }
 
   def getCgtName(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     cgtCache(cgtRef.value) {
       desConnector.getCgtSubscription(cgtRef)
-    }.map(_.response).map {
-      case Right(cgtSubscription) =>
-        cgtSubscription.subscriptionDetails.typeOfPersonDetails.name match {
-          case Right(trusteeName)   => Some(trusteeName.name)
-          case Left(individualName) => Some(s"${individualName.firstName} ${individualName.lastName}")
-        }
-      case Left(e) =>
-        logger.warn(s"Error occcured when getting CGT Name")
-        None
-    }
+    }.map(_.map { cgtSubscription =>
+      cgtSubscription.subscriptionDetails.typeOfPersonDetails.name match {
+        case Right(trusteeName) => trusteeName.name
+        case Left(individualName) => s"${individualName.firstName} ${individualName.lastName}"
+      }
+    })
 
   def getPptCustomerName(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))

@@ -20,12 +20,13 @@ import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
+import play.api.http.Status.{NOT_FOUND, OK}
 import play.api.libs.json.Reads._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtError, CgtSubscription, CgtSubscriptionResponse, DesError, VatCustomerDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscription, VatCustomerDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
@@ -35,7 +36,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DesConnectorImpl])
 trait DesConnector {
-  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse]
+  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]]
 
   def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
@@ -54,22 +55,17 @@ class DesConnectorImpl @Inject()(
 
   private val baseUrl: String = appConfig.desBaseUrl
 
-  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[CgtSubscriptionResponse] = {
+  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]] = {
 
     val url = s"$baseUrl/subscriptions/CGT/ZCGT/${cgtRef.value}"
 
     getWithDesIfHeaders("getCgtSubscription", url).map { response =>
-      val result = response.status match {
-        case 200 =>
-          Right(response.json.as[CgtSubscription])
-        case _ =>
-          (response.json \ "failures").asOpt[Seq[DesError]] match {
-            case Some(e) => Left(CgtError(response.status, e))
-            case None    => Left(CgtError(response.status, Seq(response.json.as[DesError])))
-          }
+      response.status match {
+        case OK => Some(response.json.as[CgtSubscription])
+        case NOT_FOUND => None
+        case other =>
+          throw UpstreamErrorResponse(s"unexpected error during 'getCgtSubscription': ${response.body}", other, other)
       }
-
-      CgtSubscriptionResponse(result)
     }
   }
 
@@ -80,9 +76,7 @@ class DesConnectorImpl @Inject()(
       getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
         response.status match {
           case status if is2xx(status) => (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
-          case status if is4xx(status) =>
-            logger.warn(s"4xx response from getTradingNameForMtdItId ${response.body}")
-            None
+          case NOT_FOUND => None
           case other =>
             throw UpstreamErrorResponse(s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other", other, other)
         }
@@ -97,9 +91,7 @@ class DesConnectorImpl @Inject()(
         response.status match {
           case status if is2xx(status) =>
             (response.json \ "approvedInformation" \ "customerDetails").asOpt[VatCustomerDetails]
-          case status if is4xx(status) =>
-            logger.warn(s"4xx response from getVatCustomerDetails ${response.body}")
-            None
+          case NOT_FOUND => None
           case other =>
             throw UpstreamErrorResponse(s"unexpected error during 'getVatCustomerDetails', statusCode=$other", other, other)
         }

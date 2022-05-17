@@ -26,8 +26,8 @@ import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, DesConnectorImpl, DesIfHeaders}
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscription, CgtSubscriptionResponse, IndividualName, OrganisationName, SubscriptionDetails, TypeOfPersonDetails, VatCustomerDetails, VatIndividual}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnectorImpl, DesIfHeaders}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscription, IndividualName, OrganisationName, SubscriptionDetails, TypeOfPersonDetails, VatCustomerDetails, VatIndividual}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
@@ -61,7 +61,7 @@ class DesConnectorISpec extends AnyWordSpec
       mockHttpGet(s"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}", mockResponse)(httpClient)
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
       desConnector.getCgtSubscription(CgtRef("XMCGTP123456789")).futureValue should matchPattern {
-        case CgtSubscriptionResponse(Right(sub)) if sub == cgtSubscription =>
+        case Some(sub) if sub == cgtSubscription =>
       }
     }
     "getCgtSubscription (trust)" in {
@@ -72,7 +72,7 @@ class DesConnectorISpec extends AnyWordSpec
       mockHttpGet(s"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}", mockResponse)(httpClient)
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
       desConnector.getCgtSubscription(CgtRef("XMCGTP123456789")).futureValue should matchPattern {
-        case CgtSubscriptionResponse(Right(sub)) if sub == cgtSubscription =>
+        case Some(sub) if sub == cgtSubscription =>
       }
     }
     "getTradingNameForMtdItId" in {
