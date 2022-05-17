@@ -80,11 +80,3 @@ case class CgtSubscription(subscriptionDetails: SubscriptionDetails)
 object CgtSubscription {
   implicit val format: Format[CgtSubscription] = Json.format[CgtSubscription]
 }
-
-case class CgtError(httpResponseCode: Int, errors: Seq[DesError])
-
-object CgtError {
-  implicit val format: Format[CgtError] = Json.format[CgtError]
-}
-
-case class CgtSubscriptionResponse(response: Either[CgtError, CgtSubscription])

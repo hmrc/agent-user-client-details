@@ -27,7 +27,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.{PptRef, Urn, Utr}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{DesIfHeaders, IfConnectorImpl}
-import uk.gov.hmrc.agentuserclientdetails.model.{PptSubscription, TrustName, TrustResponse}
+import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
@@ -59,7 +59,7 @@ class IfConnectorISpec extends AnyWordSpec
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
       mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}", mockResponse)(httpClient)
       val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
-      ifConnector.getTrustName(testUrn.value).futureValue shouldBe TrustResponse(Right(TrustName("Friendly Trust")))
+      ifConnector.getTrustName(testUrn.value).futureValue shouldBe Some("Friendly Trust")
     }
     "getTrustName (UTR)" in {
       val testUtr = Utr("4937455253")
@@ -67,7 +67,7 @@ class IfConnectorISpec extends AnyWordSpec
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
       mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}", mockResponse)(httpClient)
       val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
-      ifConnector.getTrustName(testUtr.value).futureValue shouldBe TrustResponse(Right(TrustName("Friendly Trust")))
+      ifConnector.getTrustName(testUtr.value).futureValue shouldBe Some("Friendly Trust")
     }
     "getPptSubscription (individual)" in {
       val testPptRef = PptRef("XAPPT0000012345")

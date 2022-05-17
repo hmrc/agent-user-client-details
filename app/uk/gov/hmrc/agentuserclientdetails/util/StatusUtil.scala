@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails.model
+package uk.gov.hmrc.agentuserclientdetails.util
 
-import play.api.libs.json._
+import play.api.http.Status._
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
-case class TrustName(name: String)
-
-object TrustName {
-  implicit val format: Format[TrustName] = Json.format[TrustName]
+object StatusUtil {
+  val retryableStatuses = Seq(UNAUTHORIZED, TOO_MANY_REQUESTS, INTERNAL_SERVER_ERROR, BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT)
+  def isRetryable(status: Int): Boolean = retryableStatuses.contains(status)
+  def isRetryable(e: Throwable): Boolean = e match {
+    case uer: UpstreamErrorResponse => isRetryable(uer.statusCode)
+    case _ => false // Expand this list if we identify any other cases that can be retried.
+  }
 }
-
-case class InvalidTrust(code: String, reason: String)
-
-object InvalidTrust {
-  implicit val format: Format[InvalidTrust] = Json.format[InvalidTrust]
-}
-
-case class TrustResponse(response: Either[InvalidTrust, TrustName])

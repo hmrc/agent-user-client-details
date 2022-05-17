@@ -19,12 +19,11 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import com.codahale.metrics.MetricRegistry
 import com.github.blemale.scaffeine.Scaffeine
 import com.kenshoo.play.metrics.Metrics
-import play.api.libs.json.JsValue
 
 import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logger, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscriptionResponse, TrustResponse, VatCustomerDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscription, PptSubscription, VatCustomerDetails}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpResponse
 
@@ -94,19 +93,17 @@ class AgentCacheProvider @Inject()(val environment: Environment, configuration: 
   val cacheExpires = Duration.create(configuration.underlying.getString("agent.cache.expires"))
   val cacheEnabled = configuration.underlying.getBoolean("agent.cache.enabled")
 
-  val trustResponseCache: Cache[TrustResponse] =
-    if (cacheEnabled) new LocalCaffeineCache[TrustResponse]("trustResponse", cacheSize, cacheExpires)
-    else new DoNotCache[TrustResponse]
+  val trustResponseCache: Cache[Option[String]] =
+    if (cacheEnabled) new LocalCaffeineCache[Option[String]]("trustResponse", cacheSize, cacheExpires)
+    else new DoNotCache[Option[String]]
 
-  val cgtSubscriptionCache: Cache[CgtSubscriptionResponse] =
-    if (cacheEnabled) new LocalCaffeineCache[CgtSubscriptionResponse]("cgtSubscription", cacheSize, cacheExpires)
-    else new DoNotCache[CgtSubscriptionResponse]
+  val cgtSubscriptionCache: Cache[Option[CgtSubscription]] =
+    if (cacheEnabled) new LocalCaffeineCache[Option[CgtSubscription]]("cgtSubscription", cacheSize, cacheExpires)
+    else new DoNotCache[Option[CgtSubscription]]
 
-  // we cache PPT subscriptions as raw JSON rather than a dedicated type as we don't have a two-way mapping that allows
-  // us to reconstruct the original JSON faithfully. (in other words the Json -> PptSubscription parser is lossy)
-  val pptSubscriptionCache: Cache[Option[JsValue]] =
-  if (cacheEnabled) new LocalCaffeineCache[Option[JsValue]]("pptSubscription", cacheSize, cacheExpires)
-  else new DoNotCache[Option[JsValue]]
+  val pptSubscriptionCache: Cache[Option[PptSubscription]] =
+  if (cacheEnabled) new LocalCaffeineCache[Option[PptSubscription]]("pptSubscription", cacheSize, cacheExpires)
+  else new DoNotCache[Option[PptSubscription]]
 
   val clientNinoCache: Cache[Option[Nino]] =
     if (cacheEnabled) new LocalCaffeineCache[Option[Nino]]("ClientNinoFromDES", cacheSize, cacheExpires)

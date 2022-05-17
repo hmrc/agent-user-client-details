@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
 import uk.gov.hmrc.agentuserclientdetails.connectors.IfConnector
 import uk.gov.hmrc.agentuserclientdetails.model._
@@ -25,41 +24,22 @@ import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import scala.concurrent.{ExecutionContext, Future}
 
 case object FakeIfConnector extends IfConnector {
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] =
-    Future.successful(TrustResponse(Right(TrustName("Trust Client"))))
-  def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] =
-    Future.successful(Some(
-      Json.parse(
-        """{
-          |  "legalEntityDetails": {
-          |    "customerDetails": {
-          |      "customerType": "Organisation",
-          |      "organisationDetails": {
-          |        "organisationName": "PPT Client"
-          |      }
-          |    }
-          |  }
-          |}
-          |""".stripMargin)
-   ))
+  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+    Future.successful(Some("Trust Client"))
   def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
     Future.successful(Some(PptSubscription("PPT Client")))
 }
 
 case class FailingIfConnector(status: Int) extends IfConnector {
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] =
-    Future.failed(UpstreamErrorResponse("A fake exception", status))
-  def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] =
+  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
 case object NotFoundIfConnector extends IfConnector {
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[TrustResponse] =
-    Future.successful(TrustResponse(Left(InvalidTrust("404", "Not found"))))
-  def getPptSubscriptionRawJson(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] =
+  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.successful(None)
-    def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
+  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
     Future.successful(None)
 }
