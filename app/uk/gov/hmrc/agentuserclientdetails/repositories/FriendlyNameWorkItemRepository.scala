@@ -56,7 +56,7 @@ case class FriendlyNameWorkItemRepository @Inject()(
   override def indexes: Seq[Index] = super.indexes ++ Seq(
     Index(
       key = Seq("item.groupId" -> IndexType.Ascending),
-      unique = true,
+      unique = false,
       background = true)
   )
 
