@@ -91,5 +91,5 @@ class AgentChecksController @Inject()(agentChecksService: AgentChecksService, cc
   }
 
   private def generateStatusJson(agentSize: AgentSize): JsValue =
-    Json.toJson(Json.obj("agent-size" -> agentSize.clientCount))
+    Json.toJson(Json.obj("client-count" -> agentSize.clientCount))
 }
