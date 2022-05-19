@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import org.joda.time.DateTime
 import play.api.Logging
 import play.api.libs.json.{JsNumber, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, RequestHeader, Result}
 import reactivemongo.api.commands.WriteError
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -44,9 +44,31 @@ class ClientListController @Inject()(
                                     )(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
-  def getClientsForArn(arn: String): Action[AnyContent] = adaptForArn(getClientsForGroupId)(arn)
-
   def getClientsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
+    getClientsForGroupIdFn(groupId)
+  }
+
+  def getClientsForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
+    adaptForArn(getClientsForGroupIdFn)(arn)
+  }
+
+  def forceRefreshFriendlyNamesForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
+    forceRefreshFriendlyNamesForGroupIdFn(groupId)
+  }
+
+  def forceRefreshFriendlyNamesForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
+    adaptForArn(forceRefreshFriendlyNamesForGroupIdFn)(arn)
+  }
+
+  def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
+    getOutstandingWorkItemsForGroupIdFn(groupId)
+  }
+
+  def getOutstandingWorkItemsForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
+    adaptForArn(getOutstandingWorkItemsForGroupIdFn)(arn)
+  }
+
+  protected def getClientsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(enrolment: Enrolment)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
       val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, enrolment, mSessionId)
@@ -83,9 +105,29 @@ class ClientListController @Inject()(
     }
   }
 
-  def getOutstandingWorkItemsForArn(arn: String): Action[AnyContent] = adaptForArn(getOutstandingWorkItemsForGroupId)(arn)
+  protected def forceRefreshFriendlyNamesForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
+    def makeWorkItem(enrolment: Enrolment)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
+      val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
+      FriendlyNameWorkItem(groupId, enrolment, mSessionId)
+    }
+    espConnector.getEnrolmentsForGroupId(groupId).transformWith {
+      case Success(enrolments) =>
+        for {
+          _ <- workItemService.removeByGroupId(groupId)
+          _ = logger.info(s"FORCED client list request for groupId $groupId. All work items for this groupId have been deleted and: ${enrolments.length} new work items will be created.")
+          enrolmentsWithoutName = enrolments.map(_.copy(friendlyName = ""))
+          _ <- workItemService.pushNew(enrolmentsWithoutName.map(enrolment => makeWorkItem(enrolment)), DateTime.now(), ToDo)
+        } yield {
+          Accepted
+        }
+      case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
+        Future.successful(NotFound)
+      case Failure(uer: UpstreamErrorResponse) =>
+        Future.failed(uer)
+    }
+  }
 
-  def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { _ =>
+  def getOutstandingWorkItemsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
     workItemService.query(groupId, None).map { wis =>
       Ok(Json.toJson[Seq[Enrolment]](wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.enrolment)))
     }
@@ -115,12 +157,12 @@ class ClientListController @Inject()(
     e1s.filterNot(enrolment => e2eks.contains(EnrolmentKey.enrolmentKeys(enrolment)))
   }
 
-  private def adaptForArn(groupIdAction: String => Action[AnyContent])(arn: String): Action[AnyContent] = Action.async { implicit request =>
+  private def adaptForArn(groupIdAction: String => Future[Result])(arn: String)(implicit request: RequestHeader): Future[Result] = {
     if (!Arn.isValid(arn)) {
       logger.error(s"Invalid ARN: $arn")
       Future.successful(BadRequest)
     } else espConnector.getPrincipalGroupIdFor(Arn(arn)).transformWith {
-      case Success(Some(groupId)) => groupIdAction(groupId).apply(request)
+      case Success(Some(groupId)) => groupIdAction(groupId)
       case Success(None) =>
         logger.error(s"ARN $arn not found.")
         Future.successful(NotFound): Future[Result]

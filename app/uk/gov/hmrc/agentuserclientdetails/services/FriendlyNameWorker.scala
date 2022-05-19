@@ -106,10 +106,10 @@ class FriendlyNameWorker @Inject()(
         // There is already a friendlyName populated. All we need to do is store the enrolment.
         throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.enrolment.friendlyName).transformWith {
           case Success(_) =>
-            logger.info("Previously fetched friendly name updated via ES19 successfully.")
+            logger.info(s"Previously fetched friendly name for ${enrolmentKey} updated via ES19 successfully.")
             workItemService.complete(workItem.id, Succeeded).map(_ => ())
           case Failure(_) =>
-            logger.info("Previously fetched friendly name update via ES19 failed. This will be retried.")
+            logger.info(s"Previously fetched friendly name for ${enrolmentKey} could not be updated via ES19. This will be retried.")
             workItemService.complete(workItem.id, Failed).map(_ => ())
         }
       case wi if wi.item.enrolment.friendlyName.isEmpty =>
@@ -118,26 +118,26 @@ class FriendlyNameWorker @Inject()(
           case Success(None) =>
             // A successful call returning None means the lookup succeeded but there is no name available.
             // There is no point in retrying; we set the status as permanently failed.
-            logger.info("No friendly name is available: marking enrolment as permanently failed.")
+            logger.info(s"No friendly name is available for ${enrolmentKey}: marking enrolment as permanently failed.")
             workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
           case Success(Some(friendlyName)) =>
             throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
               case Success(_) =>
-                logger.info("Friendly name retrieved and updated via ES19")
+                logger.info(s"Friendly name for ${enrolmentKey} retrieved and updated via ES19.")
                 workItemService.complete(workItem.id, Succeeded).map(_ => ())
               case Failure(_) => for {
                 // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
                 _ <- workItemService.pushNew(Seq(wi.item.copy(enrolment = wi.item.enrolment.copy(friendlyName = friendlyName))), DateTime.now(), ToDo)
                 // mark the old work item as duplicate
                 _ <- workItemService.complete(workItem.id, Duplicate)
-                _ = logger.info("Friendly name retrieved but could not be updated via ES19: scheduling retry")
+                _ = logger.info(s"Friendly name for ${enrolmentKey} retrieved but could not be updated via ES19: scheduling retry")
               } yield ()
             }
           case Failure(e) if StatusUtil.isRetryable(e) =>
-            logger.info(s"Fetch of friendly name failed. Reason: ${e.getMessage}. This will be retried.")
+            logger.info(s"Fetch of friendly name failed for ${enrolmentKey}. Reason: ${e.getMessage}. This will be retried.")
           workItemService.complete(workItem.id, Failed).map(_ => ())
           case Failure(e) => // non-retryable failure
-            logger.info(s"Fetch of friendly name permanently failed. Reason: ${e.getMessage}.")
+            logger.info(s"Fetch of friendly name permanently failed for ${enrolmentKey}. Reason: ${e.getMessage}.")
             workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
         }
     }
