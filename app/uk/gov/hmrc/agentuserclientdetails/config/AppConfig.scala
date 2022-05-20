@@ -47,7 +47,7 @@ trait AppConfig {
 
   val workItemRepoAvailableBeforeSeconds: Int
   val workItemRepoFailedBeforeSeconds: Int
-
+  val workItemRepoGiveUpAfterMinutes: Int
 
   val jobRestartRepoQueueInitialDelaySeconds: Int
   val jobRestartRepoQueueIntervalSeconds: Int
@@ -89,6 +89,7 @@ class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig 
 
   lazy val workItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.available-before-seconds")
   lazy val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
+  lazy val workItemRepoGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.give-up-after-minutes")
 
   lazy val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
 
