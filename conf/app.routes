@@ -3,6 +3,9 @@
 GET        /groupid/:groupid/client-list             uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsForGroupId(groupid: String)
 GET        /arn/:arn/client-list                     uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsForArn(arn: String)
 
+POST       /groupid/:groupid/refresh-names           uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.forceRefreshFriendlyNamesForGroupId(groupid: String)
+POST       /arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.forceRefreshFriendlyNamesForArn(arn: String)
+
 GET        /groupid/:groupid/outstanding-work-items  uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForGroupId(groupid: String)
 GET        /arn/:arn/outstanding-work-items          uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForArn(arn: String)
 

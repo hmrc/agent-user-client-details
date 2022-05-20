@@ -53,6 +53,8 @@ trait WorkItemService {
 
   def removeAll()(implicit ec: ExecutionContext): Future[WriteResult]
 
+  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[WriteResult]
+
   def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]]
 }
 
@@ -110,6 +112,10 @@ class WorkItemServiceImpl @Inject()(workItemRepo: FriendlyNameWorkItemRepository
   }
 
   def removeAll()(implicit ec: ExecutionContext): Future[WriteResult] = workItemRepo.removeAll()
+
+  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[WriteResult] = {
+    workItemRepo.remove("item.groupId" -> JsString(groupId))
+  }
 
   def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     workItemRepo.pullOutstanding(failedBefore, availableBefore)

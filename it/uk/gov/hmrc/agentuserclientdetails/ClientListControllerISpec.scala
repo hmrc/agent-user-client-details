@@ -63,10 +63,10 @@ class ClientListControllerISpec extends AnyWordSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
+  val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
   val testArn = Arn("BARN9706518")
   val unknownArn = Arn("SARN4216517")
   val badArn = Arn("XARN0000BAD")
-  val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
   val badGroupId = "XINV-ALID-GROU-PIDX"
   val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
   val enrolment2 = Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
@@ -81,7 +81,7 @@ class ClientListControllerISpec extends AnyWordSpec
     dropTestCollection(wir.collection.name)
   }
 
-  "/groupid/:groupid/client-list" should {
+  "GET /groupid/:groupid/client-list" should {
     "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in {
       val esp = mock[EnrolmentStoreProxyConnector]
       (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -136,7 +136,7 @@ class ClientListControllerISpec extends AnyWordSpec
     //    }
   }
 
-  "/arn/:arn/client-list" should {
+  "GET /arn/:arn/client-list" should {
     "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in {
       val esp = mock[EnrolmentStoreProxyConnector]
       (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -168,6 +168,31 @@ class ClientListControllerISpec extends AnyWordSpec
       val clc = new ClientListController(cc, wis, esp, appConfig)
       val result = clc.getClientsForArn(unknownArn.value)(request).futureValue
       result.header.status shouldBe Status.NOT_FOUND
+    }
+  }
+
+  "POST /groupid/:groupid/refresh-names" should {
+    "delete all work items from the repo for the given groupId and recreate work items, ignoring any names already present in the enrolment store" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(*, *, *)
+        .returning(Future.successful(enrolmentsWithFriendlyNames))
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolmentsWithFriendlyNames(0))), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolmentsWithFriendlyNames(1))), DateTime.now(), PermanentlyFailed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, enrolmentsWithFriendlyNames(3))), DateTime.now(), Succeeded).futureValue
+      val request = FakeRequest("POST", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      val result = clc.forceRefreshFriendlyNamesForGroupId(testGroupId)(request).futureValue
+      result.header.status shouldBe Status.ACCEPTED
+      // Check that none of the old work items are left and that now we have new to-do ones with no name filled in.
+      val workItems = wis.query(testGroupId, None).futureValue
+      workItems.length shouldBe enrolmentsWithFriendlyNames.length
+      all(workItems.map(_.status)) shouldBe ToDo
+      all(workItems.map(_.item.enrolment.friendlyName)) shouldBe empty
+      // Test that work items for a different groupId haven't been affected
+      val otherWorkItems = wis.query(anotherTestGroupId, None).futureValue
+      otherWorkItems.length shouldBe 1
+      otherWorkItems.head.status shouldBe Succeeded
     }
   }
 
