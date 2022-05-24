@@ -32,4 +32,15 @@ object EnrolmentKey {
 
   def enrolmentKeys(enrolment: Enrolment): Seq[String] = enrolment.identifiers.map(identifier => enrolmentKey(enrolment.service, identifier.value))
 
+  /**
+   * Returns serviceId and clientId from a given enrolmentKey
+   */
+  def deconstruct(ek: String): (String, String) = {
+    val serviceId = ek.takeWhile(_ != '~')
+    val clientId = ek.split('~').last
+    // sanity check: try to reconstruct the original enrolment key
+    if (enrolmentKey(serviceId, clientId).toUpperCase != ek.toUpperCase)
+      throw new IllegalArgumentException(s"Unexpected enrolment key format: $ek")
+    (serviceId, clientId)
+  }
 }

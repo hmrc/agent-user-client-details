@@ -25,14 +25,14 @@ import org.scalatest.wordspec.AnyWordSpec
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.model.{Client, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.support._
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
-import uk.gov.hmrc.workitem.{Duplicate, Failed, PermanentlyFailed, ProcessingStatus, ResultStatus, Succeeded, ToDo, WorkItem}
+import uk.gov.hmrc.workitem._
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory with FakeCache {
 
@@ -65,7 +65,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *).returns(Future.successful(()))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -84,7 +84,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *).returns(Future.successful(()))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsNoName, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -103,7 +103,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *).returns(Future.successful(()))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(400), mockActorSystem, appConfig)
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -122,7 +122,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(testGroupId, *, *, *, *).returns(Future.successful(()))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig)
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -141,7 +141,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(testGroupId, *, *, *, *).returns(Future.successful(()))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig)
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo).copy(receivedAt = DateTime.now().minusDays(2))
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo).copy(receivedAt = DateTime.now().minusDays(2))
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -163,13 +163,13 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *).returns(Future.failed(UpstreamErrorResponse("", 429)))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Duplicate, *).once()
       (stubWis.pushNew(_: Seq[FriendlyNameWorkItem], _: DateTime, _: ProcessingStatus)(_: ExecutionContext))
-        .verify(argThat((_: Seq[FriendlyNameWorkItem]).head.enrolment.friendlyName.nonEmpty), *, ToDo, *).once()
+        .verify(argThat((_: Seq[FriendlyNameWorkItem]).head.client.friendlyName.nonEmpty), *, ToDo, *).once()
     }
 
     "when encountering a work item with an already populated friendly name, should store it via ES19 without querying the name again" in {
@@ -182,7 +182,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *).returns(Future.successful(()))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "Friendly Name", Seq(Identifier("VRN", "12345678")))), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))

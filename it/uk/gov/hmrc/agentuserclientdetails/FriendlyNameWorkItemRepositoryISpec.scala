@@ -25,12 +25,12 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.model.{Client, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.workitem.{Duplicate, Failed, PermanentlyFailed, ProcessingStatus, Succeeded, ToDo, WorkItem}
+import uk.gov.hmrc.workitem._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -50,10 +50,10 @@ class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val badGroupId = "XINV-ALID-GROU-PIDX"
-  val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-  val enrolment2 = Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
-  val enrolment3 = Enrolment("HMRC-CGT-PD", "Activated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
-  val enrolment4 = Enrolment("HMRC-MTD-VAT", "Activated", "Ross Barker", Seq(Identifier("VRN", "101747641")))
+  val client1 = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
+  val client2 = Client("HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", "Frank Wright")
+  val client3 = Client("HMRC-CGT-PD~CgtRef~XMCGTP123456789", "George Candy")
+  val client4 = Client("HMRC-MTD-VAT~VRN~VRN", "Ross Barker")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -67,9 +67,9 @@ class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
 
   "collectStats" should {
     "collect the correct statistics about work items in the repository" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1), FriendlyNameWorkItem(testGroupId, enrolment2)), DateTime.now(), ToDo).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment3)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment4)), DateTime.now(), Failed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), ToDo).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
       val stats = wis.collectStats.futureValue
       stats.get(ToDo.name) shouldBe Some(2)
       stats.get(Succeeded.name) shouldBe Some(1)
@@ -80,9 +80,9 @@ class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
 
   "query" should {
     "return the correct items based on a query" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1), FriendlyNameWorkItem(testGroupId, enrolment2)), DateTime.now(), ToDo).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment3)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment4)), DateTime.now(), Failed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), ToDo).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
       wis.query(testGroupId, Some(Seq(ToDo))).futureValue.length shouldBe 2
       wis.query(testGroupId, Some(Seq(ToDo, Succeeded))).futureValue.length shouldBe 3
       wis.query(testGroupId, Some(Seq(Duplicate, PermanentlyFailed))).futureValue.length shouldBe 0
@@ -93,10 +93,10 @@ class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
 
   "cleanup" should {
     "remove any items that are either succeeded or duplicate" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment2)), DateTime.now(), Duplicate).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment3)), DateTime.now(), PermanentlyFailed).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment4)), DateTime.now(), Failed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), Duplicate).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), PermanentlyFailed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
       wis.cleanup().futureValue
       wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length shouldBe 0
       wis.query(testGroupId, Some(Seq(Duplicate))).futureValue.length shouldBe 0

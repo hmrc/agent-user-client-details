@@ -95,16 +95,14 @@ class FriendlyNameWorker @Inject()(
   def processItem(workItem: WorkItem[FriendlyNameWorkItem]): Future[Unit] = {
     implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId))
     val groupId = workItem.item.groupId
-    val clientId = workItem.item.enrolment.identifiers.head.value
-    val service = workItem.item.enrolment.service
-    val enrolmentKey = EnrolmentKey.enrolmentKey(service, clientId)
+    val enrolmentKey = workItem.item.client.enrolmentKey
     // TODO handle case when identifier is empty and/or there is more than one identifier
     // TODO handle case where the service ID provided is not valid.
 
     workItem match {
-      case wi if wi.item.enrolment.friendlyName.nonEmpty =>
+      case wi if wi.item.client.friendlyName.nonEmpty =>
         // There is already a friendlyName populated. All we need to do is store the enrolment.
-        throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.enrolment.friendlyName).transformWith {
+        throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.client.friendlyName).transformWith {
           case Success(_) =>
             logger.info(s"Previously fetched friendly name for ${enrolmentKey} updated via ES19 successfully.")
             workItemService.complete(workItem.id, Succeeded).map(_ => ())
@@ -112,9 +110,9 @@ class FriendlyNameWorker @Inject()(
             logger.info(s"Previously fetched friendly name for ${enrolmentKey} could not be updated via ES19. This will be retried.")
             workItemService.complete(workItem.id, Failed).map(_ => ())
         }
-      case wi if wi.item.enrolment.friendlyName.isEmpty =>
+      case wi if wi.item.client.friendlyName.isEmpty =>
         // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
-        throttledFetchFriendlyName(clientId, service).transformWith {
+        throttledFetchFriendlyName(enrolmentKey).transformWith {
           case Success(None) =>
             // A successful call returning None means the lookup succeeded but there is no name available.
             // There is no point in retrying; we set the status as permanently failed.
@@ -127,7 +125,7 @@ class FriendlyNameWorker @Inject()(
                 workItemService.complete(workItem.id, Succeeded).map(_ => ())
               case Failure(_) => for {
                 // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
-                _ <- workItemService.pushNew(Seq(wi.item.copy(enrolment = wi.item.enrolment.copy(friendlyName = friendlyName))), DateTime.now(), ToDo)
+                _ <- workItemService.pushNew(Seq(wi.item.copy(client = wi.item.client.copy(friendlyName = friendlyName))), DateTime.now(), ToDo)
                 // mark the old work item as duplicate
                 _ <- workItemService.complete(workItem.id, Duplicate)
                 _ = logger.info(s"Friendly name for ${enrolmentKey} retrieved but could not be updated via ES19: scheduling retry")
@@ -153,9 +151,12 @@ class FriendlyNameWorker @Inject()(
     wi.receivedAt.isBefore(DateTime.now().minusMinutes(appConfig.workItemRepoGiveUpAfterMinutes))
   }
 
-  private[services] def throttledFetchFriendlyName(clientId: String, service: String)(
+  private[services] def throttledFetchFriendlyName(enrolmentKey: String)(
     implicit hc: HeaderCarrier): Future[Option[String]] = {
-    def f(): Future[Option[String]] = clientNameService.getClientNameByService(clientId, service)
+    def f(): Future[Option[String]] = {
+      val (service, clientId) = EnrolmentKey.deconstruct(enrolmentKey)
+      clientNameService.getClientNameByService(clientId, service)
+    }
     if (appConfig.enableThrottling) clientNameThrottler.throttledStartingFrom(DateTime.now())(f())
     else f()
   }
