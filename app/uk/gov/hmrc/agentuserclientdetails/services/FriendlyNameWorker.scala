@@ -133,14 +133,14 @@ class FriendlyNameWorker @Inject()(
             }
           case Failure(e) if StatusUtil.isRetryable(e) =>
             if (giveUp(wi)) {
-              logger.info(s"Fetch of friendly name failed for ${enrolmentKey}. Reason: ${e.getMessage}. Giving up.")
+              logger.info(s"Fetch of friendly name failed for ${enrolmentKey}. Reason: ${logFriendlyMessage(e)}. Giving up.")
               workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
             } else {
-              logger.info(s"Fetch of friendly name failed for ${enrolmentKey}. Reason: ${e.getMessage}. This will be retried.")
+              logger.info(s"Fetch of friendly name failed for ${enrolmentKey}. Reason: ${logFriendlyMessage(e)}. This will be retried.")
               workItemService.complete(workItem.id, Failed).map(_ => ())
             }
           case Failure(e) => // non-retryable failure
-            logger.info(s"Fetch of friendly name permanently failed for ${enrolmentKey}. Reason: ${e.getMessage}.")
+            logger.info(s"Fetch of friendly name permanently failed for ${enrolmentKey}. Reason: ${logFriendlyMessage(e)}.")
             workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
         }
     }
@@ -149,6 +149,11 @@ class FriendlyNameWorker @Inject()(
   // Determine whether we should give up trying to process this work item if it fails again.
   protected def giveUp(wi: WorkItem[FriendlyNameWorkItem]): Boolean = {
     wi.receivedAt.isBefore(DateTime.now().minusMinutes(appConfig.workItemRepoGiveUpAfterMinutes))
+  }
+
+  private def logFriendlyMessage(e: Throwable): String = e match {
+    case uer: UpstreamErrorResponse => s"Upstream status ${uer.statusCode}: ${uer.message}"
+    case e => e.getMessage
   }
 
   private[services] def throttledFetchFriendlyName(enrolmentKey: String)(

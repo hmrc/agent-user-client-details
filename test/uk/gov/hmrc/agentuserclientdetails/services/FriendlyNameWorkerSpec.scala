@@ -31,6 +31,7 @@ import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.workitem._
 
+import java.net.ConnectException
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,9 +41,18 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
 
   val mockSi: ServiceInstances = null // very hard to mock this class due to exceptions when the constructor gets called
 
+  // Service that returns a successful response
   val mockCnsOK: ClientNameService = new ClientNameService(FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector, agentCacheProvider)
+  // Service that returns a failure with a HTTP status
   def mockCnsFail(failStatus: Int): ClientNameService = new ClientNameService(FailingCitizenDetailsConnector(failStatus), FailingDesConnector(failStatus), FailingIfConnector(failStatus), agentCacheProvider)
+  // Service that returns a non-HTTP exception
+  val mockCnsConnectFail: ClientNameService = new ClientNameService(FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector, agentCacheProvider) {
+    override def getClientNameByService(clientId: String, service: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+      Future.failed(new ConnectException("Weird error occurred."))
+  }
+  // Service that returns a successful response but no name
   val mockCnsNoName: ClientNameService = new ClientNameService(NotFoundCitizenDetailsConnector, NotFoundDesConnector, NotFoundIfConnector, agentCacheProvider)
+
 
 
   val mockActorSystem: ActorSystem = stub[ActorSystem]
@@ -122,6 +132,25 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(testGroupId, *, *, *, *).returns(Future.successful(()))
 
       val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      fnWorker.processItem(workItem).futureValue
+
+      (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .verify(testGroupId, *, *, *, *).never()
+      (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .verify(workItem.id, Failed, *).once()
+    }
+
+    "mark the work item as failed (retryable) if the call to DES/IF fails with an unknown exception (that is not an upstream HTTP error status)" in {
+      val stubWis: WorkItemService = stub[WorkItemService]
+      (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .when(*, *, *)
+        .returns(Future.successful(true))
+      val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
+      (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .when(testGroupId, *, *, *, *).returns(Future.successful(()))
+
+      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsConnectFail, mockActorSystem, appConfig)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
