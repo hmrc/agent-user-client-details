@@ -33,7 +33,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController
-import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.model.{Client, Enrolment, FriendlyNameWorkItem, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -116,7 +116,7 @@ class ClientListControllerISpec extends AnyWordSpec
     }
     "respond with 200 status if any of the retrieved enrolments don't have a friendly name but they have been tried before and marked as permanently failed" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      wis.pushNew(enrolmentsWithoutSomeFriendlyNames.filter(_.friendlyName.isEmpty).map(FriendlyNameWorkItem(testGroupId, _)), DateTime.now(), PermanentlyFailed).futureValue
+      wis.pushNew(enrolmentsWithoutSomeFriendlyNames.filter(_.friendlyName.isEmpty).map(e => FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(e))), DateTime.now(), PermanentlyFailed).futureValue
 
       (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
@@ -177,9 +177,9 @@ class ClientListControllerISpec extends AnyWordSpec
       (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolmentsWithFriendlyNames(0))), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolmentsWithFriendlyNames(1))), DateTime.now(), PermanentlyFailed).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, enrolmentsWithFriendlyNames(3))), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(0)))), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(1)))), DateTime.now(), PermanentlyFailed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(3)))), DateTime.now(), Succeeded).futureValue
       val request = FakeRequest("POST", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
       val result = clc.forceRefreshFriendlyNamesForGroupId(testGroupId)(request).futureValue
@@ -188,7 +188,7 @@ class ClientListControllerISpec extends AnyWordSpec
       val workItems = wis.query(testGroupId, None).futureValue
       workItems.length shouldBe enrolmentsWithFriendlyNames.length
       all(workItems.map(_.status)) shouldBe ToDo
-      all(workItems.map(_.item.enrolment.friendlyName)) shouldBe empty
+      all(workItems.map(_.item.client.friendlyName)) shouldBe empty
       // Test that work items for a different groupId haven't been affected
       val otherWorkItems = wis.query(anotherTestGroupId, None).futureValue
       otherWorkItems.length shouldBe 1
@@ -201,7 +201,7 @@ class ClientListControllerISpec extends AnyWordSpec
       val esp = mock[EnrolmentStoreProxyConnector]
       val request = FakeRequest("GET", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), Succeeded).futureValue
       val result = clc.cleanupWorkItems(request).futureValue
       result.header.status shouldBe 200
       wis.collectStats.futureValue.values.sum shouldBe 0
@@ -213,7 +213,7 @@ class ClientListControllerISpec extends AnyWordSpec
       val esp = mock[EnrolmentStoreProxyConnector]
       val request = FakeRequest("GET", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), ToDo).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo).futureValue
       val result = clc.getWorkItemStats(request)
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Map[String, Int]].values.sum shouldBe 1
@@ -225,12 +225,12 @@ class ClientListControllerISpec extends AnyWordSpec
       val esp = mock[EnrolmentStoreProxyConnector]
       val request = FakeRequest("GET", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), ToDo).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment3)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, enrolment2)), DateTime.now(), ToDo).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment3))), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, Client.fromEnrolment(enrolment2))), DateTime.now(), ToDo).futureValue
       val result = clc.getOutstandingWorkItemsForGroupId(testGroupId)(request)
       result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[Seq[Enrolment]].toSet shouldBe Set(enrolment1)
+      contentAsJson(result).as[Seq[Client]].toSet shouldBe Set(Client.fromEnrolment(enrolment1))
     }
 
   }

@@ -42,6 +42,17 @@ class EnrolmentKeySpec extends AnyWordSpec with Matchers with MockFactory with F
       EnrolmentKey.enrolmentKey("HMRC-PT", "someId") shouldBe "HMRC-PT~NINO~someId"
       an[Exception] shouldBe thrownBy(EnrolmentKey.enrolmentKey("badServiceId", "someId"))
     }
+    "deconstruct enrolment keys correctly" in {
+      EnrolmentKey.deconstruct("HMRC-MTD-IT~MTDITID~someId") shouldBe ("HMRC-MTD-IT", "someId")
+      EnrolmentKey.deconstruct("HMRC-MTD-VAT~VRN~someId") shouldBe ("HMRC-MTD-VAT", "someId")
+      EnrolmentKey.deconstruct("HMRC-TERS-ORG~SAUTR~someId") shouldBe ("HMRC-TERS-ORG", "someId")
+      EnrolmentKey.deconstruct("HMRC-TERSNT-ORG~URN~someId") shouldBe ("HMRC-TERSNT-ORG", "someId")
+      EnrolmentKey.deconstruct("HMRC-CGT-PD~CGTPDRef~someId") shouldBe ("HMRC-CGT-PD", "someId")
+      EnrolmentKey.deconstruct("HMRC-PPT-ORG~EtmpRegistrationNumber~someId") shouldBe ("HMRC-PPT-ORG", "someId")
+      EnrolmentKey.deconstruct("HMRC-PT~NINO~someId") shouldBe ("HMRC-PT", "someId")
+      an[Exception] shouldBe thrownBy(EnrolmentKey.deconstruct("HMRC-FAKE-SVC~NINO~AB123456Z"))
+    }
+
   }
 }
 

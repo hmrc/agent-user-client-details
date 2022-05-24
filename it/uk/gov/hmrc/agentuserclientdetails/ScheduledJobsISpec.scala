@@ -23,7 +23,7 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.model.{Client, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
@@ -42,7 +42,7 @@ class ScheduledJobsISpec extends AnyWordSpec
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
-  val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
+  val client1 = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
 
   "repository cleanup job" should {
     "clean up the repository periodically" in {
@@ -60,7 +60,7 @@ class ScheduledJobsISpec extends AnyWordSpec
 
       val main = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
       wis.removeAll().futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, enrolment1)), DateTime.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), Succeeded).futureValue
       wis.collectStats.futureValue.values.sum shouldBe 1
       Thread.sleep(5000) // Wait for the scheduled job to be executed
       wis.collectStats.futureValue.values.sum shouldBe 0

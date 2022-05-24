@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfigImpl
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UserDetails, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, FriendlyNameWorkItem, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.model.{Client, Enrolment, FriendlyNameWorkItem, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository, RecordInserted, RecordUpdated, UpsertType}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -216,7 +216,7 @@ class AgentChecksServiceSpec extends BaseSpec {
     }
 
     "enrolment store proxy returns a group for ARN" when {
-      val enrolment = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
+      val client = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
 
       val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
       val nonOutstandingProcessingStatuses: Set[ProcessingStatus] = processingStatuses -- outstandingProcessingStatuses
@@ -234,7 +234,7 @@ class AgentChecksServiceSpec extends BaseSpec {
         "return false" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
 
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = nonOutstandingProcessingStatuses.toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, enrolment), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = nonOutstandingProcessingStatuses.toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe false
@@ -245,7 +245,7 @@ class AgentChecksServiceSpec extends BaseSpec {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
 
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + InProgress).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, enrolment), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + InProgress).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -255,7 +255,7 @@ class AgentChecksServiceSpec extends BaseSpec {
       s"workItemService returns a list of work items that contains a $ToDo" should {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + ToDo).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, enrolment), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + ToDo).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -265,7 +265,7 @@ class AgentChecksServiceSpec extends BaseSpec {
       s"workItemService returns a list of work items that contains a $Deferred" should {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Deferred).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, enrolment), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Deferred).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -275,7 +275,7 @@ class AgentChecksServiceSpec extends BaseSpec {
       s"workItemService returns a list of work items that contains a $Failed" should {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Failed).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, enrolment), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Failed).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true

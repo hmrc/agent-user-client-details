@@ -17,13 +17,12 @@
 package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 
-case class FriendlyNameWorkItem(
-  groupId: String,
-  client: Client,
-  sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
-)
+case class Client(enrolmentKey: String, friendlyName: String)
 
-object FriendlyNameWorkItem {
-  implicit val format: Format[FriendlyNameWorkItem] = Json.format[FriendlyNameWorkItem]
+object Client {
+  implicit val format: Format[Client] = Json.format[Client]
+
+  def fromEnrolment(enrolment: Enrolment): Client = Client(EnrolmentKey.enrolmentKeys(enrolment).head, enrolment.friendlyName)
 }
