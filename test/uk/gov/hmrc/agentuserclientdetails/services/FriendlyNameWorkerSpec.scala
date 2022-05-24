@@ -41,7 +41,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
   val mockSi: ServiceInstances = null // very hard to mock this class due to exceptions when the constructor gets called
 
   val mockCnsOK: ClientNameService = new ClientNameService(FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector, agentCacheProvider)
-  val mockCnsFail: ClientNameService = new ClientNameService(FailingCitizenDetailsConnector(429), FailingDesConnector(429), FailingIfConnector(429), agentCacheProvider)
+  def mockCnsFail(failStatus: Int): ClientNameService = new ClientNameService(FailingCitizenDetailsConnector(failStatus), FailingDesConnector(failStatus), FailingIfConnector(failStatus), agentCacheProvider)
   val mockCnsNoName: ClientNameService = new ClientNameService(NotFoundCitizenDetailsConnector, NotFoundDesConnector, NotFoundIfConnector, agentCacheProvider)
 
 
@@ -93,7 +93,26 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(workItem.id, PermanentlyFailed, *).once()
     }
 
-    "mark the work item as failed if the call to DES/IF fails" in {
+    "mark the work item as permanently failed if the call to DES/IF fails with a non-retryable failure" in {
+      val stubWis: WorkItemService = stub[WorkItemService]
+      (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .when(*, *, *)
+        .returns(Future.successful(true))
+      val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
+      (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .when(*, *, *, *, *).returns(Future.successful(()))
+
+      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(400), mockActorSystem, appConfig)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo)
+      fnWorker.processItem(workItem).futureValue
+
+      (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .verify(testGroupId, *, *, *, *).never()
+      (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .verify(workItem.id, PermanentlyFailed, *).once()
+    }
+
+    "mark the work item as failed if the call to DES/IF fails with a retryable failure" in {
       val stubWis: WorkItemService = stub[WorkItemService]
       (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -102,7 +121,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
       (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(testGroupId, *, *, *, *).returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail, mockActorSystem, appConfig)
+      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo)
       fnWorker.processItem(workItem).futureValue
 
@@ -110,6 +129,25 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, *, *, *).never()
       (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *).once()
+    }
+
+    "mark the work item as permanently failed if it is determined that we should give up" in {
+      val stubWis: WorkItemService = stub[WorkItemService]
+      (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .when(*, *, *)
+        .returns(Future.successful(true))
+      val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
+      (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .when(testGroupId, *, *, *, *).returns(Future.successful(()))
+
+      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Enrolment("HMRC-MTD-VAT", "Activated", "", Seq(Identifier("VRN", "12345678")))), ToDo).copy(receivedAt = DateTime.now().minusDays(2))
+      fnWorker.processItem(workItem).futureValue
+
+      (mockEsp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .verify(testGroupId, *, *, *, *).never()
+      (stubWis.complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .verify(workItem.id, PermanentlyFailed, *).once()
     }
 
     "when the ES19 storage call fails mark the old item as duplicate and create a new item with the friendly name already populated" in {

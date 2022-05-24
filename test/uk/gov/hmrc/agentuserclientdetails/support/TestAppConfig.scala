@@ -35,6 +35,7 @@ class TestAppConfig extends AppConfig {
   val es19ThrottlingRate: String = "1 / second"
   val workItemRepoAvailableBeforeSeconds: Int = 0
   val workItemRepoFailedBeforeSeconds: Int = 1
+  val workItemRepoGiveUpAfterMinutes: Int = 1440
   val stubsCompatibilityMode: Boolean = true
   val jobRestartRepoQueueInitialDelaySeconds: Int = 60
   val jobRestartRepoQueueIntervalSeconds: Int = 60
@@ -42,6 +43,6 @@ class TestAppConfig extends AppConfig {
   val jobRepoCleanupInitialDelaySeconds: Int = 300
   val jobLogRepoStatsQueueInitialDelaySeconds: Int = 60
   val jobLogRepoStatsQueueIntervalSeconds: Int = 60
-  override val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
-  override val userGroupsSearchUrl: String = ""
+  val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
+  val userGroupsSearchUrl: String = ""
 }

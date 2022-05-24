@@ -11,3 +11,6 @@
 
 # Add all the application routes to the prod.routes file
 ->         /                          prod.Routes
+
+POST       /agent-user-client-details/groupid/:groupid/refresh-names           uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.forceRefreshFriendlyNamesForGroupId(groupid: String)
+POST       /agent-user-client-details/arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.forceRefreshFriendlyNamesForArn(arn: String)

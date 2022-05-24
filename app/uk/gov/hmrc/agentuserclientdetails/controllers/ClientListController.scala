@@ -114,7 +114,7 @@ class ClientListController @Inject()(
       case Success(enrolments) =>
         for {
           _ <- workItemService.removeByGroupId(groupId)
-          _ = logger.info(s"FORCED client list request for groupId $groupId. All work items for this groupId have been deleted and: ${enrolments.length} new work items will be created.")
+          _ = logger.info(s"FORCED client list request for groupId $groupId. All work items for this groupId have been deleted and ${enrolments.length} new work items will be created.")
           enrolmentsWithoutName = enrolments.map(_.copy(friendlyName = ""))
           _ <- workItemService.pushNew(enrolmentsWithoutName.map(enrolment => makeWorkItem(enrolment)), DateTime.now(), ToDo)
         } yield {
