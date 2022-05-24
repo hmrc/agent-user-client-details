@@ -64,7 +64,7 @@ class AgentUserClientDetailsMain @Inject()(
   actorSystem.scheduler.schedule(initialDelay = appConfig.jobLogRepoStatsQueueInitialDelaySeconds.seconds, interval = appConfig.jobLogRepoStatsQueueIntervalSeconds.seconds) {
     logger.info("Starting work item repository cleanup.")
     workItemService.collectStats.map { stats =>
-      logger.info(s"Work item repository stats: ${Json.toJson(stats)}")
+      logger.info(s"Work item repository stats: ${if (stats.isEmpty) "No work items" else Json.toJson(stats).toString}")
     }
   }
 }

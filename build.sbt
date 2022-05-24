@@ -30,3 +30,6 @@ lazy val microservice = Project(appName, file("."))
   .settings(
     resolvers += Resolver.jcenterRepo,
     resolvers += "hmrc-releases" at "https://artefacts.tax.service.gov.uk/artifactory/hmrc-releases/")
+
+Test / javaOptions += "-Dlogger.resource=logback-test.xml"
+IntegrationTest / javaOptions += "-Dlogger.resource=logback-test.xml"

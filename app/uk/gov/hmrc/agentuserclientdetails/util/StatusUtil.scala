@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.util
 
 import play.api.http.Status._
+import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 object StatusUtil {
@@ -24,6 +25,10 @@ object StatusUtil {
   def isRetryable(status: Int): Boolean = retryableStatuses.contains(status)
   def isRetryable(e: Throwable): Boolean = e match {
     case uer: UpstreamErrorResponse => isRetryable(uer.statusCode)
-    case _ => false // Expand this list if we identify any other cases that can be retried.
+    case _: InvalidServiceIdException => false
+    // Expand this list if we identify any other cases to be handled specifically
+    case _ => true
+    // Any other exception, when the future does not complete successfully and thus there isn't a status code
+    // is considered a temporary problem that is potentially retryable.
   }
 }
