@@ -126,9 +126,9 @@ class AgentCacheProvider @Inject()(val environment: Environment, configuration: 
       new LocalCaffeineCache[Option[VatCustomerDetails]]("VatCustomerDetailsFromDES", cacheSize, cacheExpires)
     else new DoNotCache[Option[VatCustomerDetails]]
 
-  val es3Cache: Cache[HttpResponse] =
+  val es1Cache: Cache[HttpResponse] =
     if (cacheEnabled)
-      new LocalCaffeineCache[HttpResponse]("ES3Enrolments", cacheSize, cacheExpires)
+      new LocalCaffeineCache[HttpResponse]("ES1Enrolments", cacheSize, cacheExpires)
     else new DoNotCache[HttpResponse]
 
 }
