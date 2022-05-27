@@ -64,8 +64,6 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
 
-  private val es3cache = agentCacheProvider.es3Cache
-
   // ES1 - principal
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
     val enrolmentKeyPrefix = "HMRC-AS-AGENT~AgentReferenceNumber"
@@ -73,7 +71,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
     val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
 
     monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
-      es3cache(arn.value) {
+      agentCacheProvider.es1Cache(arn.value) {
         http.GET[HttpResponse](url.toString)
       }.map { response =>
         response.status match {
@@ -104,9 +102,8 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
         espBaseUrl,
         s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated")
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
-      es3cache(groupId) {
-        http.GET[HttpResponse](url.toString)
-      }.map { response =>
+      // Do not cache this
+      http.GET[HttpResponse](url.toString).map { response =>
         response.status match {
           case Status.OK => (response.json \ "enrolments").as[Seq[Enrolment]]
           case Status.NO_CONTENT => Seq.empty
@@ -129,7 +126,6 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
         response.status match {
           case status if is2xx(status) =>
             if (status != Status.NO_CONTENT) logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
-            es3cache.invalidate(groupId)
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }
