@@ -23,9 +23,10 @@ import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import reactivemongo.bson.BSONObjectID
+import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{Client, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.support._
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}

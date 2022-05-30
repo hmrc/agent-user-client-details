@@ -19,11 +19,9 @@ package uk.gov.hmrc.agentuserclientdetails
 import com.google.inject.AbstractModule
 import play.api.http.Status.{NO_CONTENT, OK}
 import play.api.libs.json.{Json, Writes}
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, EnrolmentKey, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model._
-import uk.gov.hmrc.agentuserclientdetails.util.EnrolmentKey
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global

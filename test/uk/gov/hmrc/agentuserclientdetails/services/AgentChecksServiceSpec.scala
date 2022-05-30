@@ -18,11 +18,11 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.joda.time.DateTime
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfigImpl
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UserDetails, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.{Client, Enrolment, FriendlyNameWorkItem, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository, RecordInserted, RecordUpdated, UpsertType}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
