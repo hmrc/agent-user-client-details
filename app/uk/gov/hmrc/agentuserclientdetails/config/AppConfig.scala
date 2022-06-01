@@ -56,6 +56,8 @@ trait AppConfig {
   val jobLogRepoStatsQueueInitialDelaySeconds: Int
   val jobLogRepoStatsQueueIntervalSeconds: Int
 
+  val maxFriendlyNameUpdateBatchSize: Int
+
   val stubsCompatibilityMode: Boolean
 
   val agentsizeRefreshDuration: Duration
@@ -99,6 +101,8 @@ class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig 
   lazy val jobRepoCleanupIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.intervalSeconds")
   lazy val jobLogRepoStatsQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.initialDelaySeconds")
   lazy val jobLogRepoStatsQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
+
+  lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 
   lazy val agentsizeRefreshDuration: Duration = servicesConfig.getDuration("agentsize.refreshduration")
 
