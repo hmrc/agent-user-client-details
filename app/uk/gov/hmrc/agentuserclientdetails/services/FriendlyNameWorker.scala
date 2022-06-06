@@ -20,10 +20,11 @@ import akka.actor.ActorSystem
 import org.joda.time.DateTime
 import play.api.Logging
 import play.api.libs.iteratee.{Enumerator, Iteratee}
+import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.util.{EnrolmentKey, StatusUtil}
+import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
 import uk.gov.hmrc.workitem._

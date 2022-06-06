@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.{Format, Json}
+import uk.gov.hmrc.agentmtdidentifiers.model.Client
 
 case class FriendlyNameWorkItem(
   groupId: String,

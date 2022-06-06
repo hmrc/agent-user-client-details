@@ -20,10 +20,9 @@ import com.google.inject.AbstractModule
 import play.api.http.Status.{BAD_GATEWAY, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED}
 import play.api.libs.json.Json
 import play.api.libs.ws.{WSClient, WSResponse}
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UserDetails, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.{Enrolment, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository, AgentSizeRepositoryImpl}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
