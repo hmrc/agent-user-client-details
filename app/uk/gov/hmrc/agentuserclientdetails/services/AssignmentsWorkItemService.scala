@@ -18,25 +18,25 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.google.inject.ImplementedBy
 import org.joda.time.DateTime
-import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import play.api.libs.json.{JsArray, JsDefined, JsNumber, JsObject, JsString, Json}
 import reactivemongo.api.Cursor
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
+import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.workitem.{Duplicate, ProcessingStatus, ResultStatus, Succeeded, WorkItem}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[WorkItemServiceImpl])
-trait WorkItemService {
+@ImplementedBy(classOf[AssignmentsWorkItemServiceImpl])
+trait AssignmentsWorkItemService {
 
-  /** Query by groupId and optionally by status (leave status as None to include all statuses)
+  /** Query by status
     */
-  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit
+  def query(status: Seq[ProcessingStatus], limit: Int = -1)(implicit
     ec: ExecutionContext
-  ): Future[Seq[WorkItem[FriendlyNameWorkItem]]]
+  ): Future[Seq[WorkItem[AssignmentWorkItem]]]
 
   /** Removes any items that have been marked as successful or duplicated.
     */
@@ -46,7 +46,7 @@ trait WorkItemService {
     */
   def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]]
 
-  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit
+  def pushNew(items: Seq[AssignmentWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit
     ec: ExecutionContext
   ): Future[Unit]
 
@@ -56,32 +56,24 @@ trait WorkItemService {
 
   def removeAll()(implicit ec: ExecutionContext): Future[WriteResult]
 
-  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[WriteResult]
-
   def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit
     ec: ExecutionContext
-  ): Future[Option[WorkItem[FriendlyNameWorkItem]]]
+  ): Future[Option[WorkItem[AssignmentWorkItem]]]
 }
 
-class WorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkItemRepository) extends WorkItemService {
+class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkItemRepository)
+    extends AssignmentsWorkItemService {
 
-  /** Query by groupId and optionally by status (leave status as None to include all statuses)
+  /** Query by status
     */
-  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit
+  def query(status: Seq[ProcessingStatus], limit: Int = -1)(implicit
     ec: ExecutionContext
-  ): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
+  ): Future[Seq[WorkItem[AssignmentWorkItem]]] = {
     import workItemRepo._
-    val selector = status match {
-      case Some(statuses) =>
-        Json.obj(
-          "item.groupId" -> JsString(groupId),
-          "status"       -> Json.obj("$in" -> JsArray(statuses.map(s => JsString(s.name))))
-        )
-      case None => Json.obj("item.groupId" -> JsString(groupId))
-    }
+    val selector = Json.obj("status" -> Json.obj("$in" -> JsArray(status.map(s => JsString(s.name)))))
     workItemRepo.collection
       .find(selector, projection = None)
-      .cursor[WorkItem[FriendlyNameWorkItem]]()
+      .cursor[WorkItem[AssignmentWorkItem]]()
       .collect[Seq](limit, Cursor.FailOnError())
   }
 
@@ -111,7 +103,7 @@ class WorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkItemRepositor
       }
   }
 
-  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit
+  def pushNew(items: Seq[AssignmentWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit
     ec: ExecutionContext
   ): Future[Unit] =
     workItemRepo.pushNew(items, receivedAt, _ => initialState).map(_ => ())
@@ -123,11 +115,8 @@ class WorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkItemRepositor
 
   def removeAll()(implicit ec: ExecutionContext): Future[WriteResult] = workItemRepo.removeAll()
 
-  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[WriteResult] =
-    workItemRepo.remove("item.groupId" -> JsString(groupId))
-
   def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit
     ec: ExecutionContext
-  ): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
+  ): Future[Option[WorkItem[AssignmentWorkItem]]] =
     workItemRepo.pullOutstanding(failedBefore, availableBefore)
 }

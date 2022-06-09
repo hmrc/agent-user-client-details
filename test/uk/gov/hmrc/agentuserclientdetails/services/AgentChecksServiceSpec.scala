@@ -52,7 +52,7 @@ class AgentChecksServiceSpec extends BaseSpec {
     val mockAgentSizeRepository: AgentSizeRepository = mock[AgentSizeRepository]
     val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
     val mockUsersGroupsSearchConnector: UsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
-    val mockWorkItemService: WorkItemService = mock[WorkItemService]
+    val mockWorkItemService: FriendlyNameWorkItemService = mock[FriendlyNameWorkItemService]
 
     val agentChecksService: AgentChecksService = new AgentChecksService(
       appconfig,
@@ -389,7 +389,7 @@ class AgentChecksServiceSpec extends BaseSpec {
 
   private def mockWorkItemServiceQuery(
     workItems: Seq[WorkItem[FriendlyNameWorkItem]]
-  )(mockWorkItemService: WorkItemService) =
+  )(mockWorkItemService: FriendlyNameWorkItemService) =
     (mockWorkItemService
       .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
       .expects(groupId, None, *, *)

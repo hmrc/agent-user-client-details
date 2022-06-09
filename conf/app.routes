@@ -15,3 +15,5 @@ GET        /arn/:arn/work-items-exist                uk.gov.hmrc.agentuserclient
 GET        /arn/:arn/team-members                    uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getTeamMembers(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 POST       /arn/:arn/friendly-name                   uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController.updateFriendlyName(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+
+POST       /user-enrolment-assignments               uk.gov.hmrc.agentuserclientdetails.controllers.AssignmentController.assignEnrolments

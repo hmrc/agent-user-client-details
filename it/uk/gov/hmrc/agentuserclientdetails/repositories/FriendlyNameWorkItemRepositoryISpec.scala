@@ -22,7 +22,7 @@ import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
+import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem._
@@ -33,7 +33,7 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val wir = FriendlyNameWorkItemRepository(config)
-  lazy val wis = new WorkItemServiceImpl(wir)
+  lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"

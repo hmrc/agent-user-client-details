@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.services.WorkItemService
+import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.workitem.{Failed, PermanentlyFailed, ProcessingStatus, ToDo}
@@ -37,7 +37,7 @@ import scala.util.{Failure, Success}
 @Singleton()
 class ClientListController @Inject() (
   cc: ControllerComponents,
-  workItemService: WorkItemService,
+  workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)

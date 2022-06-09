@@ -34,7 +34,7 @@ class AgentChecksService @Inject() (
   agentSizeRepository: AgentSizeRepository,
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
-  workItemService: WorkItemService
+  workItemService: FriendlyNameWorkItemService
 ) extends Logging {
 
   private val ENROLMENT_STATE_ACTIVATED = "Activated"
