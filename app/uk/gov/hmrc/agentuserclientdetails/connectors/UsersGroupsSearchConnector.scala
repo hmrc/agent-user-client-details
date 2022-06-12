@@ -21,8 +21,8 @@ import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json._
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentmtdidentifiers.model.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse, UpstreamErrorResponse}
@@ -31,15 +31,6 @@ import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-/**
-  * Cut down version of UserDetails from users-groups-search, with only the data we
-  * are interested in
-  * */
-case class UserDetails(userId: Option[String] = None, credentialRole: Option[String] = None)
-
-object UserDetails {
-  implicit val formats: Format[UserDetails] = Json.format
-}
 
 @ImplementedBy(classOf[UsersGroupsSearchConnectorImpl])
 trait UsersGroupsSearchConnector {

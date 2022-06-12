@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import com.typesafe.config.Config
 import org.joda.time.DateTime
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Configuration
 import play.api.http.Status
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
@@ -43,14 +37,7 @@ import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class ClientListControllerISpec extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with BeforeAndAfterEach
-  with IntegrationPatience
-  with GuiceOneServerPerSuite
-  with MongoSpecSupport
-  with MockFactory {
+class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSupport {
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]

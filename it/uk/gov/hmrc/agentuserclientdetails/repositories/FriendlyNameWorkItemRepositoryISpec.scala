@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
 import org.joda.time.DateTime
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
@@ -35,14 +29,7 @@ import uk.gov.hmrc.workitem._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with BeforeAndAfterEach
-  with IntegrationPatience
-  with GuiceOneServerPerSuite
-  with MongoSpecSupport
-  with MockFactory {
+class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSpecSupport {
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val wir = FriendlyNameWorkItemRepository(config)

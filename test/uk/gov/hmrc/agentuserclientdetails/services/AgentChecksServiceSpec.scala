@@ -18,10 +18,10 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.joda.time.DateTime
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, Identifier, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfigImpl
-import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UserDetails, UsersGroupsSearchConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository, RecordInserted, RecordUpdated, UpsertType}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -286,6 +286,34 @@ class AgentChecksServiceSpec extends BaseSpec {
     def buildWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
       val now = DateTime.now()
       WorkItem(id = BSONObjectID.generate(), receivedAt = now, updatedAt = now, availableAt = now, status = status, failureCount = 0, item = item)
+    }
+  }
+
+  "Get Team Members" when {
+
+    "enrolment store proxy returns no group for ARN" should {
+      "return no team members" in new TestScope {
+        mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(None)(mockEnrolmentStoreProxyConnector)
+
+        agentChecksService.getTeamMembers(arn).futureValue shouldBe empty
+      }
+    }
+
+    "enrolment store proxy returns a group for ARN" when {
+
+      "user groups search connector returns non-empty list of user details" should {
+        "return team members" in new TestScope {
+          mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
+          val seqUserDetails: Seq[UserDetails] = Seq(
+            UserDetails(userId = Some("userId1"), credentialRole = Some("Assistant")),
+            UserDetails(userId = Some("userId2"), credentialRole = Some("Admin"))
+          )
+
+          mockUsersGroupsSearchConnectorGetGroupUsers(seqUserDetails)(mockUsersGroupsSearchConnector)
+
+          agentChecksService.getTeamMembers(arn).futureValue shouldBe seqUserDetails
+        }
+      }
     }
   }
 

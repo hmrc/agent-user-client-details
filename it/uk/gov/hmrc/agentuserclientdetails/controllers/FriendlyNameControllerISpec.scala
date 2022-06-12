@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import com.typesafe.config.Config
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Configuration
 import play.api.libs.json._
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -40,14 +34,7 @@ import uk.gov.hmrc.mongo.MongoSpecSupport
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class FriendlyNameControllerISpec extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with BeforeAndAfterEach
-  with IntegrationPatience
-  with GuiceOneServerPerSuite
-  with MongoSpecSupport
-  with MockFactory {
+class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupport {
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]

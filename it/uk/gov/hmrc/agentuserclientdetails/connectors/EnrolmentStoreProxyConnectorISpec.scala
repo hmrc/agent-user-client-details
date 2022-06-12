@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
 import play.api.http.Status.{NO_CONTENT, OK}
 import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, EnrolmentKey, Identifier}
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.joda.time.DateTime
 import org.scalamock.scalatest.MockFactory
@@ -24,9 +24,9 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
+import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
-import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.Succeeded

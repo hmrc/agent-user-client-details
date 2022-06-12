@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository}
@@ -67,7 +67,6 @@ class AgentChecksService @Inject() (appConfig: AppConfig, agentSizeRepository: A
 
   def outstandingWorkItemsExist(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Boolean] = {
     for {
-      _ <- Future.successful(logger.debug("Fetching work items"))
       maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
       workItems <- maybeGroupId match {
         case None =>
@@ -81,6 +80,18 @@ class AgentChecksService @Inject() (appConfig: AppConfig, agentSizeRepository: A
         case _ => false
       }
     }
+  }
+
+  def getTeamMembers(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Seq[UserDetails]] = {
+    for {
+      maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
+      groupUsers <- maybeGroupId match {
+        case None =>
+          Future.successful(Seq.empty)
+        case Some(groupId) =>
+          usersGroupsSearchConnector.getGroupUsers(groupId)
+      }
+    } yield groupUsers
   }
 
   private def withinRefreshDuration(refreshedDateTime: LocalDateTime): Boolean = {

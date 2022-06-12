@@ -44,6 +44,6 @@ class TestAppConfig extends AppConfig {
   val jobLogRepoStatsQueueInitialDelaySeconds: Int = 60
   val jobLogRepoStatsQueueIntervalSeconds: Int = 60
   val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
-  val userGroupsSearchUrl: String = ""
+  val userGroupsSearchUrl: String = "http://localhost"
   val maxFriendlyNameUpdateBatchSize: Int = 20
 }

@@ -17,79 +17,64 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import play.api.Logging
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.libs.json.Json
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSize
 import uk.gov.hmrc.agentuserclientdetails.services.AgentChecksService
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 @Singleton()
-class AgentChecksController @Inject()(agentChecksService: AgentChecksService, cc: ControllerComponents)
-                                     (implicit ec: ExecutionContext) extends BackendController(cc) with Logging {
+class AgentChecksController @Inject()(agentChecksService: AgentChecksService)
+                                     (implicit cc: ControllerComponents, ec: ExecutionContext) extends BackendController(cc) with Logging {
 
   def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    agentChecksService.getAgentSize(arn).transformWith {
-      case Success(maybeAgentSize) => maybeAgentSize match {
-        case None => Future.successful(NotFound)
-        case Some(agentSize) => Future.successful(Ok(generateStatusJson(agentSize)))
-      }
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
-        logger.warn(s"Details for Arn not found: ${uer.message}")
-        Future.successful(NotFound)
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED =>
-        logger.warn(s"Request was not authorized: ${uer.message}")
-        Future.successful(Unauthorized)
-      case Failure(uer: UpstreamErrorResponse) =>
-        logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
-        Future.successful(InternalServerError)
-      case Failure(ex: Exception) =>
-        logger.warn(s"Error encountered: ${ex.getMessage}")
-        Future.successful(InternalServerError)
-    }
+
+    agentChecksService.getAgentSize(arn).map {
+      case None => NotFound
+      case Some(agentSize) => Ok(Json.toJson(Json.obj("client-count" -> agentSize.clientCount)))
+    } transformWith failureHandler
   }
 
   def userCheck(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    agentChecksService.userCheck(arn).transformWith {
-      case Success(count) => if (count > 1 ) Future.successful(NoContent) else Future.successful(Forbidden)
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
-        logger.warn(s"Details for Arn not found: ${uer.message}")
-        Future.successful(NotFound)
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED =>
-        logger.warn(s"Request was not authorized: ${uer.message}")
-        Future.successful(Unauthorized)
-      case Failure(uer: UpstreamErrorResponse) =>
-        logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
-        Future.successful(InternalServerError)
-      case Failure(ex: Exception) =>
-        logger.warn(s"Error encountered: ${ex.getMessage}")
-        Future.successful(InternalServerError)
-    }
+    agentChecksService.userCheck(arn).map { count =>
+      if (count > 1 ) NoContent
+      else Forbidden
+    } transformWith failureHandler
   }
 
   def outstandingWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    agentChecksService.outstandingWorkItemsExist(arn).transformWith {
-      case Success(workItemsExist) => if (workItemsExist) Future.successful(Ok) else Future.successful(NoContent)
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
-        logger.warn(s"Details for Arn not found: ${uer.message}")
-        Future.successful(NotFound)
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED =>
-        logger.warn(s"Request was not authorized: ${uer.message}")
-        Future.successful(Unauthorized)
-      case Failure(uer: UpstreamErrorResponse) =>
-        logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
-        Future.successful(InternalServerError)
-      case Failure(ex: Exception) =>
-        logger.warn(s"Error encountered: ${ex.getMessage}")
-        Future.successful(InternalServerError)
-    }
+    agentChecksService.outstandingWorkItemsExist(arn).map { workItemsExist =>
+      if (workItemsExist) Ok
+      else NoContent
+    } transformWith failureHandler
   }
 
-  private def generateStatusJson(agentSize: AgentSize): JsValue =
-    Json.toJson(Json.obj("client-count" -> agentSize.clientCount))
+  def getTeamMembers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    agentChecksService.getTeamMembers(arn).map { teamMembers =>
+      Ok(Json.toJson(teamMembers))
+    } transformWith failureHandler
+  }
+
+  private def failureHandler(triedResult: Try[Result]): Future[Result] = triedResult match {
+    case Success(result) =>
+      Future.successful(result)
+    case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
+      logger.warn(s"Details for Arn not found: ${uer.message}")
+      Future.successful(NotFound)
+    case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED =>
+      logger.warn(s"Request was not authorized: ${uer.message}")
+      Future.successful(Unauthorized)
+    case Failure(uer: UpstreamErrorResponse) =>
+      logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
+      Future.successful(InternalServerError)
+    case Failure(ex: Exception) =>
+      logger.warn(s"Error encountered: ${ex.getMessage}")
+      Future.successful(InternalServerError)
+  }
+
 }

@@ -16,34 +16,30 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import com.google.inject.AbstractModule
 import play.api.http.Status.{BAD_GATEWAY, NOT_FOUND, OK}
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
+import uk.gov.hmrc.agentmtdidentifiers.model.UserDetails
+import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.graphite.DisabledMetrics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class UserGroupsSearchConnectorISpec extends BaseIntegrationSpec {
+class UserGroupsSearchConnectorSpec extends BaseSpec {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
+  implicit val appConfig: AppConfig = new TestAppConfig
   val mockHttpClient: HttpClient = mock[HttpClient]
 
   val groupId = "2K6H-N1C1-7M7V-O4A3"
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit = {
-      bind(classOf[HttpClient]).toInstance(mockHttpClient)
-    }
-  }
-
   trait TestScope {
-    lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
     lazy val urlUserGroupSearch = s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users"
-    lazy val ugsConnector: UsersGroupsSearchConnector = app.injector.instanceOf[UsersGroupsSearchConnector]
+    lazy val ugsConnector: UsersGroupsSearchConnector = new UsersGroupsSearchConnectorImpl(mockHttpClient, new DisabledMetrics)
   }
 
   "getGroupUsers" when {
