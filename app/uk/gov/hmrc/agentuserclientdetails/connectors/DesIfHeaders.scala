@@ -24,7 +24,7 @@ import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
 @Singleton
-class DesIfHeaders @Inject()(appConfig: AppConfig) extends Logging {
+class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
@@ -39,11 +39,14 @@ class DesIfHeaders @Inject()(appConfig: AppConfig) extends Logging {
 
   // Note that the implicit header carrier passed-in can in most cases be an empty one.
   // Only when testing locally against stubs we need to have one in order that we may include a session id.
-  def outboundHeaders(viaIF: Boolean, apiName: Option[String] = None)(implicit hc: HeaderCarrier): Seq[(String, String)] = {
+  def outboundHeaders(viaIF: Boolean, apiName: Option[String] = None)(implicit
+    hc: HeaderCarrier
+  ): Seq[(String, String)] = {
 
     val baseHeaders = Seq(
-      Environment   -> s"${if (viaIF) { ifEnvironment } else { desEnvironment }}",
-      CorrelationId -> UUID.randomUUID().toString,
+      Environment -> s"${if (viaIF) { ifEnvironment }
+        else { desEnvironment }}",
+      CorrelationId -> UUID.randomUUID().toString
     ) ++ hc.sessionId.toSeq.map { sessionId =>
       SessionId -> sessionId.value
     }

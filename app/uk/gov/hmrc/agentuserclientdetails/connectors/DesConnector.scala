@@ -36,32 +36,40 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[DesConnectorImpl])
 trait DesConnector {
-  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]]
+  def getCgtSubscription(
+    cgtRef: CgtRef
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]]
 
-  def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
+  def getTradingNameForMtdItId(
+    mtdbsa: MtdItId
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
-  def getVatCustomerDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]]
+  def getVatCustomerDetails(
+    vrn: Vrn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]]
 }
 
 @Singleton
-class DesConnectorImpl @Inject()(
-                                  appConfig: AppConfig,
-                                  agentCacheProvider: AgentCacheProvider,
-                                  httpClient: HttpClient,
-                                  metrics: Metrics,
-                                  desIfHeaders: DesIfHeaders)
-  extends HttpAPIMonitor with DesConnector with HttpErrorFunctions with Logging {
+class DesConnectorImpl @Inject() (
+  appConfig: AppConfig,
+  agentCacheProvider: AgentCacheProvider,
+  httpClient: HttpClient,
+  metrics: Metrics,
+  desIfHeaders: DesIfHeaders
+) extends HttpAPIMonitor with DesConnector with HttpErrorFunctions with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private val baseUrl: String = appConfig.desBaseUrl
 
-  def getCgtSubscription(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]] = {
+  def getCgtSubscription(
+    cgtRef: CgtRef
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]] = {
 
     val url = s"$baseUrl/subscriptions/CGT/ZCGT/${cgtRef.value}"
 
     getWithDesIfHeaders("getCgtSubscription", url).map { response =>
       response.status match {
-        case OK => Some(response.json.as[CgtSubscription])
+        case OK        => Some(response.json.as[CgtSubscription])
         case NOT_FOUND => None
         case other =>
           throw UpstreamErrorResponse(s"unexpected error during 'getCgtSubscription': ${response.body}", other, other)
@@ -69,22 +77,31 @@ class DesConnectorImpl @Inject()(
     }
   }
 
-  def getTradingNameForMtdItId(mtdbsa: MtdItId)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
+  def getTradingNameForMtdItId(
+    mtdbsa: MtdItId
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
     val url =
       s"$baseUrl/registration/business-details/mtdbsa/${UriEncoding.encodePathSegment(mtdbsa.value, "UTF-8")}"
     agentCacheProvider.tradingNameCache(mtdbsa.value) {
       getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
         response.status match {
-          case status if is2xx(status) => (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
+          case status if is2xx(status) =>
+            (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
           case NOT_FOUND => None
           case other =>
-            throw UpstreamErrorResponse(s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other", other, other)
+            throw UpstreamErrorResponse(
+              s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other",
+              other,
+              other
+            )
         }
       }
     }
   }
 
-  def getVatCustomerDetails(vrn: Vrn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] = {
+  def getVatCustomerDetails(
+    vrn: Vrn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] = {
     val url = s"$baseUrl/vat/customer/vrn/${UriEncoding.encodePathSegment(vrn.value, "UTF-8")}/information"
     agentCacheProvider.vatCustomerDetailsCache(vrn.value) {
       getWithDesIfHeaders("GetVatOrganisationNameByVrn", url).map { response =>
@@ -93,16 +110,25 @@ class DesConnectorImpl @Inject()(
             (response.json \ "approvedInformation" \ "customerDetails").asOpt[VatCustomerDetails]
           case NOT_FOUND => None
           case other =>
-            throw UpstreamErrorResponse(s"unexpected error during 'getVatCustomerDetails', statusCode=$other", other, other)
+            throw UpstreamErrorResponse(
+              s"unexpected error during 'getVatCustomerDetails', statusCode=$other",
+              other,
+              other
+            )
         }
       }
     }
   }
 
-  private def getWithDesIfHeaders(apiName: String, url: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] =
+  private def getWithDesIfHeaders(apiName: String, url: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = false, Some(apiName)))(implicitly[HttpReads[HttpResponse]], hc, ec)
+      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = false, Some(apiName)))(
+        implicitly[HttpReads[HttpResponse]],
+        hc,
+        ec
+      )
     }
 }

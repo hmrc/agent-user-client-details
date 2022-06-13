@@ -23,6 +23,9 @@ import play.api.Configuration
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.DB
 import uk.gov.hmrc.clusterworkthrottling.{DefaultServiceInstances, ServiceInstances}
+import uk.gov.hmrc.mongo.MongoComponent
+
+import scala.concurrent.ExecutionContext
 
 class ClientNameModule extends AbstractModule with ScalaModule {
 
@@ -35,7 +38,9 @@ class ClientNameModule extends AbstractModule with ScalaModule {
 
   @Provides
   @Singleton
-  def serviceInstancesProvider(configuration: Configuration, mongo: () => DB): ServiceInstances =
-    new DefaultServiceInstances(configuration)(mongo)
+  def serviceInstancesProvider(configuration: Configuration, mongo: MongoComponent)(implicit
+    ec: ExecutionContext
+  ): ServiceInstances =
+    new DefaultServiceInstances(configuration, mongo)
 
 }

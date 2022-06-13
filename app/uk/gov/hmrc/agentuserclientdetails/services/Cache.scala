@@ -53,7 +53,7 @@ class DoNotCache[T] extends Cache[T] {
 }
 
 class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit metrics: Metrics)
-  extends KenshooCacheMetrics with Cache[T] with Logging {
+    extends KenshooCacheMetrics with Cache[T] with Logging {
 
   val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -70,11 +70,10 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
         record("Count-" + name + "-from-cache")
         Future.successful(v)
       case None =>
-        body.andThen {
-          case Success(v) =>
-            logger.debug(s"Missing $name cache hit, storing new value.")
-            record("Count-" + name + "-from-source")
-            underlying.put(key, v)
+        body.andThen { case Success(v) =>
+          logger.debug(s"Missing $name cache hit, storing new value.")
+          record("Count-" + name + "-from-source")
+          underlying.put(key, v)
         }
     }
 
@@ -83,8 +82,9 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
 }
 
 @Singleton
-class AgentCacheProvider @Inject()(val environment: Environment, configuration: Configuration)(
-  implicit metrics: Metrics) {
+class AgentCacheProvider @Inject() (val environment: Environment, configuration: Configuration)(implicit
+  metrics: Metrics
+) {
 
   val runModeConfiguration: Configuration = configuration
   def mode = environment.mode
@@ -102,8 +102,8 @@ class AgentCacheProvider @Inject()(val environment: Environment, configuration: 
     else new DoNotCache[Option[CgtSubscription]]
 
   val pptSubscriptionCache: Cache[Option[PptSubscription]] =
-  if (cacheEnabled) new LocalCaffeineCache[Option[PptSubscription]]("pptSubscription", cacheSize, cacheExpires)
-  else new DoNotCache[Option[PptSubscription]]
+    if (cacheEnabled) new LocalCaffeineCache[Option[PptSubscription]]("pptSubscription", cacheSize, cacheExpires)
+    else new DoNotCache[Option[PptSubscription]]
 
   val clientNinoCache: Cache[Option[Nino]] =
     if (cacheEnabled) new LocalCaffeineCache[Option[Nino]]("ClientNinoFromDES", cacheSize, cacheExpires)

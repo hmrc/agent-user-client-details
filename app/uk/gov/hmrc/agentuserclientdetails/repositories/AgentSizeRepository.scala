@@ -48,16 +48,16 @@ trait AgentSizeRepository {
 
 @Singleton
 class AgentSizeRepositoryImpl @Inject() (
-                                  mongoComponent: MongoComponent
-                                )(implicit ec: ExecutionContext)
-  extends PlayMongoRepository[AgentSize](
-    collectionName = "agent-size",
-    domainFormat = AgentSize.formatAgentSize,
-    mongoComponent = mongoComponent,
-    indexes = Seq(
-      IndexModel(ascending("arn"), new IndexOptions().name("arnIdx").unique(true))
-    )
-  ) with AgentSizeRepository with Logging {
+  mongoComponent: MongoComponent
+)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[AgentSize](
+      collectionName = "agent-size",
+      domainFormat = AgentSize.formatAgentSize,
+      mongoComponent = mongoComponent,
+      indexes = Seq(
+        IndexModel(ascending("arn"), new IndexOptions().name("arnIdx").unique(true))
+      )
+    ) with AgentSizeRepository with Logging {
 
   override def get(arn: Arn): Future[Option[AgentSize]] = collection.find(equal("arn", arn.value)).headOption()
 

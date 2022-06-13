@@ -29,13 +29,13 @@ import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
 
 import javax.inject.Inject
 
-case class FriendlyNameWorkItemRepository @Inject()(
-                                 config: Config)(implicit mongo: () => DB)
-  extends WorkItemRepository[FriendlyNameWorkItem, BSONObjectID](
-    "client-name-work-items",
-    mongo,
-    WorkItem.workItemMongoFormat[FriendlyNameWorkItem],
-    config) {
+case class FriendlyNameWorkItemRepository @Inject() (config: Config)(implicit mongo: () => DB)
+    extends WorkItemRepository[FriendlyNameWorkItem, BSONObjectID](
+      "client-name-work-items",
+      mongo,
+      WorkItem.workItemMongoFormat[FriendlyNameWorkItem],
+      config
+    ) {
 
   implicit val dateFormats: Format[DateTime] =
     ReactiveMongoFormats.dateTimeFormats
@@ -54,10 +54,7 @@ case class FriendlyNameWorkItemRepository @Inject()(
   override def now: DateTime = DateTime.now
 
   override def indexes: Seq[Index] = super.indexes ++ Seq(
-    Index(
-      key = Seq("item.groupId" -> IndexType.Ascending),
-      unique = false,
-      background = true)
+    Index(key = Seq("item.groupId" -> IndexType.Ascending), unique = false, background = true)
   )
 
 }

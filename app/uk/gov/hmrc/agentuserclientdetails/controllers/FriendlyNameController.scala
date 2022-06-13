@@ -35,52 +35,67 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton()
-class FriendlyNameController @Inject()(
-                                      cc: ControllerComponents,
-                                      workItemService: WorkItemService,
-                                      espConnector: EnrolmentStoreProxyConnector,
-                                      appConfig: AppConfig
-                                    )(implicit ec: ExecutionContext)
+class FriendlyNameController @Inject() (
+  cc: ControllerComponents,
+  workItemService: WorkItemService,
+  espConnector: EnrolmentStoreProxyConnector,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
   def updateFriendlyName(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    lazy val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
+    lazy val mSessionId: Option[String] =
+      if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
+      else None // only required for local testing against stubs
     withGroupIdForArn(arn) { groupId =>
       withJsonBody[Seq[Enrolment]] { enrolments =>
-        val clientsToUpdate: Seq[Client] = enrolments.flatMap(enr => EnrolmentKey.enrolmentKeys(enr).map(Client(_, enr.friendlyName)))
+        val clientsToUpdate: Seq[Client] =
+          enrolments.flatMap(enr => EnrolmentKey.enrolmentKeys(enr).map(Client(_, enr.friendlyName)))
         val processAsynchronously = clientsToUpdate.length > appConfig.maxFriendlyNameUpdateBatchSize
-        val (clientsToDoNow, clientsToDoLater) = if (processAsynchronously) (Seq.empty, clientsToUpdate) else (clientsToUpdate, Seq.empty)
+        val (clientsToDoNow, clientsToDoLater) =
+          if (processAsynchronously) (Seq.empty, clientsToUpdate) else (clientsToUpdate, Seq.empty)
         for {
           // Try making any ES19 calls before returning. Keep any failures for later inspection.
           results: Seq[Option[(Client, Throwable)]] <- Future.traverse(clientsToDoNow) { client =>
-            espConnector.updateEnrolmentFriendlyName(groupId, client.enrolmentKey, client.friendlyName).transformWith {
-              case Success(()) => Future.successful(None)
-              case Failure(e) => Future.successful(Some((client, e)))
-            }
-          }
+                                                         espConnector
+                                                           .updateEnrolmentFriendlyName(
+                                                             groupId,
+                                                             client.enrolmentKey,
+                                                             client.friendlyName
+                                                           )
+                                                           .transformWith {
+                                                             case Success(()) => Future.successful(None)
+                                                             case Failure(e)  => Future.successful(Some((client, e)))
+                                                           }
+                                                       }
           failures: Seq[(Client, Throwable)] = results.flatten
           // Check which failures are temporary and could be retried.
           (retriableFailures, permanentFailures) = failures.partition { case (_, e) => StatusUtil.isRetryable(e) }
           // Add the tasks to be retried to the work item repository.
-          workItemsForLater = (retriableFailures.map(_._1) ++ clientsToDoLater).map(client => FriendlyNameWorkItem(groupId, client, mSessionId))
+          workItemsForLater = (retriableFailures.map(_._1) ++ clientsToDoLater).map(client =>
+                                FriendlyNameWorkItem(groupId, client, mSessionId)
+                              )
           _ <- workItemService.pushNew(workItemsForLater, DateTime.now(), ToDo)
-          permanentlyFailedEnrolments = enrolments.filter(enr => permanentFailures.map(_._1.enrolmentKey).contains(Client.fromEnrolment(enr).enrolmentKey))
+          permanentlyFailedEnrolments =
+            enrolments.filter(enr =>
+              permanentFailures.map(_._1.enrolmentKey).contains(Client.fromEnrolment(enr).enrolmentKey)
+            )
           info = Json.obj(
-            "delayed" -> Json.toJson((retriableFailures.map(_._1) ++ clientsToDoLater)),
-            "permanentlyFailed" -> Json.toJson(permanentFailures.map(_._1))
-          )
-        } yield {
+                   "delayed"           -> Json.toJson((retriableFailures.map(_._1) ++ clientsToDoLater)),
+                   "permanentlyFailed" -> Json.toJson(permanentFailures.map(_._1))
+                 )
+        } yield
           if (workItemsForLater.nonEmpty) Accepted(info)
           else Ok(info)
-        }
       }
     }
   }
 
-  private def withGroupIdForArn(arn: Arn)(f: String => Future[Result])(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Result] = {
+  private def withGroupIdForArn(
+    arn: Arn
+  )(f: String => Future[Result])(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Result] =
     espConnector.getPrincipalGroupIdFor(arn).flatMap {
       case Some(groupId) => f(groupId)
-      case None => Future.successful(NotFound(s"No group id for ARN ${arn.value}."))
+      case None          => Future.successful(NotFound(s"No group id for ARN ${arn.value}."))
     }
-  }
 }

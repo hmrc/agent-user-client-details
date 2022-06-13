@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
 import org.joda.time.DateTime
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
@@ -35,14 +29,7 @@ import uk.gov.hmrc.workitem._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with BeforeAndAfterEach
-  with IntegrationPatience
-  with GuiceOneServerPerSuite
-  with MongoSpecSupport
-  with MockFactory {
+class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSpecSupport {
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val wir = FriendlyNameWorkItemRepository(config)
@@ -63,12 +50,26 @@ class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
     val now = DateTime.now()
-    WorkItem(id = BSONObjectID.generate(), receivedAt = now, updatedAt = now, availableAt = now, status = status, failureCount = 0, item = item)
+    WorkItem(
+      id = BSONObjectID.generate(),
+      receivedAt = now,
+      updatedAt = now,
+      availableAt = now,
+      status = status,
+      failureCount = 0,
+      item = item
+    )
   }
 
   "collectStats" should {
     "collect the correct statistics about work items in the repository" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), ToDo).futureValue
+      wis
+        .pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
+          DateTime.now(),
+          ToDo
+        )
+        .futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
       val stats = wis.collectStats.futureValue
@@ -81,7 +82,13 @@ class FriendlyNameWorkItemRepositoryISpec extends AnyWordSpec
 
   "query" should {
     "return the correct items based on a query" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), ToDo).futureValue
+      wis
+        .pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
+          DateTime.now(),
+          ToDo
+        )
+        .futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
       wis.query(testGroupId, Some(Seq(ToDo))).futureValue.length shouldBe 2

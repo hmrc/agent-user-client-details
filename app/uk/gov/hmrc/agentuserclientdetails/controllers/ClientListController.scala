@@ -35,12 +35,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton()
-class ClientListController @Inject()(
-                                      cc: ControllerComponents,
-                                      workItemService: WorkItemService,
-                                      espConnector: EnrolmentStoreProxyConnector,
-                                      appConfig: AppConfig
-                                    )(implicit ec: ExecutionContext)
+class ClientListController @Inject() (
+  cc: ControllerComponents,
+  workItemService: WorkItemService,
+  espConnector: EnrolmentStoreProxyConnector,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
   def getClientsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
@@ -69,7 +69,9 @@ class ClientListController @Inject()(
 
   protected def getClientsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
-      val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
+      val mSessionId: Option[String] =
+        if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
+        else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
     espConnector.getEnrolmentsForGroupId(groupId).transformWith {
@@ -91,14 +93,16 @@ class ClientListController @Inject()(
           clientsWantingName = setDifference(clientsWithNoFriendlyName, clientsPermanentlyFailed)
           // We don't want to add to the work items anything that is already in it (whether to-do, failed, duplicate etc.)
           toBeAdded = setDifference(clientsWantingName, clientsAlreadyInRepo)
-          _ = logger.info(s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)")
+          _ =
+            logger.info(
+              s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
+            )
           _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
-        } yield {
+        } yield
           if (clientsWantingName.isEmpty)
             Ok(Json.toJson(clients))
           else
             Accepted(Json.toJson(clients))
-        }
       case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
         Future.successful(NotFound)
       case Failure(uer: UpstreamErrorResponse) =>
@@ -106,9 +110,13 @@ class ClientListController @Inject()(
     }
   }
 
-  protected def forceRefreshFriendlyNamesForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
+  protected def forceRefreshFriendlyNamesForGroupIdFn(
+    groupId: String
+  )(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
-      val mSessionId: Option[String] = if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value) else None // only required for local testing against stubs
+      val mSessionId: Option[String] =
+        if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
+        else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
     espConnector.getEnrolmentsForGroupId(groupId).transformWith {
@@ -116,12 +124,13 @@ class ClientListController @Inject()(
         val clients = enrolments.map(Client.fromEnrolment)
         for {
           _ <- workItemService.removeByGroupId(groupId)
-          _ = logger.info(s"FORCED client list request for groupId $groupId. All work items for this groupId have been deleted and ${clients.length} new work items will be created.")
+          _ =
+            logger.info(
+              s"FORCED client list request for groupId $groupId. All work items for this groupId have been deleted and ${clients.length} new work items will be created."
+            )
           clientsWithoutName = clients.map(_.copy(friendlyName = ""))
           _ <- workItemService.pushNew(clientsWithoutName.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
-        } yield {
-          Accepted
-        }
+        } yield Accepted
       case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
         Future.successful(NotFound)
       case Failure(uer: UpstreamErrorResponse) =>
@@ -129,11 +138,14 @@ class ClientListController @Inject()(
     }
   }
 
-  def getOutstandingWorkItemsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
+  def getOutstandingWorkItemsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] =
     workItemService.query(groupId, None).map { wis =>
-      Ok(Json.toJson[Seq[Client]](wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.client)))
+      Ok(
+        Json.toJson[Seq[Client]](
+          wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.client)
+        )
+      )
     }
-  }
 
   def getWorkItemStats: Action[AnyContent] = Action.async { _ =>
     workItemService.collectStats.map { stats =>
@@ -159,18 +171,20 @@ class ClientListController @Inject()(
     c1s.filterNot(client => e2ek.contains(client.enrolmentKey))
   }
 
-  private def adaptForArn(groupIdAction: String => Future[Result])(arn: String)(implicit request: RequestHeader): Future[Result] = {
+  private def adaptForArn(
+    groupIdAction: String => Future[Result]
+  )(arn: String)(implicit request: RequestHeader): Future[Result] =
     if (!Arn.isValid(arn)) {
       logger.error(s"Invalid ARN: $arn")
       Future.successful(BadRequest)
-    } else espConnector.getPrincipalGroupIdFor(Arn(arn)).transformWith {
-      case Success(Some(groupId)) => groupIdAction(groupId)
-      case Success(None) =>
-        logger.error(s"ARN $arn not found.")
-        Future.successful(NotFound): Future[Result]
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND => Future.successful(NotFound)
-      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED => Future.successful(Unauthorized)
-      case Failure(_) => Future.successful(InternalServerError)
-    }
-  }
+    } else
+      espConnector.getPrincipalGroupIdFor(Arn(arn)).transformWith {
+        case Success(Some(groupId)) => groupIdAction(groupId)
+        case Success(None) =>
+          logger.error(s"ARN $arn not found.")
+          Future.successful(NotFound): Future[Result]
+        case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND    => Future.successful(NotFound)
+        case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED => Future.successful(Unauthorized)
+        case Failure(_) => Future.successful(InternalServerError)
+      }
 }

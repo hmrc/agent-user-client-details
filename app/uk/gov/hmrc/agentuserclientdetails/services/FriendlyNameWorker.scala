@@ -34,23 +34,36 @@ import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class FriendlyNameWorker @Inject()(
-                                       workItemService: WorkItemService,
-                                       esConnector: EnrolmentStoreProxyConnector,
-                                       serviceInstances: ServiceInstances,
-                                       clientNameService: ClientNameService,
-                                       actorSystem: ActorSystem,
-                                       appConfig: AppConfig)(implicit ec: ExecutionContext)
-  extends Logging {
+class FriendlyNameWorker @Inject() (
+  workItemService: WorkItemService,
+  esConnector: EnrolmentStoreProxyConnector,
+  serviceInstances: ServiceInstances,
+  clientNameService: ClientNameService,
+  actorSystem: ActorSystem,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext)
+    extends Logging {
 
   lazy val clientNameThrottler: ThrottledWorkItemProcessor =
-    new ThrottledWorkItemProcessor("client-name-fetching", actorSystem, rateLimit = Some(Rate.parse(appConfig.clientNameFetchThrottlingRate))) {
-      def instanceCount: Int = Option(serviceInstances).fold(1)(_.instanceCount) // must handle serviceInstances == null case (can happen in testing)
+    new ThrottledWorkItemProcessor(
+      "client-name-fetching",
+      actorSystem,
+      rateLimit = Some(Rate.parse(appConfig.clientNameFetchThrottlingRate))
+    ) {
+      def instanceCount: Int = Option(serviceInstances).fold(1)(
+        _.instanceCount
+      ) // must handle serviceInstances == null case (can happen in testing)
     }
 
   lazy val es19Throttler: ThrottledWorkItemProcessor =
-    new ThrottledWorkItemProcessor("es19-update-friendly-name", actorSystem, rateLimit = Some(Rate.parse(appConfig.es19ThrottlingRate))) {
-      def instanceCount: Int = Option(serviceInstances).fold(1)(_.instanceCount) // must handle serviceInstances == null case (can happen in testing)
+    new ThrottledWorkItemProcessor(
+      "es19-update-friendly-name",
+      actorSystem,
+      rateLimit = Some(Rate.parse(appConfig.es19ThrottlingRate))
+    ) {
+      def instanceCount: Int = Option(serviceInstances).fold(1)(
+        _.instanceCount
+      ) // must handle serviceInstances == null case (can happen in testing)
     }
 
   val running = new AtomicBoolean(false)
@@ -59,7 +72,7 @@ class FriendlyNameWorker @Inject()(
 
   def cancel(): Unit = running.set(false)
 
-  def start(): Future[Unit] = {
+  def start(): Future[Unit] =
     running.get() match {
       case true =>
         logger.debug("Work processing triggered but was already running.")
@@ -68,19 +81,20 @@ class FriendlyNameWorker @Inject()(
         logger.debug("Work processing triggered. Starting...")
         running.set(true)
         val workItems: Enumerator[WorkItem[FriendlyNameWorkItem]] = Enumerator.generateM(pullWorkItemWhile(continue))
-        val processWorkItems: Iteratee[WorkItem[FriendlyNameWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) => processItem(item) }
+        val processWorkItems: Iteratee[WorkItem[FriendlyNameWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) =>
+          processItem(item)
+        }
         val result = workItems.run(processWorkItems)
-        result.onComplete {
-          case _ =>
-            logger.debug("Work processing finished.")
-            running.set(false)
+        result.onComplete { case _ =>
+          logger.debug("Work processing finished.")
+          running.set(false)
         }
         result
     }
-  }
 
-  def pullWorkItemWhile(continue: => Boolean)(
-    implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
+  def pullWorkItemWhile(
+    continue: => Boolean
+  )(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     if (continue) {
       workItemService.pullOutstanding(
         failedBefore = DateTime.now().minusSeconds(appConfig.workItemRepoFailedBeforeSeconds),
@@ -105,10 +119,12 @@ class FriendlyNameWorker @Inject()(
         // There is already a friendlyName populated. All we need to do is store the enrolment.
         throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.client.friendlyName).transformWith {
           case Success(_) =>
-            logger.info(s"Previously fetched friendly name for ${enrolmentKey} updated via ES19 successfully.")
+            logger.info(s"Previously fetched friendly name for $enrolmentKey updated via ES19 successfully.")
             workItemService.complete(workItem.id, Succeeded).map(_ => ())
           case Failure(_) =>
-            logger.info(s"Previously fetched friendly name for ${enrolmentKey} could not be updated via ES19. This will be retried.")
+            logger.info(
+              s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19. This will be retried."
+            )
             workItemService.complete(workItem.id, Failed).map(_ => ())
         }
       case wi if wi.item.client.friendlyName.isEmpty =>
@@ -117,48 +133,61 @@ class FriendlyNameWorker @Inject()(
           case Success(None) =>
             // A successful call returning None means the lookup succeeded but there is no name available.
             // There is no point in retrying; we set the status as permanently failed.
-            logger.info(s"No friendly name is available for ${enrolmentKey}: marking enrolment as permanently failed.")
+            logger.info(s"No friendly name is available for $enrolmentKey: marking enrolment as permanently failed.")
             workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
           case Success(Some(friendlyName)) =>
             throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
               case Success(_) =>
-                logger.info(s"Friendly name for ${enrolmentKey} retrieved and updated via ES19.")
+                logger.info(s"Friendly name for $enrolmentKey retrieved and updated via ES19.")
                 workItemService.complete(workItem.id, Succeeded).map(_ => ())
-              case Failure(_) => for {
-                // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
-                _ <- workItemService.pushNew(Seq(wi.item.copy(client = wi.item.client.copy(friendlyName = friendlyName))), DateTime.now(), ToDo)
-                // mark the old work item as duplicate
-                _ <- workItemService.complete(workItem.id, Duplicate)
-                _ = logger.info(s"Friendly name for ${enrolmentKey} retrieved but could not be updated via ES19: scheduling retry")
-              } yield ()
+              case Failure(_) =>
+                for {
+                  // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
+                  _ <- workItemService.pushNew(
+                         Seq(wi.item.copy(client = wi.item.client.copy(friendlyName = friendlyName))),
+                         DateTime.now(),
+                         ToDo
+                       )
+                  // mark the old work item as duplicate
+                  _ <- workItemService.complete(workItem.id, Duplicate)
+                  _ = logger.info(
+                        s"Friendly name for $enrolmentKey retrieved but could not be updated via ES19: scheduling retry"
+                      )
+                } yield ()
             }
           case Failure(e) if StatusUtil.isRetryable(e) =>
             if (giveUp(wi)) {
-              logger.info(s"Fetch of friendly name failed for ${enrolmentKey}. Reason: ${logFriendlyMessage(e)}. Giving up.")
+              logger.info(
+                s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. Giving up."
+              )
               workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
             } else {
-              logger.info(s"Fetch of friendly name failed for ${enrolmentKey}. Reason: ${logFriendlyMessage(e)}. This will be retried.")
+              logger.info(
+                s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. This will be retried."
+              )
               workItemService.complete(workItem.id, Failed).map(_ => ())
             }
           case Failure(e) => // non-retryable failure
-            logger.info(s"Fetch of friendly name permanently failed for ${enrolmentKey}. Reason: ${logFriendlyMessage(e)}.")
+            logger.info(
+              s"Fetch of friendly name permanently failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}."
+            )
             workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
         }
     }
   }
 
   // Determine whether we should give up trying to process this work item if it fails again.
-  protected def giveUp(wi: WorkItem[FriendlyNameWorkItem]): Boolean = {
+  protected def giveUp(wi: WorkItem[FriendlyNameWorkItem]): Boolean =
     wi.receivedAt.isBefore(DateTime.now().minusMinutes(appConfig.workItemRepoGiveUpAfterMinutes))
-  }
 
   private def logFriendlyMessage(e: Throwable): String = e match {
     case uer: UpstreamErrorResponse => s"Upstream status ${uer.statusCode}: ${uer.message}"
-    case e => e.getMessage
+    case e                          => e.getMessage
   }
 
-  private[services] def throttledFetchFriendlyName(enrolmentKey: String)(
-    implicit hc: HeaderCarrier): Future[Option[String]] = {
+  private[services] def throttledFetchFriendlyName(
+    enrolmentKey: String
+  )(implicit hc: HeaderCarrier): Future[Option[String]] = {
     def f(): Future[Option[String]] = {
       val (service, clientId) = EnrolmentKey.deconstruct(enrolmentKey)
       clientNameService.getClientNameByService(clientId, service)
@@ -168,10 +197,11 @@ class FriendlyNameWorker @Inject()(
   }
 
   private[services] def throttledUpdateFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(
-    implicit hc: HeaderCarrier): Future[Unit] = {
+    implicit hc: HeaderCarrier
+  ): Future[Unit] = {
     def f(): Future[Unit] =
       esConnector.updateEnrolmentFriendlyName(groupId, enrolmentKey, friendlyName).recover {
-        case e@UpstreamErrorResponse(_, status, _, _) =>
+        case e @ UpstreamErrorResponse(_, status, _, _) =>
           logger.info(s"$status status received from ES19.")
           throw e
 

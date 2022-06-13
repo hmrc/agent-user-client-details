@@ -14,24 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import com.typesafe.config.Config
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Configuration
 import play.api.libs.json._
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.WorkItemServiceImpl
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -40,14 +34,7 @@ import uk.gov.hmrc.mongo.MongoSpecSupport
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class FriendlyNameControllerISpec extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with BeforeAndAfterEach
-  with IntegrationPatience
-  with GuiceOneServerPerSuite
-  with MongoSpecSupport
-  with MockFactory {
+class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupport {
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]
@@ -57,7 +44,6 @@ class FriendlyNameControllerISpec extends AnyWordSpec
   lazy val wir = FriendlyNameWorkItemRepository(config)
   lazy val wis = new WorkItemServiceImpl(wir)
 
-
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
@@ -66,7 +52,8 @@ class FriendlyNameControllerISpec extends AnyWordSpec
   val badArn = Arn("XARN0000BAD")
   val badGroupId = "XINV-ALID-GROU-PIDX"
   val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-  val enrolment2 = Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
+  val enrolment2 =
+    Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
   val enrolment3 = Enrolment("HMRC-CGT-PD", "Activated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
   val enrolment4 = Enrolment("HMRC-MTD-VAT", "Activated", "Ross Barker", Seq(Identifier("VRN", "101747642")))
   val enrolmentsWithFriendlyNames: Seq[Enrolment] = Seq(enrolment1, enrolment2, enrolment3, enrolment4)
@@ -79,10 +66,12 @@ class FriendlyNameControllerISpec extends AnyWordSpec
   "POST /arn/:arn/friendly-name" should {
     "respond with 200 status if all of the requests were processed successfully" in {
       val esp = stub[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
-      (esp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolmentsWithFriendlyNames))
@@ -95,13 +84,16 @@ class FriendlyNameControllerISpec extends AnyWordSpec
     }
     "respond with 200 status if some of the requests permanently failed and there is no further work outstanding" in {
       val esp = stub[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
-      (esp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, EnrolmentKey.enrolmentKeys(enrolment4).head, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 404))) // a 404 from enrolment store is a non-retryable failure
-      (esp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolmentsWithFriendlyNames))
@@ -109,18 +101,23 @@ class FriendlyNameControllerISpec extends AnyWordSpec
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
       status(result) shouldBe 200
       contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq.empty))
-      contentAsJson(result) \ "permanentlyFailed" shouldBe JsDefined(JsArray(Seq(Json.toJson(Client.fromEnrolment(enrolment4)))))
+      contentAsJson(result) \ "permanentlyFailed" shouldBe JsDefined(
+        JsArray(Seq(Json.toJson(Client.fromEnrolment(enrolment4))))
+      )
       wis.collectStats.futureValue.values.sum shouldBe 0
     }
     "respond with 202 status if some of the requests temporarily failed and work items for the failed item should be created" in {
       val esp = stub[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
-      (esp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, EnrolmentKey.enrolmentKeys(enrolment2).head, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429))) // a 429 from enrolment store is a retryable failure
-      (esp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolmentsWithFriendlyNames))
@@ -133,23 +130,29 @@ class FriendlyNameControllerISpec extends AnyWordSpec
     }
     "respond with 202 status if the request has too many enrolments to process and add work items to the repository" in {
       val esp = stub[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
-      (esp.updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
-      val request = FakeRequest("POST", "").withBody(Json.toJson(Seq.fill(100)(enrolment1))) // 100 enrolments to process
+      val request =
+        FakeRequest("POST", "").withBody(Json.toJson(Seq.fill(100)(enrolment1))) // 100 enrolments to process
       val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
       status(result) shouldBe 202
-      contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq.fill(100)(Json.toJson(Client.fromEnrolment(enrolment1)))))
+      contentAsJson(result) \ "delayed" shouldBe JsDefined(
+        JsArray(Seq.fill(100)(Json.toJson(Client.fromEnrolment(enrolment1))))
+      )
       contentAsJson(result) \ "permanentlyFailed" shouldBe JsDefined(JsArray(Seq.empty))
       wis.collectStats.futureValue.values.sum shouldBe 100
     }
     "respond with 400 status if the request is malformed" in {
       val esp = stub[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       val request = FakeRequest("POST", "").withBody(Json.obj("someJson" -> JsNumber(0xbad)))
@@ -159,7 +162,8 @@ class FriendlyNameControllerISpec extends AnyWordSpec
     }
     "respond with 404 status if the groupId provided is unknown" in {
       val esp = stub[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(None))
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolmentsWithFriendlyNames))

@@ -46,18 +46,24 @@ trait EnrolmentStoreProxyConnector {
   // ES1 - principal
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
-  //ES3 - Query Enrolments allocated to a Group
-  def getEnrolmentsForGroupId(groupId: String)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
+  // ES3 - Query Enrolments allocated to a Group
+  def getEnrolmentsForGroupId(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
 
-  //ES19 - Update an enrolment's friendly name
-  def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Unit]
+  // ES19 - Update an enrolment's friendly name
+  def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit]
 }
 
-
 @Singleton
-class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCacheProvider: AgentCacheProvider, metrics: Metrics)(implicit appConfig: AppConfig)
+class EnrolmentStoreProxyConnectorImpl @Inject() (
+  http: HttpClient,
+  agentCacheProvider: AgentCacheProvider,
+  metrics: Metrics
+)(implicit appConfig: AppConfig)
     extends EnrolmentStoreProxyConnector with HttpAPIMonitor with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -67,44 +73,47 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
     val enrolmentKeyPrefix = "HMRC-AS-AGENT~AgentReferenceNumber"
     val enrolmentKey = enrolmentKeyPrefix + "~" + arn.value
-    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
+    val url =
+      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
 
     monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
-      agentCacheProvider.es1Cache(arn.value) {
-        http.GET[HttpResponse](url.toString)
-      }.map { response =>
-        response.status match {
-          case Status.NO_CONTENT =>
-            logger.warn(s"UNKNOWN_ARN $arn")
-            None
-          case Status.OK =>
-            val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
-            if (groupIds.isEmpty) {
+      agentCacheProvider
+        .es1Cache(arn.value) {
+          http.GET[HttpResponse](url.toString)
+        }
+        .map { response =>
+          response.status match {
+            case Status.NO_CONTENT =>
               logger.warn(s"UNKNOWN_ARN $arn")
               None
-            } else {
-              if (groupIds.lengthCompare(1) > 0)
-                logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
-              groupIds.headOption
-            }
-          case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            case Status.OK =>
+              val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
+              if (groupIds.isEmpty) {
+                logger.warn(s"UNKNOWN_ARN $arn")
+                None
+              } else {
+                if (groupIds.lengthCompare(1) > 0)
+                  logger.warn(s"Multiple groupIds found for $enrolmentKeyPrefix")
+                groupIds.headOption
+              }
+            case other =>
+              throw UpstreamErrorResponse(response.body, other, other)
+          }
         }
-      }
     }
   }
 
-  //ES3 - Query Enrolments allocated to a Group
-  def getEnrolmentsForGroupId(groupId: String)(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]] = {
+  // ES3 - Query Enrolments allocated to a Group
+  def getEnrolmentsForGroupId(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]] = {
     val url =
-      new URL(
-        espBaseUrl,
-        s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated")
+      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated")
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
       // Do not cache this
       http.GET[HttpResponse](url.toString).map { response =>
         response.status match {
-          case Status.OK => (response.json \ "enrolments").as[Seq[Enrolment]]
+          case Status.OK         => (response.json \ "enrolments").as[Seq[Enrolment]]
           case Status.NO_CONTENT => Seq.empty
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
@@ -113,18 +122,21 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
     }
   }
 
-  //ES19 - Update an enrolment's friendly name
-  def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[Unit] = {
+  // ES19 - Update an enrolment's friendly name
+  def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit] = {
     val url = new URL(
       espBaseUrl,
-      s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name")
+      s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name"
+    )
     monitor(s"ConsumedAPI-ES-updateEnrolmentFriendlyName-PUT") {
       http.PUT[ES19Request, HttpResponse](url.toString, ES19Request(friendlyName)).map { response =>
         response.status match {
           case status if is2xx(status) =>
-            if (status != Status.NO_CONTENT) logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
+            if (status != Status.NO_CONTENT)
+              logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }
@@ -132,4 +144,3 @@ class EnrolmentStoreProxyConnectorImpl @Inject()(http: HttpClient, agentCachePro
     }
   }
 }
-
