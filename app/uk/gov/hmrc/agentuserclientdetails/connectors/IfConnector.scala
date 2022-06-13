@@ -36,21 +36,25 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[IfConnectorImpl])
 trait IfConnector {
   def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]]
+  def getPptSubscription(
+    pptRef: PptRef
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]]
 }
 
 @Singleton
-class IfConnectorImpl @Inject()(
-                                  appConfig: AppConfig,
-                                  agentCacheProvider: AgentCacheProvider,
-                                  httpClient: HttpClient,
-                                  metrics: Metrics,
-                                  desIfHeaders: DesIfHeaders)
-  extends HttpAPIMonitor with IfConnector with HttpErrorFunctions with Logging {
+class IfConnectorImpl @Inject() (
+  appConfig: AppConfig,
+  agentCacheProvider: AgentCacheProvider,
+  httpClient: HttpClient,
+  metrics: Metrics,
+  desIfHeaders: DesIfHeaders
+) extends HttpAPIMonitor with IfConnector with HttpErrorFunctions with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  //IF API#1495 Agent Known Fact Check (Trusts)
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
+  // IF API#1495 Agent Known Fact Check (Trusts)
+  def getTrustName(
+    trustTaxIdentifier: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
 
     val url = getTrustNameUrl(trustTaxIdentifier)
 
@@ -60,13 +64,19 @@ class IfConnectorImpl @Inject()(
           Some((response.json \ "trustDetails" \ "trustName").as[String])
         case NOT_FOUND => None
         case other =>
-          throw UpstreamErrorResponse(s"unexpected status during retrieving TrustName, error=${response.body}", other, other)
+          throw UpstreamErrorResponse(
+            s"unexpected status during retrieving TrustName, error=${response.body}",
+            other,
+            other
+          )
       }
     }
   }
 
-  //IF API#1712 PPT Subscription Display
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] = {
+  // IF API#1712 PPT Subscription Display
+  def getPptSubscription(
+    pptRef: PptRef
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] = {
     val url = s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
     agentCacheProvider.pptSubscriptionCache(pptRef.value) {
       getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
@@ -81,11 +91,16 @@ class IfConnectorImpl @Inject()(
     }
   }
 
-  private def getWithDesIfHeaders(apiName: String, url: String)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext): Future[HttpResponse] =
+  private def getWithDesIfHeaders(apiName: String, url: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[HttpResponse] =
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = true, Some(apiName)))(implicitly[HttpReads[HttpResponse]], hc, ec)
+      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = true, Some(apiName)))(
+        implicitly[HttpReads[HttpResponse]],
+        hc,
+        ec
+      )
     }
 
   private val utrPattern = "^\\d{10}$"

@@ -28,16 +28,20 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class ClientNameNotFound() extends Exception
 
-class ClientNameService @Inject()(
-                                   citizenDetailsConnector: CitizenDetailsConnector,
-                                   desConnector: DesConnector,
-                                   ifConnector: IfConnector,
-                                   agentCacheProvider: AgentCacheProvider) {
+class ClientNameService @Inject() (
+  citizenDetailsConnector: CitizenDetailsConnector,
+  desConnector: DesConnector,
+  ifConnector: IfConnector,
+  agentCacheProvider: AgentCacheProvider
+) {
 
   private def trustCache = agentCacheProvider.trustResponseCache
   private def cgtCache = agentCacheProvider.cgtSubscriptionCache
 
-  def getClientNameByService(clientId: String, service: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+  def getClientNameByService(clientId: String, service: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] =
     service match {
       case HMRCMTDIT     => getItsaTradingName(MtdItId(clientId))
       case "HMRC-PT"     => getCitizenName(Nino(clientId))
@@ -65,7 +69,9 @@ class ClientNameService @Inject()(
           .orElse(customerDetails.individual.map(_.name))
       }
 
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+  def getTrustName(
+    trustTaxIdentifier: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     trustCache(trustTaxIdentifier) {
       ifConnector.getTrustName(trustTaxIdentifier)
     }
@@ -75,7 +81,7 @@ class ClientNameService @Inject()(
       desConnector.getCgtSubscription(cgtRef)
     }.map(_.map { cgtSubscription =>
       cgtSubscription.subscriptionDetails.typeOfPersonDetails.name match {
-        case Right(trusteeName) => trusteeName.name
+        case Right(trusteeName)   => trusteeName.name
         case Left(individualName) => s"${individualName.firstName} ${individualName.lastName}"
       }
     })

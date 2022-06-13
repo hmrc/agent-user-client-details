@@ -37,7 +37,12 @@ class CitizenDetailsConnectorISpec extends BaseIntegrationSpec {
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
-    (mockHttpClient.GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+    (mockHttpClient
+      .GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(
+        _: HttpReads[A],
+        _: HeaderCarrier,
+        _: ExecutionContext
+      ))
       .when(url, *, *, *, *, *)
       .returns(Future.successful(response))
 
@@ -59,7 +64,9 @@ class CitizenDetailsConnectorISpec extends BaseIntegrationSpec {
                                        |   "dateOfBirth": "2000-01-01"
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
-      mockHttpGet(s"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}", mockResponse)(httpClient)
+      mockHttpGet(s"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}", mockResponse)(
+        httpClient
+      )
       val cdConnector = new CitizenDetailsConnectorImpl(appConfig, httpClient, metrics)
       cdConnector.getCitizenDetails(testNino).futureValue shouldBe Some(Citizen(Some("John"), Some("Smith")))
     }

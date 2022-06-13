@@ -28,20 +28,25 @@ import uk.gov.hmrc.agentuserclientdetails.services.{FriendlyNameWorker, WorkItem
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
-class AgentUserClientDetailsMain @Inject()(
-                           actorSystem: ActorSystem,
-                           lifecycle: ApplicationLifecycle,
-                           friendlyNameWorker: FriendlyNameWorker,
-                           workItemService: WorkItemService,
-                           appConfig: AppConfig)(implicit val ec: ExecutionContext)
-  extends Logging {
+class AgentUserClientDetailsMain @Inject() (
+  actorSystem: ActorSystem,
+  lifecycle: ApplicationLifecycle,
+  friendlyNameWorker: FriendlyNameWorker,
+  workItemService: WorkItemService,
+  appConfig: AppConfig
+)(implicit val ec: ExecutionContext)
+    extends Logging {
 
   lifecycle.addStopHook(() =>
     Future {
       actorSystem.terminate()
-    })
+    }
+  )
 
-  actorSystem.scheduler.schedule(initialDelay = appConfig.jobRestartRepoQueueInitialDelaySeconds.seconds, interval = appConfig.jobRestartRepoQueueIntervalSeconds.second) {
+  actorSystem.scheduler.schedule(
+    initialDelay = appConfig.jobRestartRepoQueueInitialDelaySeconds.seconds,
+    interval = appConfig.jobRestartRepoQueueIntervalSeconds.second
+  ) {
     friendlyNameWorker.running.get() match {
       case true =>
         logger.debug("Friendly name fetching job was already running, so I did not trigger it again.")
@@ -51,17 +56,25 @@ class AgentUserClientDetailsMain @Inject()(
     }
   }
 
-  actorSystem.scheduler.schedule(initialDelay = appConfig.jobRepoCleanupInitialDelaySeconds.seconds, interval = appConfig.jobRepoCleanupIntervalSeconds.seconds) {
+  actorSystem.scheduler.schedule(
+    initialDelay = appConfig.jobRepoCleanupInitialDelaySeconds.seconds,
+    interval = appConfig.jobRepoCleanupIntervalSeconds.seconds
+  ) {
     logger.info("Starting work item repository cleanup.")
     workItemService.cleanup().map {
       case result if result.ok =>
         logger.info(s"Cleanup of work item repository complete. ${result.n} work items deleted.")
       case result if !result.ok =>
-        logger.error(s"Cleanup of work item repository finished with errors. ${result.n} work items deleted, ${result.writeErrors.length} write errors.")
+        logger.error(
+          s"Cleanup of work item repository finished with errors. ${result.n} work items deleted, ${result.writeErrors.length} write errors."
+        )
     }
   }
 
-  actorSystem.scheduler.schedule(initialDelay = appConfig.jobLogRepoStatsQueueInitialDelaySeconds.seconds, interval = appConfig.jobLogRepoStatsQueueIntervalSeconds.seconds) {
+  actorSystem.scheduler.schedule(
+    initialDelay = appConfig.jobLogRepoStatsQueueInitialDelaySeconds.seconds,
+    interval = appConfig.jobLogRepoStatsQueueIntervalSeconds.seconds
+  ) {
     logger.info("Starting work item repository cleanup.")
     workItemService.collectStats.map { stats =>
       logger.info(s"Work item repository stats: ${if (stats.isEmpty) "No work items" else Json.toJson(stats).toString}")

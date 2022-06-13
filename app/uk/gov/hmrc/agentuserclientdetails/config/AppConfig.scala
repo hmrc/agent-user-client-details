@@ -66,9 +66,10 @@ trait AppConfig {
 }
 
 @Singleton
-class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig {
+class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig {
 
-  private def getConf(key: String) = servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
+  private def getConf(key: String) =
+    servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
 
   private def baseUrl(key: String) = servicesConfig.baseUrl(key)
 
@@ -89,18 +90,24 @@ class AppConfigImpl @Inject()(servicesConfig: ServicesConfig) extends AppConfig 
   lazy val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
   lazy val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
 
-  lazy val workItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.available-before-seconds")
+  lazy val workItemRepoAvailableBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.available-before-seconds")
   lazy val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
   lazy val workItemRepoGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.give-up-after-minutes")
 
   lazy val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
 
-  lazy val jobRestartRepoQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.initialDelaySeconds")
-  lazy val jobRestartRepoQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.restart-repo-queue.intervalSeconds")
-  lazy val jobRepoCleanupInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.initialDelaySeconds")
+  lazy val jobRestartRepoQueueInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.restart-repo-queue.initialDelaySeconds")
+  lazy val jobRestartRepoQueueIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.restart-repo-queue.intervalSeconds")
+  lazy val jobRepoCleanupInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.repo-cleanup.initialDelaySeconds")
   lazy val jobRepoCleanupIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.intervalSeconds")
-  lazy val jobLogRepoStatsQueueInitialDelaySeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.initialDelaySeconds")
-  lazy val jobLogRepoStatsQueueIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
+  lazy val jobLogRepoStatsQueueInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.log-repo-stats.initialDelaySeconds")
+  lazy val jobLogRepoStatsQueueIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
 
   lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 

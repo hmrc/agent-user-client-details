@@ -34,7 +34,7 @@ import scala.util.Try
 
 case class Citizen(firstName: Option[String], lastName: Option[String]) {
   lazy val name: Option[String] = {
-    val n = Seq(firstName, lastName).collect({ case Some(x) => x }).mkString(" ")
+    val n = Seq(firstName, lastName).collect { case Some(x) => x }.mkString(" ")
     if (n.isEmpty) None else Some(n)
   }
 }
@@ -55,8 +55,8 @@ trait CitizenDetailsConnector {
 }
 
 @Singleton
-class CitizenDetailsConnectorImpl @Inject()(appConfig: AppConfig, http: HttpClient, metrics: Metrics)
-  extends HttpAPIMonitor with CitizenDetailsConnector with Logging {
+class CitizenDetailsConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClient, metrics: Metrics)
+    extends HttpAPIMonitor with CitizenDetailsConnector with Logging {
 
   private val baseUrl = appConfig.citizenDetailsBaseUrl
 

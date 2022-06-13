@@ -50,12 +50,26 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
     val now = DateTime.now()
-    WorkItem(id = BSONObjectID.generate(), receivedAt = now, updatedAt = now, availableAt = now, status = status, failureCount = 0, item = item)
+    WorkItem(
+      id = BSONObjectID.generate(),
+      receivedAt = now,
+      updatedAt = now,
+      availableAt = now,
+      status = status,
+      failureCount = 0,
+      item = item
+    )
   }
 
   "collectStats" should {
     "collect the correct statistics about work items in the repository" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), ToDo).futureValue
+      wis
+        .pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
+          DateTime.now(),
+          ToDo
+        )
+        .futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
       val stats = wis.collectStats.futureValue
@@ -68,7 +82,13 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   "query" should {
     "return the correct items based on a query" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), ToDo).futureValue
+      wis
+        .pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
+          DateTime.now(),
+          ToDo
+        )
+        .futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
       wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
       wis.query(testGroupId, Some(Seq(ToDo))).futureValue.length shouldBe 2

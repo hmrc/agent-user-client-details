@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-
 import play.api.libs.json.Json.reads
 import play.api.libs.json.Reads
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId

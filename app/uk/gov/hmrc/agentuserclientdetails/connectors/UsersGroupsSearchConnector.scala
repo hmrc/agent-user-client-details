@@ -31,19 +31,20 @@ import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-
 @ImplementedBy(classOf[UsersGroupsSearchConnectorImpl])
 trait UsersGroupsSearchConnector {
   def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]]
 }
 
 @Singleton
-class UsersGroupsSearchConnectorImpl @Inject()(httpClient: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
+class UsersGroupsSearchConnectorImpl @Inject() (httpClient: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
     extends UsersGroupsSearchConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
 
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  override def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]] = {
+  override def getGroupUsers(
+    groupId: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]] = {
     val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
       httpClient.GET[HttpResponse](url.toString).map { response =>

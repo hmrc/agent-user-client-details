@@ -26,7 +26,6 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
 class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
 
   implicit val hc = HeaderCarrier()

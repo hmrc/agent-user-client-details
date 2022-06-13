@@ -24,22 +24,34 @@ import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import scala.concurrent.{ExecutionContext, Future}
 
 case object FakeIfConnector extends IfConnector {
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+  def getTrustName(
+    trustTaxIdentifier: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.successful(Some("Trust Client"))
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
+  def getPptSubscription(
+    pptRef: PptRef
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
     Future.successful(Some(PptSubscription("PPT Client")))
 }
 
 case class FailingIfConnector(status: Int) extends IfConnector {
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+  def getTrustName(
+    trustTaxIdentifier: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
+  def getPptSubscription(
+    pptRef: PptRef
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
 case object NotFoundIfConnector extends IfConnector {
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+  def getTrustName(
+    trustTaxIdentifier: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     Future.successful(None)
-  def getPptSubscription(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
+  def getPptSubscription(
+    pptRef: PptRef
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
     Future.successful(None)
 }

@@ -38,7 +38,12 @@ class DesConnectorISpec extends BaseIntegrationSpec {
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
-    (mockHttpClient.GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+    (mockHttpClient
+      .GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(
+        _: HttpReads[A],
+        _: HeaderCarrier,
+        _: ExecutionContext
+      ))
       .when(url, *, *, *, *, *)
       .returns(Future.successful(response))
 
@@ -46,7 +51,8 @@ class DesConnectorISpec extends BaseIntegrationSpec {
     "getCgtSubscription" in {
       val testCgtRef = CgtRef("XMCGTP123456789")
       val httpClient = stub[HttpClient]
-      val cgtSubscription = CgtSubscription(SubscriptionDetails(TypeOfPersonDetails("Individual", Left(IndividualName("Tom", "Jones")))))
+      val cgtSubscription =
+        CgtSubscription(SubscriptionDetails(TypeOfPersonDetails("Individual", Left(IndividualName("Tom", "Jones")))))
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(cgtSubscription).toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}", mockResponse)(httpClient)
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
@@ -57,7 +63,8 @@ class DesConnectorISpec extends BaseIntegrationSpec {
     "getCgtSubscription (trust)" in {
       val testCgtRef = CgtRef("XMCGTP123456789")
       val httpClient = stub[HttpClient]
-      val cgtSubscription = CgtSubscription(SubscriptionDetails(TypeOfPersonDetails("Trustee", Right(OrganisationName("Friendly Trust")))))
+      val cgtSubscription =
+        CgtSubscription(SubscriptionDetails(TypeOfPersonDetails("Trustee", Right(OrganisationName("Friendly Trust")))))
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(cgtSubscription).toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}", mockResponse)(httpClient)
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
@@ -99,139 +106,142 @@ class DesConnectorISpec extends BaseIntegrationSpec {
                                        |  ]
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(responseJson).toString)
-      mockHttpGet(s"${appConfig.desBaseUrl}/registration/business-details/mtdbsa/${testMtdItId.value}", mockResponse)(httpClient)
+      mockHttpGet(s"${appConfig.desBaseUrl}/registration/business-details/mtdbsa/${testMtdItId.value}", mockResponse)(
+        httpClient
+      )
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
-      desConnector.getTradingNameForMtdItId(testMtdItId).futureValue should matchPattern {
-        case Some("Surname DADTN") =>
+      desConnector.getTradingNameForMtdItId(testMtdItId).futureValue should matchPattern { case Some("Surname DADTN") =>
       }
     }
     "getVatCustomerDetails (organisation)" in {
       val testVrn = Vrn("12345678")
       val httpClient = stub[HttpClient]
-      val responseJson = Json.parse(
-        s"""{
-           |   "approvedInformation" : {
-           |      "customerDetails" : {
-           |         "organisationName" : "Friendly Organisation",
-           |         "mandationStatus" : "2",
-           |         "businessStartDate" : "2017-04-02",
-           |         "registrationReason" : "0013",
-           |         "effectiveRegistrationDate": "2017-04-02",
-           |         "isInsolvent" : false
-           |      },
-           |      "bankDetails" : {
-           |         "sortCode" : "16****",
-           |         "accountHolderName" : "***********************",
-           |         "bankAccountNumber" : "****9584"
-           |      },
-           |      "deregistration" : {
-           |         "effectDateOfCancellation" : "2018-03-01",
-           |         "lastReturnDueDate" : "2018-02-24",
-           |         "deregistrationReason" : "0001"
-           |      },
-           |      "PPOB" : {
-           |         "address" : {
-           |            "line4" : "VAT PPOB Line5",
-           |            "postCode" : "HA0 3ET",
-           |            "countryCode" : "GB",
-           |            "line2" : "VAT PPOB Line2",
-           |            "line3" : "VAT PPOB Line3",
-           |            "line1" : "VAT PPOB Line1"
-           |         },
-           |         "contactDetails" : {
-           |            "mobileNumber" : "012345678902",
-           |            "emailAddress" : "testsignuptcooo37@hmrc.co.uk",
-           |            "faxNumber" : "012345678903",
-           |            "primaryPhoneNumber" : "012345678901"
-           |         },
-           |         "websiteAddress" : "www.tumbleweed.com"
-           |      },
-           |      "flatRateScheme" : {
-           |         "FRSCategory" : "003",
-           |         "limitedCostTrader" : true,
-           |         "FRSPercentage" : 59.99
-           |      },
-           |      "returnPeriod" : {
-           |         "stdReturnPeriod" : "MA"
-           |      },
-           |      "businessActivities" : {
-           |         "primaryMainCode" : "10410",
-           |         "mainCode3" : "10710",
-           |         "mainCode2" : "10611",
-           |         "mainCode4" : "10720"
-           |      }
-           |   }
-           |}""".stripMargin)
+      val responseJson = Json.parse(s"""{
+                                       |   "approvedInformation" : {
+                                       |      "customerDetails" : {
+                                       |         "organisationName" : "Friendly Organisation",
+                                       |         "mandationStatus" : "2",
+                                       |         "businessStartDate" : "2017-04-02",
+                                       |         "registrationReason" : "0013",
+                                       |         "effectiveRegistrationDate": "2017-04-02",
+                                       |         "isInsolvent" : false
+                                       |      },
+                                       |      "bankDetails" : {
+                                       |         "sortCode" : "16****",
+                                       |         "accountHolderName" : "***********************",
+                                       |         "bankAccountNumber" : "****9584"
+                                       |      },
+                                       |      "deregistration" : {
+                                       |         "effectDateOfCancellation" : "2018-03-01",
+                                       |         "lastReturnDueDate" : "2018-02-24",
+                                       |         "deregistrationReason" : "0001"
+                                       |      },
+                                       |      "PPOB" : {
+                                       |         "address" : {
+                                       |            "line4" : "VAT PPOB Line5",
+                                       |            "postCode" : "HA0 3ET",
+                                       |            "countryCode" : "GB",
+                                       |            "line2" : "VAT PPOB Line2",
+                                       |            "line3" : "VAT PPOB Line3",
+                                       |            "line1" : "VAT PPOB Line1"
+                                       |         },
+                                       |         "contactDetails" : {
+                                       |            "mobileNumber" : "012345678902",
+                                       |            "emailAddress" : "testsignuptcooo37@hmrc.co.uk",
+                                       |            "faxNumber" : "012345678903",
+                                       |            "primaryPhoneNumber" : "012345678901"
+                                       |         },
+                                       |         "websiteAddress" : "www.tumbleweed.com"
+                                       |      },
+                                       |      "flatRateScheme" : {
+                                       |         "FRSCategory" : "003",
+                                       |         "limitedCostTrader" : true,
+                                       |         "FRSPercentage" : 59.99
+                                       |      },
+                                       |      "returnPeriod" : {
+                                       |         "stdReturnPeriod" : "MA"
+                                       |      },
+                                       |      "businessActivities" : {
+                                       |         "primaryMainCode" : "10410",
+                                       |         "mainCode3" : "10710",
+                                       |         "mainCode2" : "10611",
+                                       |         "mainCode4" : "10720"
+                                       |      }
+                                       |   }
+                                       |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information", mockResponse)(httpClient)
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
-      desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(VatCustomerDetails(Some("Friendly Organisation"), None, None))
+      desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(
+        VatCustomerDetails(Some("Friendly Organisation"), None, None)
+      )
     }
 
     "getVatCustomerDetails (individual)" in {
       val testVrn = Vrn("12345679")
       val httpClient = stub[HttpClient]
-      val responseJson = Json.parse(
-        s"""{
-           |   "approvedInformation" : {
-           |      "customerDetails" : {
-           |         "individual" : {
-           |           "firstName" : "Tom",
-           |           "lastName" : "Jones"
-           |         },
-           |         "mandationStatus" : "2",
-           |         "businessStartDate" : "2017-04-02",
-           |         "registrationReason" : "0013",
-           |         "effectiveRegistrationDate": "2017-04-02",
-           |         "isInsolvent" : false
-           |      },
-           |      "bankDetails" : {
-           |         "sortCode" : "16****",
-           |         "accountHolderName" : "***********************",
-           |         "bankAccountNumber" : "****9584"
-           |      },
-           |      "deregistration" : {
-           |         "effectDateOfCancellation" : "2018-03-01",
-           |         "lastReturnDueDate" : "2018-02-24",
-           |         "deregistrationReason" : "0001"
-           |      },
-           |      "PPOB" : {
-           |         "address" : {
-           |            "line4" : "VAT PPOB Line5",
-           |            "postCode" : "HA0 3ET",
-           |            "countryCode" : "GB",
-           |            "line2" : "VAT PPOB Line2",
-           |            "line3" : "VAT PPOB Line3",
-           |            "line1" : "VAT PPOB Line1"
-           |         },
-           |         "contactDetails" : {
-           |            "mobileNumber" : "012345678902",
-           |            "emailAddress" : "testsignuptcooo37@hmrc.co.uk",
-           |            "faxNumber" : "012345678903",
-           |            "primaryPhoneNumber" : "012345678901"
-           |         },
-           |         "websiteAddress" : "www.tumbleweed.com"
-           |      },
-           |      "flatRateScheme" : {
-           |         "FRSCategory" : "003",
-           |         "limitedCostTrader" : true,
-           |         "FRSPercentage" : 59.99
-           |      },
-           |      "returnPeriod" : {
-           |         "stdReturnPeriod" : "MA"
-           |      },
-           |      "businessActivities" : {
-           |         "primaryMainCode" : "10410",
-           |         "mainCode3" : "10710",
-           |         "mainCode2" : "10611",
-           |         "mainCode4" : "10720"
-           |      }
-           |   }
-           |}""".stripMargin)
+      val responseJson = Json.parse(s"""{
+                                       |   "approvedInformation" : {
+                                       |      "customerDetails" : {
+                                       |         "individual" : {
+                                       |           "firstName" : "Tom",
+                                       |           "lastName" : "Jones"
+                                       |         },
+                                       |         "mandationStatus" : "2",
+                                       |         "businessStartDate" : "2017-04-02",
+                                       |         "registrationReason" : "0013",
+                                       |         "effectiveRegistrationDate": "2017-04-02",
+                                       |         "isInsolvent" : false
+                                       |      },
+                                       |      "bankDetails" : {
+                                       |         "sortCode" : "16****",
+                                       |         "accountHolderName" : "***********************",
+                                       |         "bankAccountNumber" : "****9584"
+                                       |      },
+                                       |      "deregistration" : {
+                                       |         "effectDateOfCancellation" : "2018-03-01",
+                                       |         "lastReturnDueDate" : "2018-02-24",
+                                       |         "deregistrationReason" : "0001"
+                                       |      },
+                                       |      "PPOB" : {
+                                       |         "address" : {
+                                       |            "line4" : "VAT PPOB Line5",
+                                       |            "postCode" : "HA0 3ET",
+                                       |            "countryCode" : "GB",
+                                       |            "line2" : "VAT PPOB Line2",
+                                       |            "line3" : "VAT PPOB Line3",
+                                       |            "line1" : "VAT PPOB Line1"
+                                       |         },
+                                       |         "contactDetails" : {
+                                       |            "mobileNumber" : "012345678902",
+                                       |            "emailAddress" : "testsignuptcooo37@hmrc.co.uk",
+                                       |            "faxNumber" : "012345678903",
+                                       |            "primaryPhoneNumber" : "012345678901"
+                                       |         },
+                                       |         "websiteAddress" : "www.tumbleweed.com"
+                                       |      },
+                                       |      "flatRateScheme" : {
+                                       |         "FRSCategory" : "003",
+                                       |         "limitedCostTrader" : true,
+                                       |         "FRSPercentage" : 59.99
+                                       |      },
+                                       |      "returnPeriod" : {
+                                       |         "stdReturnPeriod" : "MA"
+                                       |      },
+                                       |      "businessActivities" : {
+                                       |         "primaryMainCode" : "10410",
+                                       |         "mainCode3" : "10710",
+                                       |         "mainCode2" : "10611",
+                                       |         "mainCode4" : "10720"
+                                       |      }
+                                       |   }
+                                       |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information", mockResponse)(httpClient)
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
-      desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(VatCustomerDetails(None, Some(VatIndividual(None, Some("Tom"), None, Some("Jones"))), None))
+      desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(
+        VatCustomerDetails(None, Some(VatIndividual(None, Some("Tom"), None, Some("Jones"))), None)
+      )
     }
 
   }

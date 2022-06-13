@@ -38,7 +38,12 @@ class IfConnectorISpec extends BaseIntegrationSpec {
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
-    (mockHttpClient.GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+    (mockHttpClient
+      .GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(
+        _: HttpReads[A],
+        _: HeaderCarrier,
+        _: ExecutionContext
+      ))
       .when(url, *, *, *, *, *)
       .returns(Future.successful(response))
 
@@ -47,7 +52,9 @@ class IfConnectorISpec extends BaseIntegrationSpec {
       val testUrn = Urn("XXTRUST12345678")
       val httpClient = stub[HttpClient]
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
-      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}", mockResponse)(httpClient)
+      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}", mockResponse)(
+        httpClient
+      )
       val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
       ifConnector.getTrustName(testUrn.value).futureValue shouldBe Some("Friendly Trust")
     }
@@ -55,7 +62,9 @@ class IfConnectorISpec extends BaseIntegrationSpec {
       val testUtr = Utr("4937455253")
       val httpClient = stub[HttpClient]
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
-      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}", mockResponse)(httpClient)
+      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}", mockResponse)(
+        httpClient
+      )
       val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
       ifConnector.getTrustName(testUtr.value).futureValue shouldBe Some("Friendly Trust")
     }
@@ -75,7 +84,10 @@ class IfConnectorISpec extends BaseIntegrationSpec {
                                        |  }
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
-      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display", mockResponse)(httpClient)
+      mockHttpGet(
+        s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display",
+        mockResponse
+      )(httpClient)
       val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Bill Sikes"))
     }
@@ -94,7 +106,10 @@ class IfConnectorISpec extends BaseIntegrationSpec {
                                        |  }
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
-      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display", mockResponse)(httpClient)
+      mockHttpGet(
+        s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display",
+        mockResponse
+      )(httpClient)
       val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Friendly Organisation"))
     }

@@ -27,13 +27,9 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.{Application, Configuration, Environment}
 
-abstract class BaseIntegrationSpec extends AnyWordSpec
-  with Matchers
-  with ScalaFutures
-  with IntegrationPatience
-  with GuiceOneServerPerSuite
-  with MockFactory
-  with BeforeAndAfterEach {
+abstract class BaseIntegrationSpec
+    extends AnyWordSpec with Matchers with ScalaFutures with IntegrationPatience with GuiceOneServerPerSuite
+    with MockFactory with BeforeAndAfterEach {
 
   protected lazy val conf: Configuration = GuiceApplicationBuilder().configuration
   protected lazy val env: Environment = GuiceApplicationBuilder().environment

@@ -54,17 +54,31 @@ class AgentChecksServiceSpec extends BaseSpec {
     val mockUsersGroupsSearchConnector: UsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
     val mockWorkItemService: WorkItemService = mock[WorkItemService]
 
-    val agentChecksService: AgentChecksService = new AgentChecksService(appconfig, mockAgentSizeRepository, mockEnrolmentStoreProxyConnector, mockUsersGroupsSearchConnector, mockWorkItemService)
+    val agentChecksService: AgentChecksService = new AgentChecksService(
+      appconfig,
+      mockAgentSizeRepository,
+      mockEnrolmentStoreProxyConnector,
+      mockUsersGroupsSearchConnector,
+      mockWorkItemService
+    )
 
     def buildAgentSize(refreshDateTime: LocalDateTime): AgentSize = AgentSize(arn, 50, refreshDateTime)
   }
 
   "Get AgentSize" when {
 
-    val enrolment1: Enrolment = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-    val enrolment2: Enrolment = Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
-    val enrolment3: Enrolment = Enrolment("HMRC-CGT-PD", "Activated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
-    val enrolment4: Enrolment = Enrolment("HMRC-CGT-PD", "NotYetActivated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
+    val enrolment1: Enrolment =
+      Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
+    val enrolment2: Enrolment = Enrolment(
+      "HMRC-PPT-ORG",
+      "Activated",
+      "Frank Wright",
+      Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345"))
+    )
+    val enrolment3: Enrolment =
+      Enrolment("HMRC-CGT-PD", "Activated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
+    val enrolment4: Enrolment =
+      Enrolment("HMRC-CGT-PD", "NotYetActivated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
 
     "an AgentSize record that was last refreshed within the refresh duration exists" should {
 
@@ -109,7 +123,9 @@ class AgentChecksServiceSpec extends BaseSpec {
           "return correct count of enrolments having Activated state" in new TestScope {
             mockAgentSizeRepositoryGet(None)(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(enrolment1, enrolment2, enrolment3, enrolment4))(mockEnrolmentStoreProxyConnector)
+            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(enrolment1, enrolment2, enrolment3, enrolment4))(
+              mockEnrolmentStoreProxyConnector
+            )
             mockAgentSizeRepositoryUpsert(Some(RecordInserted))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
@@ -153,7 +169,9 @@ class AgentChecksServiceSpec extends BaseSpec {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
             mockServicesConfigGetDuration(mockServicesConfig)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(enrolment1, enrolment2, enrolment3, enrolment4))(mockEnrolmentStoreProxyConnector)
+            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(enrolment1, enrolment2, enrolment3, enrolment4))(
+              mockEnrolmentStoreProxyConnector
+            )
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
@@ -234,7 +252,8 @@ class AgentChecksServiceSpec extends BaseSpec {
         "return false" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
 
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = nonOutstandingProcessingStatuses.toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] =
+            nonOutstandingProcessingStatuses.toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe false
@@ -245,7 +264,8 @@ class AgentChecksServiceSpec extends BaseSpec {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
 
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + InProgress).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + InProgress).toSeq
+            .map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -255,7 +275,8 @@ class AgentChecksServiceSpec extends BaseSpec {
       s"workItemService returns a list of work items that contains a $ToDo" should {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + ToDo).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] =
+            (nonOutstandingProcessingStatuses + ToDo).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -265,7 +286,9 @@ class AgentChecksServiceSpec extends BaseSpec {
       s"workItemService returns a list of work items that contains a $Deferred" should {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Deferred).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Deferred).toSeq.map(
+            buildWorkItem(FriendlyNameWorkItem(groupId, client), _)
+          )
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -275,7 +298,9 @@ class AgentChecksServiceSpec extends BaseSpec {
       s"workItemService returns a list of work items that contains a $Failed" should {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Failed).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Failed).toSeq.map(
+            buildWorkItem(FriendlyNameWorkItem(groupId, client), _)
+          )
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -285,7 +310,15 @@ class AgentChecksServiceSpec extends BaseSpec {
 
     def buildWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
       val now = DateTime.now()
-      WorkItem(id = BSONObjectID.generate(), receivedAt = now, updatedAt = now, availableAt = now, status = status, failureCount = 0, item = item)
+      WorkItem(
+        id = BSONObjectID.generate(),
+        receivedAt = now,
+        updatedAt = now,
+        availableAt = now,
+        status = status,
+        failureCount = 0,
+        item = item
+      )
     }
   }
 
@@ -317,27 +350,48 @@ class AgentChecksServiceSpec extends BaseSpec {
     }
   }
 
-  private def mockAgentSizeRepositoryGet(maybeAgentSize: Option[AgentSize])(mockAgentSizeRepository: AgentSizeRepository) =
+  private def mockAgentSizeRepositoryGet(maybeAgentSize: Option[AgentSize])(
+    mockAgentSizeRepository: AgentSizeRepository
+  ) =
     (mockAgentSizeRepository.get _).expects(arn).returning(Future.successful(maybeAgentSize))
 
-  private def mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(maybeGroupId: Option[String])(mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) =
-    (mockEnrolmentStoreProxyConnector.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext)).expects(arn, *, *)
+  private def mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(
+    maybeGroupId: Option[String]
+  )(mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) =
+    (mockEnrolmentStoreProxyConnector
+      .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(arn, *, *)
       .returning(Future.successful(maybeGroupId))
 
   private def mockServicesConfigGetDuration(mockServicesConfig: ServicesConfig) =
     (mockServicesConfig.getDuration _).expects(refreshdurationConfigKey).returning(refreshDuration)
 
-  private def mockEnrolmentStoreProxyConnectorGetEnrolments(enrolments: Seq[Enrolment])(mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) =
-    (mockEnrolmentStoreProxyConnector.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext)).expects(groupId, *, *)
+  private def mockEnrolmentStoreProxyConnectorGetEnrolments(
+    enrolments: Seq[Enrolment]
+  )(mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) =
+    (mockEnrolmentStoreProxyConnector
+      .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(groupId, *, *)
       .returning(Future.successful(enrolments))
 
-  private def mockAgentSizeRepositoryUpsert(maybeUpsertType: Option[UpsertType])(mockAgentSizeRepository: AgentSizeRepository) =
+  private def mockAgentSizeRepositoryUpsert(maybeUpsertType: Option[UpsertType])(
+    mockAgentSizeRepository: AgentSizeRepository
+  ) =
     (mockAgentSizeRepository.upsert _).expects(*).returning(Future.successful(maybeUpsertType))
 
-  private def mockUsersGroupsSearchConnectorGetGroupUsers(seqUserDetail: Seq[UserDetails])(mockUsersGroupsSearchConnector: UsersGroupsSearchConnector) =
-    (mockUsersGroupsSearchConnector.getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext)).expects(groupId, *, *).returning(Future.successful(seqUserDetail))
+  private def mockUsersGroupsSearchConnectorGetGroupUsers(
+    seqUserDetail: Seq[UserDetails]
+  )(mockUsersGroupsSearchConnector: UsersGroupsSearchConnector) =
+    (mockUsersGroupsSearchConnector
+      .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(groupId, *, *)
+      .returning(Future.successful(seqUserDetail))
 
-  private def mockWorkItemServiceQuery(workItems: Seq[WorkItem[FriendlyNameWorkItem]])(mockWorkItemService: WorkItemService) =
-    (mockWorkItemService.query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-    .expects(groupId, None, *, *).returning(Future.successful(workItems))
+  private def mockWorkItemServiceQuery(
+    workItems: Seq[WorkItem[FriendlyNameWorkItem]]
+  )(mockWorkItemService: WorkItemService) =
+    (mockWorkItemService
+      .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
+      .expects(groupId, None, *, *)
+      .returning(Future.successful(workItems))
 }

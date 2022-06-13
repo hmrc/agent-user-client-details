@@ -29,20 +29,21 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 @Singleton()
-class AgentChecksController @Inject()(agentChecksService: AgentChecksService)
-                                     (implicit cc: ControllerComponents, ec: ExecutionContext) extends BackendController(cc) with Logging {
+class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(implicit
+  cc: ControllerComponents,
+  ec: ExecutionContext
+) extends BackendController(cc) with Logging {
 
   def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-
     agentChecksService.getAgentSize(arn).map {
-      case None => NotFound
+      case None            => NotFound
       case Some(agentSize) => Ok(Json.toJson(Json.obj("client-count" -> agentSize.clientCount)))
     } transformWith failureHandler
   }
 
   def userCheck(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     agentChecksService.userCheck(arn).map { count =>
-      if (count > 1 ) NoContent
+      if (count > 1) NoContent
       else Forbidden
     } transformWith failureHandler
   }

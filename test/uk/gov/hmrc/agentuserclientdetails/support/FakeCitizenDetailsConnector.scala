@@ -32,7 +32,7 @@ case class FailingCitizenDetailsConnector(status: Int) extends CitizenDetailsCon
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
-  case object NotFoundCitizenDetailsConnector extends CitizenDetailsConnector {
+case object NotFoundCitizenDetailsConnector extends CitizenDetailsConnector {
   def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
     Future.successful(None)
 }

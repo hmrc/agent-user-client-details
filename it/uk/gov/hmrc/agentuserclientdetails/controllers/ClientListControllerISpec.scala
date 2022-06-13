@@ -47,7 +47,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   lazy val wir = FriendlyNameWorkItemRepository(config)
   lazy val wis = new WorkItemServiceImpl(wir)
 
-
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
@@ -56,12 +55,14 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   val badArn = Arn("XARN0000BAD")
   val badGroupId = "XINV-ALID-GROU-PIDX"
   val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-  val enrolment2 = Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
+  val enrolment2 =
+    Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
   val enrolment3 = Enrolment("HMRC-CGT-PD", "Activated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
   val enrolment4 = Enrolment("HMRC-MTD-VAT", "Activated", "Ross Barker", Seq(Identifier("VRN", "101747641")))
   val enrolmentsWithFriendlyNames: Seq[Enrolment] = Seq(enrolment1, enrolment2, enrolment3, enrolment4)
   val enrolmentsWithoutAnyFriendlyNames = enrolmentsWithFriendlyNames.map(_.copy(friendlyName = ""))
-  val enrolmentsWithoutSomeFriendlyNames = enrolmentsWithFriendlyNames.take(2) ++ enrolmentsWithoutAnyFriendlyNames.drop(2)
+  val enrolmentsWithoutSomeFriendlyNames =
+    enrolmentsWithFriendlyNames.take(2) ++ enrolmentsWithoutAnyFriendlyNames.drop(2)
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -71,7 +72,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   "GET /groupid/:groupid/client-list" should {
     "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
       val request = FakeRequest("GET", "")
@@ -82,7 +84,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
     "respond with 404 status if the groupId provided is unknown" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.failed(UpstreamErrorResponse("", 404)))
       val clc = new ClientListController(cc, wis, esp, appConfig)
@@ -92,7 +95,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
     "respond with 202 status if any of the retrieved enrolments don't have a friendly name" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
       val request = FakeRequest("GET", "")
@@ -103,9 +107,18 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
     "respond with 200 status if any of the retrieved enrolments don't have a friendly name but they have been tried before and marked as permanently failed" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      wis.pushNew(enrolmentsWithoutSomeFriendlyNames.filter(_.friendlyName.isEmpty).map(e => FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(e))), DateTime.now(), PermanentlyFailed).futureValue
+      wis
+        .pushNew(
+          enrolmentsWithoutSomeFriendlyNames
+            .filter(_.friendlyName.isEmpty)
+            .map(e => FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(e))),
+          DateTime.now(),
+          PermanentlyFailed
+        )
+        .futureValue
 
-      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
       val request = FakeRequest("GET", "")
@@ -126,10 +139,12 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   "GET /arn/:arn/client-list" should {
     "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
       val request = FakeRequest("GET", "")
@@ -148,7 +163,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
     "respond with 404 status if given a valid but non-existent ARN" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      (esp.getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(unknownArn, *, *)
         .returning(Future.successful(None))
       val request = FakeRequest("GET", "")
@@ -161,12 +177,31 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   "POST /groupid/:groupid/refresh-names" should {
     "delete all work items from the repo for the given groupId and recreate work items, ignoring any names already present in the enrolment store" in {
       val esp = mock[EnrolmentStoreProxyConnector]
-      (esp.getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(0)))), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(1)))), DateTime.now(), PermanentlyFailed).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(3)))), DateTime.now(), Succeeded).futureValue
+      wis
+        .pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(0)))),
+          DateTime.now(),
+          Succeeded
+        )
+        .futureValue
+      wis
+        .pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(1)))),
+          DateTime.now(),
+          PermanentlyFailed
+        )
+        .futureValue
+      wis
+        .pushNew(
+          Seq(FriendlyNameWorkItem(anotherTestGroupId, Client.fromEnrolment(enrolmentsWithFriendlyNames(3)))),
+          DateTime.now(),
+          Succeeded
+        )
+        .futureValue
       val request = FakeRequest("POST", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
       val result = clc.forceRefreshFriendlyNamesForGroupId(testGroupId)(request).futureValue
@@ -188,7 +223,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       val esp = mock[EnrolmentStoreProxyConnector]
       val request = FakeRequest("GET", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), Succeeded).futureValue
+      wis
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), Succeeded)
+        .futureValue
       val result = clc.cleanupWorkItems(request).futureValue
       result.header.status shouldBe 200
       wis.collectStats.futureValue.values.sum shouldBe 0
@@ -200,7 +237,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       val esp = mock[EnrolmentStoreProxyConnector]
       val request = FakeRequest("GET", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo).futureValue
+      wis
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo)
+        .futureValue
       val result = clc.getWorkItemStats(request)
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Map[String, Int]].values.sum shouldBe 1
@@ -212,9 +251,15 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       val esp = mock[EnrolmentStoreProxyConnector]
       val request = FakeRequest("GET", "")
       val clc = new ClientListController(cc, wis, esp, appConfig)
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment3))), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, Client.fromEnrolment(enrolment2))), DateTime.now(), ToDo).futureValue
+      wis
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo)
+        .futureValue
+      wis
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment3))), DateTime.now(), Succeeded)
+        .futureValue
+      wis
+        .pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, Client.fromEnrolment(enrolment2))), DateTime.now(), ToDo)
+        .futureValue
       val result = clc.getOutstandingWorkItemsForGroupId(testGroupId)(request)
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Seq[Client]].toSet shouldBe Set(Client.fromEnrolment(enrolment1))

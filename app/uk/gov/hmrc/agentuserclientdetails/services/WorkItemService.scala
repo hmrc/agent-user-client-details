@@ -32,41 +32,51 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[WorkItemServiceImpl])
 trait WorkItemService {
 
-  /**
-   * Query by groupId and optionally by status (leave status as None to include all statuses)
-   */
-  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]]
+  /** Query by groupId and optionally by status (leave status as None to include all statuses)
+    */
+  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit
+    ec: ExecutionContext
+  ): Future[Seq[WorkItem[FriendlyNameWorkItem]]]
 
-  /**
-   * Removes any items that have been marked as successful or duplicated.
-   */
+  /** Removes any items that have been marked as successful or duplicated.
+    */
   def cleanup()(implicit ec: ExecutionContext): Future[WriteResult]
 
-  /**
-   * Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
-   */
+  /** Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
+    */
   def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]]
 
-  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit ec: ExecutionContext): Future[Unit]
+  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit
+    ec: ExecutionContext
+  ): Future[Unit]
 
-  def complete(id: BSONObjectID, newStatus: ProcessingStatus with ResultStatus)(implicit ec: ExecutionContext): Future[Boolean]
+  def complete(id: BSONObjectID, newStatus: ProcessingStatus with ResultStatus)(implicit
+    ec: ExecutionContext
+  ): Future[Boolean]
 
   def removeAll()(implicit ec: ExecutionContext): Future[WriteResult]
 
   def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[WriteResult]
 
-  def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]]
+  def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit
+    ec: ExecutionContext
+  ): Future[Option[WorkItem[FriendlyNameWorkItem]]]
 }
 
-class WorkItemServiceImpl @Inject()(workItemRepo: FriendlyNameWorkItemRepository) extends WorkItemService {
+class WorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkItemRepository) extends WorkItemService {
 
-  /**
-   * Query by groupId and optionally by status (leave status as None to include all statuses)
-   */
-  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit ec: ExecutionContext): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
+  /** Query by groupId and optionally by status (leave status as None to include all statuses)
+    */
+  def query(groupId: String, status: Option[Seq[ProcessingStatus]], limit: Int = -1)(implicit
+    ec: ExecutionContext
+  ): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
     import workItemRepo._
     val selector = status match {
-      case Some(statuses) => Json.obj("item.groupId" -> JsString(groupId), "status" -> Json.obj("$in" -> JsArray(statuses.map(s => JsString(s.name)))))
+      case Some(statuses) =>
+        Json.obj(
+          "item.groupId" -> JsString(groupId),
+          "status"       -> Json.obj("$in" -> JsArray(statuses.map(s => JsString(s.name))))
+        )
       case None => Json.obj("item.groupId" -> JsString(groupId))
     }
     workItemRepo.collection
@@ -75,18 +85,15 @@ class WorkItemServiceImpl @Inject()(workItemRepo: FriendlyNameWorkItemRepository
       .collect[Seq](limit, Cursor.FailOnError())
   }
 
-  /**
-   * Removes any items that have been marked as successful or duplicated.
-   */
-  def cleanup()(implicit ec: ExecutionContext): Future[WriteResult] = {
+  /** Removes any items that have been marked as successful or duplicated.
+    */
+  def cleanup()(implicit ec: ExecutionContext): Future[WriteResult] =
     workItemRepo.remove(
       "status" -> Json.obj("$in" -> JsArray(Seq(JsString(Succeeded.name), JsString(Duplicate.name))))
     )
-  }
 
-  /**
-   * Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
-   */
+  /** Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
+    */
   def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] = {
     import workItemRepo.collection.BatchCommands.AggregationFramework.{Group, GroupFunction, SumAll}
     workItemRepo.collection
@@ -104,19 +111,23 @@ class WorkItemServiceImpl @Inject()(workItemRepo: FriendlyNameWorkItemRepository
       }
   }
 
-  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit ec: ExecutionContext): Future[Unit] =
+  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: DateTime, initialState: ProcessingStatus)(implicit
+    ec: ExecutionContext
+  ): Future[Unit] =
     workItemRepo.pushNew(items, receivedAt, _ => initialState).map(_ => ())
 
-  def complete(id: BSONObjectID, newStatus: ProcessingStatus with ResultStatus)(implicit ec: ExecutionContext): Future[Boolean] = {
+  def complete(id: BSONObjectID, newStatus: ProcessingStatus with ResultStatus)(implicit
+    ec: ExecutionContext
+  ): Future[Boolean] =
     workItemRepo.complete(id, newStatus)
-  }
 
   def removeAll()(implicit ec: ExecutionContext): Future[WriteResult] = workItemRepo.removeAll()
 
-  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[WriteResult] = {
+  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[WriteResult] =
     workItemRepo.remove("item.groupId" -> JsString(groupId))
-  }
 
-  def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
+  def pullOutstanding(failedBefore: DateTime, availableBefore: DateTime)(implicit
+    ec: ExecutionContext
+  ): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     workItemRepo.pullOutstanding(failedBefore, availableBefore)
 }

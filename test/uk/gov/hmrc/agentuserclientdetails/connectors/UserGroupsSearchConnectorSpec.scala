@@ -39,7 +39,8 @@ class UserGroupsSearchConnectorSpec extends BaseSpec {
 
   trait TestScope {
     lazy val urlUserGroupSearch = s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users"
-    lazy val ugsConnector: UsersGroupsSearchConnector = new UsersGroupsSearchConnectorImpl(mockHttpClient, new DisabledMetrics)
+    lazy val ugsConnector: UsersGroupsSearchConnector =
+      new UsersGroupsSearchConnectorImpl(mockHttpClient, new DisabledMetrics)
   }
 
   "getGroupUsers" when {
@@ -72,16 +73,20 @@ class UserGroupsSearchConnectorSpec extends BaseSpec {
         mockHttpGet(urlUserGroupSearch, mockResponse)(mockHttpClient)
 
         whenReady(ugsConnector.getGroupUsers(groupId).failed) { ex =>
-          ex shouldBe a [UpstreamErrorResponse]
+          ex shouldBe a[UpstreamErrorResponse]
         }
       }
     }
   }
 
-  def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit = {
-    (mockHttpClient.GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+  def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
+    (mockHttpClient
+      .GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(
+        _: HttpReads[A],
+        _: HeaderCarrier,
+        _: ExecutionContext
+      ))
       .expects(url, *, *, *, *, *)
       .returning(Future.successful(response))
-  }
 
 }

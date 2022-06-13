@@ -34,13 +34,13 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
   val httpClient: HttpClient = stub[HttpClient]
 
   override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit = {
+    override def configure(): Unit =
       bind(classOf[HttpClient]).toInstance(httpClient)
-    }
   }
 
   val enrolment1: Enrolment = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-  val enrolment2: Enrolment = Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
+  val enrolment2: Enrolment =
+    Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
 
   trait TestScope {
     lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -48,42 +48,67 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
   }
 
   "EnrolmentStoreProxy" should {
-    "complete ES1 call successfully" in  new TestScope {
+    "complete ES1 call successfully" in new TestScope {
       val arn = "TARN0000001"
       val groupId = "2K6H-N1C1-7M7V-O4A3"
       val principalGroupIds = s"""{"principalGroupIds": ["$groupId"]}"""
       val mockResponse: HttpResponse = HttpResponse(OK, principalGroupIds)
-      mockHttpGet(s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~$arn/groups?type=principal", mockResponse)(httpClient)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~$arn/groups?type=principal",
+        mockResponse
+      )(httpClient)
       esp.getPrincipalGroupIdFor(Arn(arn)).futureValue shouldBe Some(groupId)
     }
     s"handle $NO_CONTENT in ES1 call" in new TestScope {
       val arn = "TARN0000001"
       val mockResponse: HttpResponse = HttpResponse(NO_CONTENT, "")
-      mockHttpGet(s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~$arn/groups?type=principal", mockResponse)(httpClient)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~$arn/groups?type=principal",
+        mockResponse
+      )(httpClient)
       esp.getPrincipalGroupIdFor(Arn(arn)).futureValue shouldBe None
     }
-    "complete ES3 call successfully" in  new TestScope {
+    "complete ES3 call successfully" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
-      val mockResponse: HttpResponse = HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2))).toString)
-      mockHttpGet(s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated", mockResponse)(httpClient)
+      val mockResponse: HttpResponse =
+        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2))).toString)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated",
+        mockResponse
+      )(httpClient)
       esp.getEnrolmentsForGroupId(testGroupId).futureValue.toSet shouldBe Set(enrolment1, enrolment2)
     }
     "complete ES19 call successfully" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
-      val mockResponse: HttpResponse = HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2))).toString)
+      val mockResponse: HttpResponse =
+        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2))).toString)
       val enrolmentKey = EnrolmentKey.enrolmentKeys(enrolment1).head
-      mockHttpPut(s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name", mockResponse)(httpClient)
+      mockHttpPut(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name",
+        mockResponse
+      )(httpClient)
       esp.updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name").futureValue shouldBe ()
     }
   }
 
   def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
-    (mockHttpClient.GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+    (mockHttpClient
+      .GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(
+        _: HttpReads[A],
+        _: HeaderCarrier,
+        _: ExecutionContext
+      ))
       .when(url, *, *, *, *, *)
       .returns(Future.successful(response))
 
   def mockHttpPut[I, A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
-    (mockHttpClient.PUT[I, A](_: String, _: I, _: Seq[(String, String)])(_: Writes[I], _: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+    (mockHttpClient
+      .PUT[I, A](_: String, _: I, _: Seq[(String, String)])(
+        _: Writes[I],
+        _: HttpReads[A],
+        _: HeaderCarrier,
+        _: ExecutionContext
+      ))
       .when(url, *, *, *, *, *, *)
       .returns(Future.successful(response))
 }
