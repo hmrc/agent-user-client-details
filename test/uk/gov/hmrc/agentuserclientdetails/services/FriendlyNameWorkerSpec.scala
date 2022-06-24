@@ -88,7 +88,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
   }
   "processItem" should {
     "retrieve the friendly name and store it via ES19 and mark the item as succeeded when everything is successful" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -114,7 +114,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     }
 
     "mark the work item as permanently failed if the call to DES/IF is successful but no name is available" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -140,7 +140,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     }
 
     "mark the work item as permanently failed if the call to DES/IF fails with a non-retryable failure" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -166,7 +166,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     }
 
     "mark the work item as failed if the call to DES/IF fails with a retryable failure" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -192,7 +192,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     }
 
     "mark the work item as failed (retryable) if the call to DES/IF fails with an unknown exception (that is not an upstream HTTP error status)" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -218,7 +218,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     }
 
     "mark the work item as permanently failed if it is determined that we should give up" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -245,7 +245,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     }
 
     "when the ES19 storage call fails mark the old item as duplicate and create a new item with the friendly name already populated" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
@@ -275,7 +275,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     }
 
     "when encountering a work item with an already populated friendly name, should store it via ES19 without querying the name again" in {
-      val stubWis: WorkItemService = stub[WorkItemService]
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)

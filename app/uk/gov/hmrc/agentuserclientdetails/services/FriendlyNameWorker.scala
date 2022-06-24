@@ -35,7 +35,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 class FriendlyNameWorker @Inject() (
-  workItemService: WorkItemService,
+  workItemService: FriendlyNameWorkItemService,
   esConnector: EnrolmentStoreProxyConnector,
   serviceInstances: ServiceInstances,
   clientNameService: ClientNameService,
@@ -75,10 +75,10 @@ class FriendlyNameWorker @Inject() (
   def start(): Future[Unit] =
     running.get() match {
       case true =>
-        logger.debug("Work processing triggered but was already running.")
+        logger.debug("Friendly name processing triggered but was already running.")
         Future.successful(())
       case false =>
-        logger.debug("Work processing triggered. Starting...")
+        logger.debug("Friendly name triggered. Starting...")
         running.set(true)
         val workItems: Enumerator[WorkItem[FriendlyNameWorkItem]] = Enumerator.generateM(pullWorkItemWhile(continue))
         val processWorkItems: Iteratee[WorkItem[FriendlyNameWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) =>
@@ -86,7 +86,7 @@ class FriendlyNameWorker @Inject() (
         }
         val result = workItems.run(processWorkItems)
         result.onComplete { case _ =>
-          logger.debug("Work processing finished.")
+          logger.debug("Friendly name processing finished.")
           running.set(false)
         }
         result
@@ -97,8 +97,8 @@ class FriendlyNameWorker @Inject() (
   )(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     if (continue) {
       workItemService.pullOutstanding(
-        failedBefore = DateTime.now().minusSeconds(appConfig.workItemRepoFailedBeforeSeconds),
-        availableBefore = DateTime.now().minusSeconds(appConfig.workItemRepoAvailableBeforeSeconds)
+        failedBefore = DateTime.now().minusSeconds(appConfig.friendlyNameWorkItemRepoFailedBeforeSeconds),
+        availableBefore = DateTime.now().minusSeconds(appConfig.friendlyNameWorkItemRepoAvailableBeforeSeconds)
       )
     } else {
       Future.successful(None)
@@ -178,7 +178,7 @@ class FriendlyNameWorker @Inject() (
 
   // Determine whether we should give up trying to process this work item if it fails again.
   protected def giveUp(wi: WorkItem[FriendlyNameWorkItem]): Boolean =
-    wi.receivedAt.isBefore(DateTime.now().minusMinutes(appConfig.workItemRepoGiveUpAfterMinutes))
+    wi.receivedAt.isBefore(DateTime.now().minusMinutes(appConfig.friendlyNameWorkItemRepoGiveUpAfterMinutes))
 
   private def logFriendlyMessage(e: Throwable): String = e match {
     case uer: UpstreamErrorResponse => s"Upstream status ${uer.statusCode}: ${uer.message}"

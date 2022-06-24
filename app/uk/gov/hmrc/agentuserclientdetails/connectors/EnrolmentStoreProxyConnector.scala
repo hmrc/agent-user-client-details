@@ -51,6 +51,18 @@ trait EnrolmentStoreProxyConnector {
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
 
+  // ES11 - Assign enrolment to user
+  def assignEnrolment(userId: String, enrolmentKey: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit]
+
+  // ES12 - Unassign enrolment from user
+  def unassignEnrolment(userId: String, enrolmentKey: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit]
+
   // ES19 - Update an enrolment's friendly name
   def updateEnrolmentFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(implicit
     hc: HeaderCarrier,
@@ -115,6 +127,44 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
         response.status match {
           case Status.OK         => (response.json \ "enrolments").as[Seq[Enrolment]]
           case Status.NO_CONTENT => Seq.empty
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
+  }
+
+  // ES11 - Assign enrolment to user
+  def assignEnrolment(userId: String, enrolmentKey: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit] = {
+    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/users/$userId/enrolments/$enrolmentKey")
+    monitor(s"ConsumedAPI-ES-assignEnrolment-POST") {
+      http.POSTEmpty[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case status if is2xx(status) =>
+            if (status != Status.CREATED)
+              logger.warn(s"assignEnrolment: Expected 201 status, got other success status ($status)")
+          case other =>
+            throw UpstreamErrorResponse(response.body, other, other)
+        }
+      }
+    }
+  }
+
+  // ES12 - Unassign enrolment from user
+  def unassignEnrolment(userId: String, enrolmentKey: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Unit] = {
+    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/users/$userId/enrolments/$enrolmentKey")
+    monitor(s"ConsumedAPI-ES-unassignEnrolment-DELETE") {
+      http.DELETE[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case status if is2xx(status) =>
+            if (status != Status.NO_CONTENT)
+              logger.warn(s"assignEnrolment: Expected 204 status, got other success status ($status)")
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }

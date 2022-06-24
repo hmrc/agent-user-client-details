@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
-import play.api.http.Status.{NO_CONTENT, OK}
+import play.api.http.Status.{CREATED, NO_CONTENT, OK}
 import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, EnrolmentKey, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
@@ -87,7 +87,27 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name",
         mockResponse
       )(httpClient)
-      esp.updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name").futureValue shouldBe ()
+      esp.updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name").futureValue shouldBe (())
+    }
+    "complete ES11 call successfully" in new TestScope {
+      val testUserId = "ABCEDEFGI1234568"
+      val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
+      val mockResponse: HttpResponse = HttpResponse(CREATED, "")
+      mockHttpPostEmpty(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$testUserId/enrolments/$testEnrolmentKey",
+        mockResponse
+      )(httpClient)
+      esp.assignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe (())
+    }
+    "complete ES12 call successfully" in new TestScope {
+      val testUserId = "ABCEDEFGI1234568"
+      val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
+      val mockResponse: HttpResponse = HttpResponse(NO_CONTENT, "")
+      mockHttpDelete(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$testUserId/enrolments/$testEnrolmentKey",
+        mockResponse
+      )(httpClient)
+      esp.unassignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe (())
     }
   }
 
@@ -101,6 +121,12 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
       .when(url, *, *, *, *, *)
       .returns(Future.successful(response))
 
+  def mockHttpPostEmpty[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
+    (mockHttpClient
+      .POSTEmpty[A](_: String, _: Seq[(String, String)])(_: HttpReads[A], _: HeaderCarrier, _: ExecutionContext))
+      .when(url, *, *, *, *)
+      .returns(Future.successful(response))
+
   def mockHttpPut[I, A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
     (mockHttpClient
       .PUT[I, A](_: String, _: I, _: Seq[(String, String)])(
@@ -110,5 +136,15 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
         _: ExecutionContext
       ))
       .when(url, *, *, *, *, *, *)
+      .returns(Future.successful(response))
+
+  def mockHttpDelete[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
+    (mockHttpClient
+      .DELETE[A](_: String, _: Seq[(String, String)])(
+        _: HttpReads[A],
+        _: HeaderCarrier,
+        _: ExecutionContext
+      ))
+      .when(url, *, *, *, *)
       .returns(Future.successful(response))
 }

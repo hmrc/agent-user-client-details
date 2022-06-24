@@ -44,17 +44,29 @@ trait AppConfig {
   val enableThrottling: Boolean
   val clientNameFetchThrottlingRate: String
   val es19ThrottlingRate: String
+  val assignmentsThrottlingRate: String
 
-  val workItemRepoAvailableBeforeSeconds: Int
-  val workItemRepoFailedBeforeSeconds: Int
-  val workItemRepoGiveUpAfterMinutes: Int
+  val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int
+  val friendlyNameWorkItemRepoFailedBeforeSeconds: Int
+  val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int
 
-  val jobRestartRepoQueueInitialDelaySeconds: Int
-  val jobRestartRepoQueueIntervalSeconds: Int
-  val jobRepoCleanupIntervalSeconds: Int
-  val jobRepoCleanupInitialDelaySeconds: Int
-  val jobLogRepoStatsQueueInitialDelaySeconds: Int
-  val jobLogRepoStatsQueueIntervalSeconds: Int
+  val friendlyNameJobRestartRepoQueueInitialDelaySeconds: Int
+  val friendlyNameJobRestartRepoQueueIntervalSeconds: Int
+  val friendlyNameJobRepoCleanupIntervalSeconds: Int
+  val friendlyNameJobRepoCleanupInitialDelaySeconds: Int
+  val friendlyNameJobLogRepoStatsQueueInitialDelaySeconds: Int
+  val friendlyNameJobLogRepoStatsQueueIntervalSeconds: Int
+
+  val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int
+  val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int
+  val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int
+
+  val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int
+  val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int
+  val assignEnrolmentJobRepoCleanupIntervalSeconds: Int
+  val assignEnrolmentJobRepoCleanupInitialDelaySeconds: Int
+  val assignEnrolmentJobLogRepoStatsQueueInitialDelaySeconds: Int
+  val assignEnrolmentJobLogRepoStatsQueueIntervalSeconds: Int
 
   val maxFriendlyNameUpdateBatchSize: Int
 
@@ -89,25 +101,49 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
   lazy val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
   lazy val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
   lazy val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
+  lazy val assignmentsThrottlingRate: String = servicesConfig.getString("throttling-rate.assignments")
 
-  lazy val workItemRepoAvailableBeforeSeconds: Int =
-    servicesConfig.getInt("work-item-repository.available-before-seconds")
-  lazy val workItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.failed-before-seconds")
-  lazy val workItemRepoGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.give-up-after-minutes")
+  lazy val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.friendly-name.available-before-seconds")
+  lazy val friendlyNameWorkItemRepoFailedBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.friendly-name.failed-before-seconds")
+  lazy val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int =
+    servicesConfig.getInt("work-item-repository.friendly-name.give-up-after-minutes")
+
+  lazy val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.assignments.available-before-seconds")
+  lazy val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.assignments.failed-before-seconds")
+  lazy val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int =
+    servicesConfig.getInt("work-item-repository.assignments.give-up-after-minutes")
 
   lazy val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
 
-  lazy val jobRestartRepoQueueInitialDelaySeconds: Int =
-    servicesConfig.getInt("job-scheduling.restart-repo-queue.initialDelaySeconds")
-  lazy val jobRestartRepoQueueIntervalSeconds: Int =
-    servicesConfig.getInt("job-scheduling.restart-repo-queue.intervalSeconds")
-  lazy val jobRepoCleanupInitialDelaySeconds: Int =
-    servicesConfig.getInt("job-scheduling.repo-cleanup.initialDelaySeconds")
-  lazy val jobRepoCleanupIntervalSeconds: Int = servicesConfig.getInt("job-scheduling.repo-cleanup.intervalSeconds")
-  lazy val jobLogRepoStatsQueueInitialDelaySeconds: Int =
-    servicesConfig.getInt("job-scheduling.log-repo-stats.initialDelaySeconds")
-  lazy val jobLogRepoStatsQueueIntervalSeconds: Int =
-    servicesConfig.getInt("job-scheduling.log-repo-stats.intervalSeconds")
+  lazy val friendlyNameJobRestartRepoQueueInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds")
+  lazy val friendlyNameJobRestartRepoQueueIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.friendly-name.restart-repo-queue.intervalSeconds")
+  lazy val friendlyNameJobRepoCleanupInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.friendly-name.repo-cleanup.initialDelaySeconds")
+  lazy val friendlyNameJobRepoCleanupIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.friendly-name.repo-cleanup.intervalSeconds")
+  lazy val friendlyNameJobLogRepoStatsQueueInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.friendly-name.log-repo-stats.initialDelaySeconds")
+  lazy val friendlyNameJobLogRepoStatsQueueIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.friendly-name.log-repo-stats.intervalSeconds")
+
+  lazy val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds")
+  lazy val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds")
+  lazy val assignEnrolmentJobRepoCleanupInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.assign-enrolment.repo-cleanup.initialDelaySeconds")
+  lazy val assignEnrolmentJobRepoCleanupIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.assign-enrolment.repo-cleanup.intervalSeconds")
+  lazy val assignEnrolmentJobLogRepoStatsQueueInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.assign-enrolment.log-repo-stats.initialDelaySeconds")
+  lazy val assignEnrolmentJobLogRepoStatsQueueIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.assign-enrolment.log-repo-stats.intervalSeconds")
 
   lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 
