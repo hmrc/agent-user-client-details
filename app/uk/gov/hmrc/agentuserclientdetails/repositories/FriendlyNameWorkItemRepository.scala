@@ -40,7 +40,7 @@ case class FriendlyNameWorkItemRepository @Inject() (config: Config)(implicit mo
   implicit val dateFormats: Format[DateTime] =
     ReactiveMongoFormats.dateTimeFormats
 
-  lazy val inProgressRetryAfterProperty = "work-item-repository.friendlyName.inProgressRetryAfter.millis"
+  lazy val inProgressRetryAfterProperty = "work-item-repository.friendly-name.inProgressRetryAfter.millis"
 
   lazy val workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
     val receivedAt = "createdAt"
