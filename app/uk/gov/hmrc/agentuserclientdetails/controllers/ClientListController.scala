@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.joda.time.DateTime
 import play.api.Logging
+import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
 import reactivemongo.api.commands.WriteError
@@ -49,6 +50,15 @@ class ClientListController @Inject() (
 
   def getClientsForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
     adaptForArn(getClientsForGroupIdFn)(arn)
+  }
+
+  def getClientListStatusForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
+    adaptForArn(getClientsForGroupIdFn)(arn).map { result =>
+      result.header.status match {
+        case OK | ACCEPTED => result.copy(body = NoEntity)
+        case _             => result
+      }
+    }
   }
 
   def forceRefreshFriendlyNamesForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
