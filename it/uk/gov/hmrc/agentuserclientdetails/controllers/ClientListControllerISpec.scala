@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 import play.api.Configuration
+import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
@@ -171,6 +172,42 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       val clc = new ClientListController(cc, wis, esp, appConfig)
       val result = clc.getClientsForArn(unknownArn.value)(request).futureValue
       result.header.status shouldBe Status.NOT_FOUND
+    }
+  }
+
+  "GET /arn/:arn/client-list-status" should {
+    "respond with 200 status if all of the retrieved enrolments have friendly names" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(*, *, *)
+        .returning(Future.successful(enrolmentsWithFriendlyNames))
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      val result = clc.getClientListStatusForArn(testArn.value)(request).futureValue
+      result.header.status shouldBe 200
+      result.body shouldBe NoEntity
+    }
+
+    "respond with 202 status if some of the retrieved enrolments have friendly names" in {
+      val esp = mock[EnrolmentStoreProxyConnector]
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(*, *, *)
+        .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
+      val request = FakeRequest("GET", "")
+      val clc = new ClientListController(cc, wis, esp, appConfig)
+      val result = clc.getClientListStatusForArn(testArn.value)(request).futureValue
+      result.header.status shouldBe 202
+      result.body shouldBe NoEntity
     }
   }
 
