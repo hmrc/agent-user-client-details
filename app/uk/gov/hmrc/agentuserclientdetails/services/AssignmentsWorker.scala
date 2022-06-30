@@ -139,22 +139,25 @@ class AssignmentsWorker @Inject() (
   private[services] def throttledAssignEnrolment(awi: AssignmentWorkItem)(implicit
     hc: HeaderCarrier
   ): Future[Unit] = {
-    def f(): Future[Unit] = {
+    // return a Future[Option[Throwable]] instead of a failed future because the throttler library
+    // doesn't seem to throttle failed futures correctly.
+    def f(): Future[Option[Throwable]] = {
       val (endpoint, result) = awi.operation match {
         case Assign   => ("ES11", esConnector.assignEnrolment(awi.userId, awi.enrolmentKey))
         case Unassign => ("ES12", esConnector.unassignEnrolment(awi.userId, awi.enrolmentKey))
       }
-      result.recover {
+      result.map(_ => None).recover {
         case e @ UpstreamErrorResponse(_, status, _, _) =>
           logger.info(s"$status status received from $endpoint.")
-          throw e
-
+          Some(e)
         case e =>
           logger.info(s"Error received when calling $endpoint: $e")
-          throw e
+          Some(e)
       }
     }
-    if (appConfig.enableThrottling) assignmentsThrottler.throttledStartingFrom(DateTime.now())(f())
-    else f()
+    val result =
+      if (appConfig.enableThrottling) assignmentsThrottler.throttledStartingFrom(DateTime.now())(f())
+      else f()
+    result.flatMap(_.fold(Future.successful(()))(Future.failed))
   }
 }
