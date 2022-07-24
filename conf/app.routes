@@ -7,6 +7,8 @@ GET        /arn/:arn/client-list-status              uk.gov.hmrc.agentuserclient
 GET        /groupid/:groupid/outstanding-work-items  uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForGroupId(groupid: String)
 GET        /arn/:arn/outstanding-work-items          uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForArn(arn: String)
 
+GET        /arn/:arn/clients-assigned-users          uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsWithAssignedUsers(arn: String)
+
 POST       /work-items/clean                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.cleanupWorkItems
 GET        /work-items/stats                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getWorkItemStats
 

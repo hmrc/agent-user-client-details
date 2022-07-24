@@ -26,7 +26,7 @@ import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -42,6 +42,12 @@ object ES19Request {
 
 @ImplementedBy(classOf[EnrolmentStoreProxyConnectorImpl])
 trait EnrolmentStoreProxyConnector {
+
+  // ES0 Query users who have an assigned enrolment
+  def getUsersAssignedToEnrolment(enrolmentKey: String, `type`: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Seq[String]]
 
   // ES1 - principal
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
@@ -68,6 +74,11 @@ trait EnrolmentStoreProxyConnector {
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit]
+
+  // ES21 - Query a group's delegated enrolments, returning information about the assigned agent users
+  def getGroupDelegatedEnrolments(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[GroupDelegatedEnrolments]]
 }
 
 @Singleton
@@ -80,6 +91,47 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
+
+  // ES0 Query users who have an assigned enrolment
+  override def getUsersAssignedToEnrolment(enrolmentKey: String, `type`: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Seq[String]] = {
+
+    val url =
+      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=${`type`}")
+
+    `type` match {
+      case "principal" | "delegated" | "all" =>
+        monitor(s"ConsumedAPI-ES-getUsersAssignedToEnrolment-$enrolmentKey-GET") {
+          http
+            .GET[HttpResponse](url.toString)
+            .map { response =>
+              response.status match {
+                case Status.NO_CONTENT =>
+                  logger.warn(s"No assigned users for $enrolmentKey")
+                  Seq.empty
+                case Status.OK =>
+                  `type` match {
+                    case "principal" =>
+                      (response.json \ "principalUserIds").as[Seq[String]]
+                    case "delegated" =>
+                      (response.json \ "delegatedUserIds").as[Seq[String]]
+                    case "all" =>
+                      (response.json \ "principalUserIds").as[Seq[String]] ++ (response.json \ "delegatedUserIds")
+                        .as[Seq[String]]
+                  }
+                case other =>
+                  throw UpstreamErrorResponse(response.body, other, other)
+              }
+            }
+        }
+      case _ =>
+        Future successful Seq.empty
+
+    }
+
+  }
 
   // ES1 - principal
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
@@ -193,4 +245,23 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
       }
     }
   }
+
+  // ES21 - Query a group's delegated enrolments, returning information about the assigned agent users
+  override def getGroupDelegatedEnrolments(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[GroupDelegatedEnrolments]] = {
+    val url =
+      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated")
+    monitor(s"ConsumedAPI-ES-getGroupDelegatedEnrolments-$groupId-GET") {
+      http.GET[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.OK => Some(response.json.as[GroupDelegatedEnrolments])
+          case other =>
+            logger.error(s"Could not fetch group delegated enrolments $groupId, status: $other, body: ${response.body}")
+            None
+        }
+      }
+    }
+  }
+
 }
