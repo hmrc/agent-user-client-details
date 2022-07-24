@@ -22,11 +22,11 @@ import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
 import reactivemongo.api.commands.WriteError
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
+import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.workitem.{Failed, PermanentlyFailed, ProcessingStatus, ToDo}
@@ -40,7 +40,8 @@ class ClientListController @Inject() (
   cc: ControllerComponents,
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  assignedUsersService: AssignedUsersService
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
@@ -76,6 +77,22 @@ class ClientListController @Inject() (
   def getOutstandingWorkItemsForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
     adaptForArn(getOutstandingWorkItemsForGroupIdFn)(arn)
   }
+
+  def getClientsWithAssignedUsers(arn: String): Action[AnyContent] = Action.async { implicit request =>
+    adaptForArn(getClientsWithAssignedUsersForGroupIdFn)(arn)
+  }
+
+  private def getClientsWithAssignedUsersForGroupIdFn(
+    groupId: String
+  )(implicit request: RequestHeader): Future[Result] =
+    espConnector.getGroupDelegatedEnrolments(groupId) flatMap {
+      case None =>
+        Future successful NotFound
+      case Some(groupDelegatedEnrolments) =>
+        assignedUsersService.calculate(groupDelegatedEnrolments) map { clients =>
+          Ok(Json.toJson(GroupDelegatedEnrolments(clients)))
+        }
+    }
 
   protected def getClientsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
