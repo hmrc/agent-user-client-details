@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
-import play.api.http.Status.{CREATED, NO_CONTENT, OK}
+import play.api.http.Status.{CREATED, NOT_FOUND, NO_CONTENT, OK}
 import play.api.libs.json.{Json, Writes}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, EnrolmentKey, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, EnrolmentKey, GroupDelegatedEnrolments, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
@@ -48,6 +48,110 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
   }
 
   "EnrolmentStoreProxy" should {
+
+    s"handle ES0 call returning $NO_CONTENT" in new TestScope {
+      val enrolmentKey = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
+      val enrolmentType = "principal"
+
+      val mockResponse: HttpResponse = HttpResponse(NO_CONTENT, "")
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=$enrolmentType",
+        mockResponse
+      )(httpClient)
+
+      esp.getUsersAssignedToEnrolment(enrolmentKey, enrolmentType).futureValue shouldBe Seq.empty
+    }
+
+    "handle ES0 call returning 'principal' user ids" in new TestScope {
+      val enrolmentKey = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
+      val enrolmentType = "principal"
+
+      val pricipalUserId1 = "ABCEDEFGI1234567"
+      val pricipalUserId2 = "ABCEDEFGI1234568"
+      val principalUserIds: String = s"""{
+                                        |    "principalUserIds": [
+                                        |       "$pricipalUserId1",
+                                        |       "$pricipalUserId2"
+                                        |    ]
+                                        |}""".stripMargin
+
+      val mockResponse: HttpResponse = HttpResponse(OK, principalUserIds)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=$enrolmentType",
+        mockResponse
+      )(httpClient)
+
+      esp.getUsersAssignedToEnrolment(enrolmentKey, enrolmentType).futureValue shouldBe Seq(
+        pricipalUserId1,
+        pricipalUserId2
+      )
+    }
+
+    "handle ES0 call returning 'delegated' user ids" in new TestScope {
+      val enrolmentKey = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
+      val enrolmentType = "delegated"
+
+      val delegatedUserId1 = "ABCEDEFGI1234565"
+      val delegatedUserId2 = "ABCEDEFGI1234566"
+      val delegatedUserIds: String = s"""{
+                                        |    "delegatedUserIds": [
+                                        |       "$delegatedUserId1",
+                                        |       "$delegatedUserId2"
+                                        |    ]
+                                        |}""".stripMargin
+
+      val mockResponse: HttpResponse = HttpResponse(OK, delegatedUserIds)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=$enrolmentType",
+        mockResponse
+      )(httpClient)
+
+      esp.getUsersAssignedToEnrolment(enrolmentKey, enrolmentType).futureValue shouldBe Seq(
+        delegatedUserId1,
+        delegatedUserId2
+      )
+    }
+
+    "handle ES0 call returning 'principal' and 'delegated' user ids" in new TestScope {
+      val enrolmentKey = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
+      val enrolmentType = "all"
+
+      val pricipalUserId1 = "ABCEDEFGI1234567"
+      val pricipalUserId2 = "ABCEDEFGI1234568"
+      val delegatedUserId1 = "ABCEDEFGI1234565"
+      val delegatedUserId2 = "ABCEDEFGI1234566"
+      val delegatedUserIds: String = s"""{
+                                        |    "principalUserIds": [
+                                        |       "$pricipalUserId1",
+                                        |       "$pricipalUserId2"
+                                        |    ],
+                                        |    "delegatedUserIds": [
+                                        |       "$delegatedUserId1",
+                                        |       "$delegatedUserId2"
+                                        |    ]
+                                        |}""".stripMargin
+
+      val mockResponse: HttpResponse = HttpResponse(OK, delegatedUserIds)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=$enrolmentType",
+        mockResponse
+      )(httpClient)
+
+      esp.getUsersAssignedToEnrolment(enrolmentKey, enrolmentType).futureValue shouldBe Seq(
+        pricipalUserId1,
+        pricipalUserId2,
+        delegatedUserId1,
+        delegatedUserId2
+      )
+    }
+
+    "handle ES0 call for unknown enrolment type" in new TestScope {
+      val enrolmentKey = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
+      val enrolmentType = "unknown"
+
+      esp.getUsersAssignedToEnrolment(enrolmentKey, enrolmentType).futureValue shouldBe Seq.empty
+    }
+
     "complete ES1 call successfully" in new TestScope {
       val arn = "TARN0000001"
       val groupId = "2K6H-N1C1-7M7V-O4A3"
@@ -108,6 +212,34 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
         mockResponse
       )(httpClient)
       esp.unassignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe (())
+    }
+
+    s"handle ES21 call returning non-$OK" in new TestScope {
+      val groupId = "2K6H-N1C1-7M7V-O4A3"
+
+      val mockResponse: HttpResponse = HttpResponse(NOT_FOUND, "")
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated",
+        mockResponse
+      )(httpClient)
+
+      esp.getGroupDelegatedEnrolments(groupId).futureValue shouldBe None
+    }
+
+    s"handle ES21 call returning $OK" in new TestScope {
+      val groupId = "2K6H-N1C1-7M7V-O4A3"
+
+      val groupDelegatedEnrolments: String = s"""{
+                                                |    "clients": []
+                                                |}""".stripMargin
+
+      val mockResponse: HttpResponse = HttpResponse(OK, groupDelegatedEnrolments)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated",
+        mockResponse
+      )(httpClient)
+
+      esp.getGroupDelegatedEnrolments(groupId).futureValue shouldBe Some(GroupDelegatedEnrolments(Seq.empty))
     }
   }
 
