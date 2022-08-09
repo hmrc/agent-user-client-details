@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import org.scalamock.handlers.CallHandler3
+import org.scalamock.handlers.{CallHandler2, CallHandler3}
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{ControllerComponents, Result}
 import play.api.test.Helpers._
@@ -91,6 +91,22 @@ class AgentChecksControllerSpec extends BaseSpec {
       (mockAgentChecksService
         .outstandingWorkItemsExist(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
+        .returning(Future failed ex)
+
+    def mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithoutException(
+      exist: Boolean
+    ): CallHandler2[Arn, ExecutionContext, Future[Boolean]] =
+      (mockAgentChecksService
+        .outstandingAssignmentsWorkItemsExist(_: Arn)(_: ExecutionContext))
+        .expects(arn, *)
+        .returning(Future successful exist)
+
+    def mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
+      ex: Exception
+    ): CallHandler2[Arn, ExecutionContext, Future[Boolean]] =
+      (mockAgentChecksService
+        .outstandingAssignmentsWorkItemsExist(_: Arn)(_: ExecutionContext))
+        .expects(arn, *)
         .returning(Future failed ex)
 
     def mockAgentChecksServiceGetTeamMembersWithoutException(
@@ -296,6 +312,69 @@ class AgentChecksControllerSpec extends BaseSpec {
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(new RuntimeException("boo boo"))
 
         val result = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
+        status(result) shouldBe INTERNAL_SERVER_ERROR
+      }
+    }
+  }
+
+  "Call to check outstanding assignments work items" when {
+
+    "dependency service indicates outstanding work items exist" should {
+      s"return $OK" in new TestScope {
+        mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithoutException(true)
+
+        val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
+        status(result) shouldBe OK
+      }
+    }
+
+    "dependency service indicates outstanding work items do not exist" should {
+      s"return $NO_CONTENT" in new TestScope {
+        mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithoutException(false)
+
+        val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
+        status(result) shouldBe NO_CONTENT
+      }
+    }
+
+    s"dependency service throws an upstream error having status $NOT_FOUND" should {
+      s"return $NOT_FOUND" in new TestScope {
+        mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
+          UpstreamErrorResponse("not found message", NOT_FOUND, NOT_FOUND)
+        )
+
+        val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
+        status(result) shouldBe NOT_FOUND
+      }
+    }
+
+    s"dependency service throws an upstream error having status $UNAUTHORIZED" should {
+      s"return $UNAUTHORIZED" in new TestScope {
+        mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
+          UpstreamErrorResponse("unauthorized message", UNAUTHORIZED, UNAUTHORIZED)
+        )
+
+        val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
+        status(result) shouldBe UNAUTHORIZED
+      }
+    }
+
+    s"dependency service throws a 5xx upstream error" should {
+      s"return $INTERNAL_SERVER_ERROR" in new TestScope {
+        mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
+          UpstreamErrorResponse("backend problem message", BAD_GATEWAY, BAD_GATEWAY)
+        )
+
+        val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
+        status(result) shouldBe INTERNAL_SERVER_ERROR
+      }
+    }
+
+    s"dependency service throws a runtime exception" should {
+      s"return $INTERNAL_SERVER_ERROR" in new TestScope {
+        mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(new RuntimeException("boo boo"))
+
+        val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
         status(result) shouldBe INTERNAL_SERVER_ERROR
       }
     }

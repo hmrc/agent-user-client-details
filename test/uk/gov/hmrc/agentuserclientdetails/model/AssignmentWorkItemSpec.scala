@@ -24,12 +24,14 @@ class AssignmentWorkItemSpec extends AnyWordSpec with Matchers {
 
   val testUserId = "ABCEDEFGI1234568"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
+  val testArn = "BARN9706518"
 
   "AssignmentWorkItemSpec" should {
     "serialise/deserialise correctly" in {
-      val assignWi = AssignmentWorkItem(Assign, "ABCEDEFGI1234568", "HMRC-MTD-VAT~VRN~12345678", Some("testSessionId"))
+      val assignWi =
+        AssignmentWorkItem(Assign, "ABCEDEFGI1234568", "HMRC-MTD-VAT~VRN~12345678", testArn, Some("testSessionId"))
       val unassignWi =
-        AssignmentWorkItem(Unassign, "ABCEDEFGI1234568", "HMRC-MTD-VAT~VRN~12345678", Some("testSessionId"))
+        AssignmentWorkItem(Unassign, "ABCEDEFGI1234568", "HMRC-MTD-VAT~VRN~12345678", testArn, Some("testSessionId"))
 
       Json.toJson(assignWi).as[AssignmentWorkItem] shouldBe assignWi
       Json.toJson(unassignWi).as[AssignmentWorkItem] shouldBe unassignWi

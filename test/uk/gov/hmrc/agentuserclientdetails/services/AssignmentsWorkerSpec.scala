@@ -38,6 +38,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
 
   val testUserId = "ABCEDEFGI1234568"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
+  val testArn = "BARN9706518"
   val mockSi: ServiceInstances = null // very hard to mock this class due to exceptions when the constructor gets called
 
   val mockActorSystem: ActorSystem = stub[ActorSystem]
@@ -71,7 +72,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.successful(()))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (mockEsp
@@ -101,7 +102,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (stubWis
@@ -127,7 +128,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.failed(new RuntimeException("Unknown error!")))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (stubWis
@@ -153,7 +154,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.failed(UpstreamErrorResponse("", 404)))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (stubWis
@@ -176,7 +177,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
       val workItem =
-        mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey), ToDo)
+        mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
           .copy(receivedAt = DateTime.now().minusDays(2))
       worker.processItem(workItem).futureValue
 
@@ -201,7 +202,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.successful(()))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (mockEsp
@@ -231,7 +232,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (stubWis
@@ -257,7 +258,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.failed(new RuntimeException("Unknown error!")))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (stubWis
@@ -283,7 +284,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .returns(Future.failed(UpstreamErrorResponse("", 404)))
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
-      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey), ToDo)
+      val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
       (stubWis
@@ -306,7 +307,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
 
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
       val workItem =
-        mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey), ToDo)
+        mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
           .copy(receivedAt = DateTime.now().minusDays(2))
       worker.processItem(workItem).futureValue
 

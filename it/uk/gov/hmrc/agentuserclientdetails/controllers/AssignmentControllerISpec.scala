@@ -28,7 +28,7 @@ import play.api.libs.json._
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentmtdidentifiers.model.{UserEnrolment, UserEnrolmentAssignments}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, UserEnrolment, UserEnrolmentAssignments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
@@ -55,6 +55,7 @@ class AssignmentControllerISpec
   val ue2 = UserEnrolment(testUserId, "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345")
   val ue3 = UserEnrolment(testUserId, "HMRC-CGT-PD~CgtRef~XMCGTP123456789")
   val ue4 = UserEnrolment(testUserId, "HMRC-MTD-VAT~VRN~VRN")
+  val testArn = Arn("BARN9706518")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -64,7 +65,7 @@ class AssignmentControllerISpec
   "POST /assign-enrolments" should {
     "respond with 202 Accepted and add items to the queue (assign)" in {
       val request = FakeRequest("POST", "").withBody(
-        Json.toJson(UserEnrolmentAssignments(assign = Set(ue1, ue2, ue3, ue4), unassign = Set.empty))
+        Json.toJson(UserEnrolmentAssignments(assign = Set(ue1, ue2, ue3, ue4), unassign = Set.empty, arn = testArn))
       )
       val fnc = new AssignmentController(cc, wis, appConfig)
       val result = fnc.assignEnrolments(request: Request[JsValue])
@@ -73,7 +74,7 @@ class AssignmentControllerISpec
     }
     "respond with 202 Accepted and add items to the queue (unassign)" in {
       val request = FakeRequest("POST", "").withBody(
-        Json.toJson(UserEnrolmentAssignments(assign = Set.empty, unassign = Set(ue1, ue2, ue3, ue4)))
+        Json.toJson(UserEnrolmentAssignments(assign = Set.empty, unassign = Set(ue1, ue2, ue3, ue4), arn = testArn))
       )
       val fnc = new AssignmentController(cc, wis, appConfig)
       val result = fnc.assignEnrolments(request: Request[JsValue])
@@ -82,7 +83,7 @@ class AssignmentControllerISpec
     }
     "respond with 202 Accepted and add items to the queue (mixed)" in {
       val request = FakeRequest("POST", "").withBody(
-        Json.toJson(UserEnrolmentAssignments(assign = Set(ue1), unassign = Set(ue2, ue3, ue4)))
+        Json.toJson(UserEnrolmentAssignments(assign = Set(ue1), unassign = Set(ue2, ue3, ue4), arn = testArn))
       )
       val fnc = new AssignmentController(cc, wis, appConfig)
       val result = fnc.assignEnrolments(request: Request[JsValue])
