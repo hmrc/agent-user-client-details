@@ -55,6 +55,13 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
     } transformWith failureHandler
   }
 
+  def outstandingAssignmentsWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async {
+    agentChecksService.outstandingAssignmentsWorkItemsExist(arn).map { workItemsExist =>
+      if (workItemsExist) Ok
+      else NoContent
+    } transformWith failureHandler
+  }
+
   def getTeamMembers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     agentChecksService.getTeamMembers(arn).map { teamMembers =>
       Ok(Json.toJson(teamMembers))

@@ -28,6 +28,7 @@ import uk.gov.hmrc.workitem.{Duplicate, ProcessingStatus, ResultStatus, Succeede
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 @ImplementedBy(classOf[AssignmentsWorkItemServiceImpl])
 trait AssignmentsWorkItemService {
@@ -35,6 +36,12 @@ trait AssignmentsWorkItemService {
   /** Query by status
     */
   def query(status: Seq[ProcessingStatus], limit: Int = -1)(implicit
+    ec: ExecutionContext
+  ): Future[Seq[WorkItem[AssignmentWorkItem]]]
+
+  /** Query by ARN
+    */
+  def queryBy(arn: Arn, limit: Int = -1)(implicit
     ec: ExecutionContext
   ): Future[Seq[WorkItem[AssignmentWorkItem]]]
 
@@ -71,6 +78,17 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
   ): Future[Seq[WorkItem[AssignmentWorkItem]]] = {
     import workItemRepo._
     val selector = Json.obj("status" -> Json.obj("$in" -> JsArray(status.map(s => JsString(s.name)))))
+    workItemRepo.collection
+      .find(selector, projection = None)
+      .cursor[WorkItem[AssignmentWorkItem]]()
+      .collect[Seq](limit, Cursor.FailOnError())
+  }
+
+  override def queryBy(arn: Arn, limit: Int = -1)(implicit
+    ec: ExecutionContext
+  ): Future[Seq[WorkItem[AssignmentWorkItem]]] = {
+    import workItemRepo._
+    val selector = Json.obj("item.arn" -> JsString(arn.value))
     workItemRepo.collection
       .find(selector, projection = None)
       .cursor[WorkItem[AssignmentWorkItem]]()

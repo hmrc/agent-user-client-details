@@ -25,6 +25,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import reactivemongo.bson.BSONObjectID
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
 import uk.gov.hmrc.http.HeaderCarrier
@@ -47,6 +48,7 @@ class AssignmentsWorkItemRepositoryISpec
   val enrolmentKey2 = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
   val enrolmentKey3 = "HMRC-CGT-PD~CgtRef~XMCGTP123456789"
   val enrolmentKey4 = "HMRC-MTD-VAT~VRN~VRN"
+  val testArn = Arn("BARN9706518")
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -71,15 +73,19 @@ class AssignmentsWorkItemRepositoryISpec
       wis
         .pushNew(
           Seq(
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey1),
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey2)
+            AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
+            AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
           ),
           DateTime.now(),
           ToDo
         )
         .futureValue
-      wis.pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4)), DateTime.now(), Failed).futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), DateTime.now(), Succeeded)
+        .futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .futureValue
       val stats = wis.collectStats.futureValue
       stats.get(ToDo.name) shouldBe Some(2)
       stats.get(Succeeded.name) shouldBe Some(1)
@@ -93,29 +99,66 @@ class AssignmentsWorkItemRepositoryISpec
       wis
         .pushNew(
           Seq(
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey1),
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey2)
+            AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
+            AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
           ),
           DateTime.now(),
           ToDo
         )
         .futureValue
-      wis.pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4)), DateTime.now(), Failed).futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), DateTime.now(), Succeeded)
+        .futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .futureValue
       wis.query(Seq(ToDo)).futureValue.length shouldBe 2
       wis.query(Seq(ToDo, Succeeded)).futureValue.length shouldBe 3
       wis.query(Seq(Duplicate, PermanentlyFailed)).futureValue.length shouldBe 0
     }
   }
 
+  "query by ARN" should {
+    "return the correct items based on a query" in {
+      wis
+        .pushNew(
+          Seq(
+            AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
+            AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
+          ),
+          DateTime.now(),
+          ToDo
+        )
+        .futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), DateTime.now(), Succeeded)
+        .futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .futureValue
+
+      wis.queryBy(testArn).futureValue.length shouldBe 4
+    }
+  }
+
   "cleanup" should {
     "remove any items that are either succeeded or duplicate" in {
-      wis.pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey2)), DateTime.now(), Duplicate).futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3)), DateTime.now(), PermanentlyFailed)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), DateTime.now(), Succeeded)
         .futureValue
-      wis.pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4)), DateTime.now(), Failed).futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)), DateTime.now(), Duplicate)
+        .futureValue
+      wis
+        .pushNew(
+          Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)),
+          DateTime.now(),
+          PermanentlyFailed
+        )
+        .futureValue
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .futureValue
       wis.cleanup().futureValue
       wis.query(Seq(Succeeded)).futureValue.length shouldBe 0
       wis.query(Seq(Duplicate)).futureValue.length shouldBe 0

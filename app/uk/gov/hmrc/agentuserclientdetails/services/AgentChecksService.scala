@@ -34,7 +34,8 @@ class AgentChecksService @Inject() (
   agentSizeRepository: AgentSizeRepository,
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
-  workItemService: FriendlyNameWorkItemService
+  workItemService: FriendlyNameWorkItemService,
+  assignmentsWorkItemService: AssignmentsWorkItemService
 ) extends Logging {
 
   private val ENROLMENT_STATE_ACTIVATED = "Activated"
@@ -76,6 +77,16 @@ class AgentChecksService @Inject() (
                      case Some(groupId) =>
                        workItemService.query(groupId, None)
                    }
+    } yield workItems match {
+      case items if items.exists(item => outstandingProcessingStatuses.contains(item.status)) => true
+      case _                                                                                  => false
+    }
+
+  def outstandingAssignmentsWorkItemsExist(
+    arn: Arn
+  )(implicit ec: ExecutionContext): Future[Boolean] =
+    for {
+      workItems <- assignmentsWorkItemService.queryBy(arn)
     } yield workItems match {
       case items if items.exists(item => outstandingProcessingStatuses.contains(item.status)) => true
       case _                                                                                  => false

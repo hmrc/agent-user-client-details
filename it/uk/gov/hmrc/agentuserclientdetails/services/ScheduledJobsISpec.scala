@@ -40,6 +40,7 @@ class ScheduledJobsISpec
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~101747641"
+  val testArn = "BARN9706518"
   val client1 = Client(testEnrolmentKey, "John Innes")
 
   "'friendly name' repository cleanup job" should {
@@ -87,7 +88,7 @@ class ScheduledJobsISpec
         val main = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         wis.removeAll().futureValue
         wis
-          .pushNew(Seq(AssignmentWorkItem(Assign, testGroupId, testEnrolmentKey)), DateTime.now(), Succeeded)
+          .pushNew(Seq(AssignmentWorkItem(Assign, testGroupId, testEnrolmentKey, testArn)), DateTime.now(), Succeeded)
           .futureValue
         wis.collectStats.futureValue.values.sum shouldBe 1
         Thread.sleep(5000) // Wait for the scheduled job to be executed

@@ -44,10 +44,10 @@ class AssignmentController @Inject() (
       else None // only required for local testing against stubs
     withJsonBody[UserEnrolmentAssignments] { aer =>
       val assignWorkItems = aer.assign.map { case UserEnrolment(userId, enrolmentKey) =>
-        AssignmentWorkItem(Assign, userId, enrolmentKey, mSessionId)
+        AssignmentWorkItem(Assign, userId, enrolmentKey, aer.arn.value, mSessionId)
       }
       val unassignWorkItems = aer.unassign.map { case UserEnrolment(userId, enrolmentKey) =>
-        AssignmentWorkItem(Unassign, userId, enrolmentKey, mSessionId)
+        AssignmentWorkItem(Unassign, userId, enrolmentKey, aer.arn.value, mSessionId)
       }
       for {
         _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, DateTime.now(), ToDo)

@@ -15,6 +15,7 @@ GET        /work-items/stats                         uk.gov.hmrc.agentuserclient
 GET        /arn/:arn/agent-size                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getAgentSize(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET        /arn/:arn/user-check                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.userCheck(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET        /arn/:arn/work-items-exist                uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.outstandingWorkItemsExist(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/assignments-work-items-exist    uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.outstandingAssignmentsWorkItemsExist(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET        /arn/:arn/team-members                    uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getTeamMembers(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 POST       /arn/:arn/friendly-name                   uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController.updateFriendlyName(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)

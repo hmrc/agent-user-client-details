@@ -22,6 +22,7 @@ case class AssignmentWorkItem(
   operation: Operation,
   userId: String,
   enrolmentKey: String,
+  arn: String,
   sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
 )
 
