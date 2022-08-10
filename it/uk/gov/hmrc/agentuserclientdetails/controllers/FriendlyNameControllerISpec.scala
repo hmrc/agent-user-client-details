@@ -172,4 +172,42 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
       status(result) shouldBe 404
     }
   }
+
+  "PUT /arn/:arn/update-friendly-name" should {
+    "respond 204 No Content if successful" in {
+
+      val friendlyNameRequest = """{"enrolmentKey": "HMRC-MTD-VAT~VRN~123456789","friendlyName": "jr"}"""
+
+      val esp = stub[EnrolmentStoreProxyConnector]
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .when(testArn, *, *)
+        .returns(Future.successful(Some(testGroupId)))
+      (esp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .when(*, *, *, *, *)
+        .returns(Future.successful(()))
+      val request = FakeRequest("PUT", "").withBody(Json.parse(friendlyNameRequest))
+      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val result = fnc.updateOneFriendlyName(testArn)(request)
+      status(result) shouldBe 204
+    }
+
+    "respond 400 Bad Request when something wrong with request" in {
+
+      val friendlyNameRequest = """{"mistake": "HMRC-MTD-VAT~VRN~123456789","friendlyName": "jr"}"""
+
+      val esp = stub[EnrolmentStoreProxyConnector]
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .when(testArn, *, *)
+        .returns(Future.successful(Some(testGroupId)))
+
+      val request = FakeRequest("PUT", "").withBody(Json.parse(friendlyNameRequest))
+      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val result = fnc.updateOneFriendlyName(testArn)(request)
+      status(result) shouldBe 400
+
+    }
+  }
 }
