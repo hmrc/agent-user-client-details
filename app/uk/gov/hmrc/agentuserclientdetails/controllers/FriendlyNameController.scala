@@ -23,7 +23,7 @@ import play.api.mvc._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, EnrolmentKey}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameWorkItem, UpdateFriendlyNameRequest}
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
 import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.http.HeaderCarrier
@@ -87,6 +87,14 @@ class FriendlyNameController @Inject() (
         } yield
           if (workItemsForLater.nonEmpty) Accepted(info)
           else Ok(info)
+      }
+    }
+  }
+
+  def updateOneFriendlyName(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    withGroupIdForArn(arn) { groupId =>
+      withJsonBody[UpdateFriendlyNameRequest] { req =>
+        espConnector.updateEnrolmentFriendlyName(groupId, req.enrolmentKey, req.friendlyName).map(_ => NoContent)
       }
     }
   }
