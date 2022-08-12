@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
+import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -33,7 +35,7 @@ class ClientNameService @Inject() (
   desConnector: DesConnector,
   ifConnector: IfConnector,
   agentCacheProvider: AgentCacheProvider
-) {
+) extends AnyRef with Logging {
 
   private def trustCache = agentCacheProvider.trustResponseCache
   private def cgtCache = agentCacheProvider.cgtSubscriptionCache
@@ -88,6 +90,7 @@ class ClientNameService @Inject() (
 
   def getPptCustomerName(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))
+
 }
 
 object ClientNameService {

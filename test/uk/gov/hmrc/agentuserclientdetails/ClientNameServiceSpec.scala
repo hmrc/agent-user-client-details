@@ -29,7 +29,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
 
   implicit val hc = HeaderCarrier()
-  val cns = new ClientNameService(FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector, agentCacheProvider)
+  val cns = new ClientNameService(
+    FakeCitizenDetailsConnector,
+    FakeDesConnector,
+    FakeIfConnector,
+    agentCacheProvider
+  )
 
   "retrieving the client's friendly name" should {
     "hit the correct endpoint for income tax" in {

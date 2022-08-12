@@ -23,7 +23,7 @@ import play.api.inject.ApplicationLifecycle
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignmentsWorkItemService, AssignmentsWorker, FriendlyNameWorkItemService, FriendlyNameWorker}
+import uk.gov.hmrc.agentuserclientdetails.services.{AssignmentsWorkItemService, AssignmentsWorker, FriendlyNameWorkItemService, FriendlyNameWorker, JobMonitoringWorker}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
@@ -35,6 +35,7 @@ class AgentUserClientDetailsMain @Inject() (
   friendlyNameWorkItemService: FriendlyNameWorkItemService,
   assignmentsWorker: AssignmentsWorker,
   assignmentsWorkItemService: AssignmentsWorkItemService,
+  jobMonitoringWorker: JobMonitoringWorker,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
     extends Logging {
@@ -98,6 +99,19 @@ class AgentUserClientDetailsMain @Inject() (
         logger.error(
           s"[Assign enrolment job] Work item cleanup finished with errors. ${result.n} work items deleted, ${result.writeErrors.length} write errors."
         )
+    }
+  }
+
+  actorSystem.scheduler.schedule(
+    initialDelay = appConfig.jobMonitoringWorkerInitialDelaySeconds.seconds,
+    interval = appConfig.jobMonitoringWorkerIntervalSeconds.seconds
+  ) {
+    jobMonitoringWorker.running.get() match {
+      case true =>
+        logger.debug("[Job monitor] Was already running, so I did not trigger it again.")
+      case false =>
+        logger.debug("[Job monitor] Triggered")
+        jobMonitoringWorker.start()
     }
   }
 

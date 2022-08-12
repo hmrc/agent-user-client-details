@@ -26,7 +26,7 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscription, VatCustomerDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, CgtSubscription, VatCustomerDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
@@ -47,6 +47,10 @@ trait DesConnector {
   def getVatCustomerDetails(
     vrn: Vrn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]]
+
+  def getAgencyDetails(
+    arn: Arn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]]
 }
 
 @Singleton
@@ -119,6 +123,29 @@ class DesConnectorImpl @Inject() (
       }
     }
   }
+
+  override def getAgencyDetails(
+    arn: Arn
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] =
+    agentCacheProvider
+      .agencyDetailsCache(arn.value) {
+        val url = s"$baseUrl/registration/personal-details/arn/${UriEncoding.encodePathSegment(arn.value, "UTF-8")}"
+        getWithDesIfHeaders("getAgencyDetails", url).map { response =>
+          response.status match {
+            case status if is2xx(status) => response.json.asOpt[AgentDetailsDesResponse]
+            case status if is4xx(status) => None
+            case _ if response.body.contains("AGENT_TERMINATED") =>
+              logger.warn(s"Discovered a Termination for agent: $arn")
+              None
+            case other =>
+              throw UpstreamErrorResponse(
+                s"unexpected response during 'getAgencyDetails', status: $other, response: ${response.body}",
+                other,
+                other
+              )
+          }
+        }
+      }
 
   private def getWithDesIfHeaders(apiName: String, url: String)(implicit
     hc: HeaderCarrier,

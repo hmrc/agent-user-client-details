@@ -56,4 +56,7 @@ class TestAppConfig extends AppConfig {
   val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
   val userGroupsSearchUrl: String = "http://localhost"
   val maxFriendlyNameUpdateBatchSize: Int = 20
+  override val emailBaseUrl: String = ""
+  override val jobMonitoringWorkerIntervalSeconds: Int = 60
+  override val jobMonitoringWorkerInitialDelaySeconds: Int = 10
 }

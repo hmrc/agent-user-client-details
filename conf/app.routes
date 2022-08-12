@@ -1,13 +1,12 @@
 # microservice specific routes
 
-GET        /groupid/:groupid/client-list             uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsForGroupId(groupid: String)
-GET        /arn/:arn/client-list                     uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsForArn(arn: String)
-GET        /arn/:arn/client-list-status              uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientListStatusForArn(arn: String)
+GET        /arn/:arn/client-list                     uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/client-list-status              uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientListStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 GET        /groupid/:groupid/outstanding-work-items  uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForGroupId(groupid: String)
-GET        /arn/:arn/outstanding-work-items          uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForArn(arn: String)
+GET        /arn/:arn/outstanding-work-items          uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForArn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
-GET        /arn/:arn/clients-assigned-users          uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsWithAssignedUsers(arn: String)
+GET        /arn/:arn/clients-assigned-users          uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientsWithAssignedUsers(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 POST       /work-items/clean                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.cleanupWorkItems
 GET        /work-items/stats                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getWorkItemStats
