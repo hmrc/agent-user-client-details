@@ -24,7 +24,7 @@ import play.api.mvc._
 import reactivemongo.api.commands.WriteError
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -40,6 +40,7 @@ class ClientListController @Inject() (
   cc: ControllerComponents,
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
+  usersGroupsSearchConnector: UsersGroupsSearchConnector,
   appConfig: AppConfig,
   assignedUsersService: AssignedUsersService
 )(implicit ec: ExecutionContext)
@@ -89,9 +90,14 @@ class ClientListController @Inject() (
       case None =>
         Future successful NotFound
       case Some(groupDelegatedEnrolments) =>
-        assignedUsersService.calculate(groupDelegatedEnrolments) map { clients =>
-          Ok(Json.toJson(GroupDelegatedEnrolments(clients)))
-        }
+        for {
+          assignedClients <- assignedUsersService.calculate(groupDelegatedEnrolments)
+          userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
+        } yield Ok(
+          Json.toJson(
+            GroupDelegatedEnrolments(assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo)))
+          )
+        )
     }
 
   protected def getClientsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
