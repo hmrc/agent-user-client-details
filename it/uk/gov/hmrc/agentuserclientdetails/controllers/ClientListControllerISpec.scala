@@ -24,10 +24,10 @@ import play.api.http.Status
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, AssignedClient, Client, Enrolment, GroupDelegatedEnrolments, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, AssignedClient, Client, Enrolment, GroupDelegatedEnrolments, Identifier, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemServiceImpl}
@@ -79,8 +79,10 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
+
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientsForGroupId(testGroupId)(request).futureValue
       result.header.status shouldBe 200
       // TODO check content
@@ -91,7 +93,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.failed(UpstreamErrorResponse("", 404)))
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val request = FakeRequest("GET", "")
       val result = clc.getClientsForGroupId(badGroupId)(request).futureValue
       result.header.status shouldBe 404
@@ -102,8 +105,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientsForGroupId(testGroupId)(request).futureValue
       result.header.status shouldBe 202
       // TODO check content
@@ -124,8 +128,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientsForGroupId(testGroupId)(request).futureValue
       result.header.status shouldBe 200
       // TODO check content
@@ -150,16 +155,18 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientsForArn(testArn.value)(request).futureValue
       result.header.status shouldBe 200
     }
 
     "respond with 400 status if given an ARN in invalid format" in {
       val esp = mock[EnrolmentStoreProxyConnector]
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientsForArn(badArn.value)(request).futureValue
       result.header.status shouldBe Status.BAD_REQUEST
     }
@@ -170,8 +177,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(unknownArn, *, *)
         .returning(Future.successful(None))
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientsForArn(unknownArn.value)(request).futureValue
       result.header.status shouldBe Status.NOT_FOUND
     }
@@ -188,8 +196,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientListStatusForArn(testArn.value)(request).futureValue
       result.header.status shouldBe 200
       result.body shouldBe NoEntity
@@ -205,8 +214,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.getClientListStatusForArn(testArn.value)(request).futureValue
       result.header.status shouldBe 202
       result.body shouldBe NoEntity
@@ -228,39 +238,88 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
           .expects(*, *, *)
           .returning(Future successful None)
 
+        val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
+
         val request = FakeRequest("GET", "")
-        val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+        val clc =
+          new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
         val result = clc.getClientsWithAssignedUsers(testArn.value)(request)
         result.futureValue.header.status shouldBe 404
       }
     }
 
-    "ESP connector returns some group delegated enrolments" should {
-      "return 200" in {
-        val esp = mock[EnrolmentStoreProxyConnector]
+    "ESP connector returns some group delegated enrolments" when {
 
-        (esp
-          .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-          .expects(testArn, *, *)
-          .returning(Future.successful(Some(testGroupId)))
+      "UGS does not return any matching user details" should {
+        "return 200 with empty list of clients" in {
+          val esp = mock[EnrolmentStoreProxyConnector]
 
-        val groupDelegatedEnrolments =
-          GroupDelegatedEnrolments(Seq(AssignedClient("aService", Seq(Identifier("idKey", "idVal")), None, "me")))
+          (esp
+            .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(testArn, *, *)
+            .returning(Future.successful(Some(testGroupId)))
 
-        (esp
-          .getGroupDelegatedEnrolments(_: String)(_: HeaderCarrier, _: ExecutionContext))
-          .expects(*, *, *)
-          .returning(
-            Future successful Some(
-              groupDelegatedEnrolments
+          val groupDelegatedEnrolments =
+            GroupDelegatedEnrolments(Seq(AssignedClient("aService", Seq(Identifier("idKey", "idVal")), None, "me")))
+
+          (esp
+            .getGroupDelegatedEnrolments(_: String)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(*, *, *)
+            .returning(
+              Future successful Some(
+                groupDelegatedEnrolments
+              )
             )
-          )
+          val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
 
-        val request = FakeRequest("GET", "")
-        val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
-        val result = clc.getClientsWithAssignedUsers(testArn.value)(request)
-        result.futureValue.header.status shouldBe 200
-        contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe groupDelegatedEnrolments
+          (mockUsersGroupsSearchConnector
+            .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(testGroupId, *, *)
+            .returning(Future successful Seq.empty)
+
+          val request = FakeRequest("GET", "")
+          val clc =
+            new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
+          val result = clc.getClientsWithAssignedUsers(testArn.value)(request)
+          result.futureValue.header.status shouldBe 200
+          contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe GroupDelegatedEnrolments(Seq.empty)
+        }
+      }
+
+      "UGS returns matching user details" should {
+        "return 200 with non-empty list of clients" in {
+          val esp = mock[EnrolmentStoreProxyConnector]
+
+          (esp
+            .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(testArn, *, *)
+            .returning(Future.successful(Some(testGroupId)))
+
+          val groupDelegatedEnrolments =
+            GroupDelegatedEnrolments(Seq(AssignedClient("aService", Seq(Identifier("idKey", "idVal")), None, "me")))
+
+          (esp
+            .getGroupDelegatedEnrolments(_: String)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(*, *, *)
+            .returning(
+              Future successful Some(
+                groupDelegatedEnrolments
+              )
+            )
+          val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
+
+          (mockUsersGroupsSearchConnector
+            .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
+            .expects(testGroupId, *, *)
+            .returning(Future successful Seq(UserDetails(userId = Some("me"))))
+
+          val request = FakeRequest("GET", "")
+          val clc =
+            new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
+          val result = clc.getClientsWithAssignedUsers(testArn.value)(request)
+          result.futureValue.header.status shouldBe 200
+          contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe groupDelegatedEnrolments
+        }
       }
     }
   }
@@ -293,8 +352,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
           Succeeded
         )
         .futureValue
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("POST", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       val result = clc.forceRefreshFriendlyNamesForGroupId(testGroupId)(request).futureValue
       result.header.status shouldBe Status.ACCEPTED
       // Check that none of the old work items are left and that now we have new to-do ones with no name filled in.
@@ -312,8 +372,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   "/work-items/clean" should {
     "trigger cleanup of work items when requested" in {
       val esp = mock[EnrolmentStoreProxyConnector]
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), Succeeded)
         .futureValue
@@ -326,8 +387,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   "/work-items/stats" should {
     "collect repository stats when requested" in {
       val esp = mock[EnrolmentStoreProxyConnector]
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo)
         .futureValue
@@ -340,8 +402,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   "/groupid/:groupid/outstanding-work-items" should {
     "query repository by groupId" in {
       val esp = mock[EnrolmentStoreProxyConnector]
+      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(cc, wis, esp, appConfig, assignedUsersService)
+      val clc = new ClientListController(cc, wis, esp, mockUsersGroupsSearchConnector, appConfig, assignedUsersService)
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo)
         .futureValue
