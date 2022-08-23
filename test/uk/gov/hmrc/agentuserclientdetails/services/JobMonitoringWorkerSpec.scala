@@ -104,6 +104,42 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .once()
     }
 
+    "mark the job as completed and send the email when the job is completed and sending email is enabled (welsh)" in {
+      val email = stub[EmailConnector]
+      (email
+        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .when(*, *, *)
+        .returns(Future.successful(true))
+      val jobRepo = stub[JobMonitoringRepository]
+      (jobRepo
+        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+        .when(*, *)
+        .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
+      val fnwis = stub[FriendlyNameWorkItemService]
+      (fnwis
+        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
+        .when(groupId, Some(Seq(Failed, ToDo)), *, *)
+        .returns(
+          Future.successful(Seq.empty) // No outstanding items
+        )
+      (fnwis
+        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
+        .when(groupId, Some(Seq(PermanentlyFailed)), *, *)
+        .returns(Future.successful(Seq.empty)) // no permanently failed items
+
+      val jmw = new JobMonitoringWorker(jobRepo, fnwis, email)
+      jmw.processItem(jobData.copy(emailLanguagePreference = Some("cy"))).futureValue // Welsh language preference
+
+      (email
+        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .verify(argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_success_cy"), *, *)
+        .once()
+      (jobRepo
+        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+        .verify(jobId, *)
+        .once()
+    }
+
     "mark the job as completed but don't send the email when the job is completed and sending email is disabled" in {
       val email = stub[EmailConnector]
       (email

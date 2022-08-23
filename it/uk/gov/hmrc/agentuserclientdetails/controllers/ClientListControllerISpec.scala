@@ -83,11 +83,23 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     val citizenDetailsConnector = mock[CitizenDetailsConnector]
     val desConnector = mock[DesConnector]
     val ifConnector = mock[IfConnector]
+    val ugs = mock[UsersGroupsSearchConnector]
+    val esp = mock[EnrolmentStoreProxyConnector]
     val clientNameService = new ClientNameService(
       citizenDetailsConnector,
       desConnector,
       ifConnector,
       agentCacheProvider
+    )
+    val clc = new ClientListController(
+      cc,
+      wis,
+      esp,
+      ugs,
+      assignedUsersService,
+      jobMonitoringRepository,
+      desConnector,
+      appConfig
     )
 
     def mockDesConnectorGetAgencyDetails(
@@ -100,7 +112,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "GET /arn/:arn/client-list" should {
     "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -110,64 +121,28 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
 
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
     }
 
     "respond with 400 status if given an ARN in invalid format" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       val request = FakeRequest("GET", "")
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.getClients(badArn)(request).futureValue
       result.header.status shouldBe Status.BAD_REQUEST
     }
 
     "respond with 404 status if given a valid but non-existent ARN" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(unknownArn, *, *)
         .returning(Future.successful(None))
       val request = FakeRequest("GET", "")
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.getClients(unknownArn)(request).futureValue
       result.header.status shouldBe Status.NOT_FOUND
     }
 
     "respond with 404 status if the groupId associated with the arn is unknown" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -176,23 +151,11 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.failed(UpstreamErrorResponse("", 404)))
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val request = FakeRequest("GET", "")
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 404
     }
     "respond with 202 status if any of the retrieved enrolments don't have a friendly name" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -202,24 +165,12 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
       mockDesConnectorGetAgencyDetails(None)
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 202
       // TODO check content
     }
     "respond with 200 status if any of the retrieved enrolments don't have a friendly name but they have been tried before and marked as permanently failed" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       wis
         .pushNew(
           enrolmentsWithoutSomeFriendlyNames
@@ -239,17 +190,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
       val request = FakeRequest("GET", "")
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
       // TODO check content
@@ -258,7 +198,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "GET /arn/:arn/client-list-status" should {
     "respond with 200 status if all of the retrieved enrolments have friendly names" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -267,25 +206,13 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 200
       result.body shouldBe NoEntity
     }
 
     "respond with 202 status if some of the retrieved enrolments have friendly names" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -294,19 +221,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
       mockDesConnectorGetAgencyDetails(None)
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 202
       result.body shouldBe NoEntity
@@ -317,8 +233,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
     "ESP connector returns nothing for group delegated enrolments" should {
       "return 404" in new TestScope {
-        val esp = mock[EnrolmentStoreProxyConnector]
-
         (esp
           .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
           .expects(testArn, *, *)
@@ -328,19 +242,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
           .expects(*, *, *)
           .returning(Future successful None)
 
-        val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
-
         val request = FakeRequest("GET", "")
-        val clc = new ClientListController(
-          cc,
-          wis,
-          esp,
-          mockUsersGroupsSearchConnector,
-          assignedUsersService,
-          jobMonitoringRepository,
-          desConnector,
-          appConfig
-        )
         val result = clc.getClientsWithAssignedUsers(testArn)(request)
         result.futureValue.header.status shouldBe 404
       }
@@ -350,8 +252,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
       "UGS does not return any matching user details" should {
         "return 200 with empty list of clients" in new TestScope {
-          val esp = mock[EnrolmentStoreProxyConnector]
-
           (esp
             .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
             .expects(testArn, *, *)
@@ -368,24 +268,13 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
                 groupDelegatedEnrolments
               )
             )
-          val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
 
-          (mockUsersGroupsSearchConnector
+          (ugs
             .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
             .expects(testGroupId, *, *)
             .returning(Future successful Seq.empty)
 
           val request = FakeRequest("GET", "")
-          val clc = new ClientListController(
-            cc,
-            wis,
-            esp,
-            mockUsersGroupsSearchConnector,
-            assignedUsersService,
-            jobMonitoringRepository,
-            desConnector,
-            appConfig
-          )
           val result = clc.getClientsWithAssignedUsers(testArn)(request)
           result.futureValue.header.status shouldBe 200
           contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe GroupDelegatedEnrolments(Seq.empty)
@@ -394,8 +283,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
       "UGS returns matching user details" should {
         "return 200 with non-empty list of clients" in new TestScope {
-          val esp = mock[EnrolmentStoreProxyConnector]
-
           (esp
             .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
             .expects(testArn, *, *)
@@ -412,24 +299,13 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
                 groupDelegatedEnrolments
               )
             )
-          val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
 
-          (mockUsersGroupsSearchConnector
+          (ugs
             .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
             .expects(testGroupId, *, *)
             .returning(Future successful Seq(UserDetails(userId = Some("me"))))
 
           val request = FakeRequest("GET", "")
-          val clc = new ClientListController(
-            cc,
-            wis,
-            esp,
-            mockUsersGroupsSearchConnector,
-            assignedUsersService,
-            jobMonitoringRepository,
-            desConnector,
-            appConfig
-          )
           val result = clc.getClientsWithAssignedUsers(testArn)(request)
           result.futureValue.header.status shouldBe 200
           contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe groupDelegatedEnrolments
@@ -440,7 +316,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "POST /groupid/:groupid/refresh-names" should {
     "delete all work items from the repo for the given groupId and recreate work items, ignoring any names already present in the enrolment store" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -470,18 +345,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
           Succeeded
         )
         .futureValue
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("POST", "")
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       val result = clc.forceRefreshFriendlyNames(testArn)(request).futureValue
       result.header.status shouldBe Status.ACCEPTED
       // Check that none of the old work items are left and that now we have new to-do ones with no name filled in.
@@ -498,19 +362,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "/work-items/clean" should {
     "trigger cleanup of work items when requested" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), Succeeded)
         .futureValue
@@ -522,19 +374,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "/work-items/stats" should {
     "collect repository stats when requested" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo)
         .futureValue
@@ -546,19 +386,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "/groupid/:groupid/outstanding-work-items" should {
     "query repository by groupId" in new TestScope {
-      val esp = mock[EnrolmentStoreProxyConnector]
-      val mockUsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
       val request = FakeRequest("GET", "")
-      val clc = new ClientListController(
-        cc,
-        wis,
-        esp,
-        mockUsersGroupsSearchConnector,
-        assignedUsersService,
-        jobMonitoringRepository,
-        desConnector,
-        appConfig
-      )
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, Client.fromEnrolment(enrolment1))), DateTime.now(), ToDo)
         .futureValue

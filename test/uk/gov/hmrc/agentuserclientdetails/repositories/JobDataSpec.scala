@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
-import play.api.i18n.Lang
-import play.api.libs.json.{JsResult, Json}
+import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 

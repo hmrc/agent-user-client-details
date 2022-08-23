@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.mongodb.client.result.UpdateResult
 import play.api.Logging
-import play.api.i18n.Lang
 import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameWorkItem}
@@ -31,10 +30,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-/*
-TODO this class is a copy and paste of the 'workers' for the other jobs, which contains quite a bit of boilerplate,
- maybe we don't need the same level of complexity?
- */
 class JobMonitoringWorker @Inject() (
   jobMonitoring: JobMonitoringRepository,
   friendlyNameWorkItemService: FriendlyNameWorkItemService,
@@ -96,7 +91,7 @@ class JobMonitoringWorker @Inject() (
                        failuresFor(job).flatMap { failures =>
                          val emailTemplateName =
                            (if (failures.isEmpty) "agent_permissions_success"
-                            else "agent_permissions_some_failed") + (if (job.emailLanguagePreference == Lang("cy"))
+                            else "agent_permissions_some_failed") + (if (job.emailLanguagePreference.contains("cy"))
                                                                        "_cy"
                                                                      else "")
                          logger.info(
