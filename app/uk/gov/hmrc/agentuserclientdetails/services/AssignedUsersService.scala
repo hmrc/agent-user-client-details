@@ -29,7 +29,7 @@ import scala.util.{Failure, Success, Try}
 @ImplementedBy(classOf[AssignedUsersServiceImpl])
 trait AssignedUsersService {
 
-  def calculate(groupDelegatedEnrolments: GroupDelegatedEnrolments)(implicit
+  def calculateClientsWithAssignedUsers(groupDelegatedEnrolments: GroupDelegatedEnrolments)(implicit
     hc: HeaderCarrier
   ): Future[Seq[AssignedClient]]
 }
@@ -38,7 +38,7 @@ trait AssignedUsersService {
 class AssignedUsersServiceImpl @Inject() (espConnector: EnrolmentStoreProxyConnector)(implicit ec: ExecutionContext)
     extends AssignedUsersService with Logging {
 
-  override def calculate(
+  override def calculateClientsWithAssignedUsers(
     groupDelegatedEnrolments: GroupDelegatedEnrolments
   )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] = {
 
