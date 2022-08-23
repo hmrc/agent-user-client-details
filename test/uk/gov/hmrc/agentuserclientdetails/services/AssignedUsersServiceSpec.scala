@@ -47,7 +47,9 @@ class AssignedUsersServiceSpec extends BaseSpec {
 
     "input clients list is empty" should {
       "return empty list of clients" in new TestScope {
-        assignedUsersService.calculate(GroupDelegatedEnrolments(Seq.empty)).futureValue shouldBe Seq.empty
+        assignedUsersService
+          .calculateClientsWithAssignedUsers(GroupDelegatedEnrolments(Seq.empty))
+          .futureValue shouldBe Seq.empty
       }
     }
 
@@ -68,7 +70,7 @@ class AssignedUsersServiceSpec extends BaseSpec {
           )
         )
 
-        assignedUsersService.calculate(groupDelegatedEnrolments).futureValue shouldBe List(
+        assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments).futureValue shouldBe List(
           AssignedClient(
             "HMRC-PPT-ORG",
             List(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")),

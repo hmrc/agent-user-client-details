@@ -91,13 +91,11 @@ class ClientListController @Inject() (
         Future successful NotFound
       case Some(groupDelegatedEnrolments) =>
         for {
-          assignedClients <- assignedUsersService.calculate(groupDelegatedEnrolments)
+          assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments)
           userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
-        } yield Ok(
-          Json.toJson(
-            GroupDelegatedEnrolments(assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo)))
-          )
-        )
+          assignedClientsWithUgsFilteredUsers =
+            assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo))
+        } yield Ok(Json.toJson(GroupDelegatedEnrolments(assignedClientsWithUgsFilteredUsers)))
     }
 
   protected def getClientsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
