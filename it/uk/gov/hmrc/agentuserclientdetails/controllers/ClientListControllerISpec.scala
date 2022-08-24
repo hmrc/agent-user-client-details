@@ -28,14 +28,11 @@ import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, AssignedClient, Client, Enrolment, GroupDelegatedEnrolments, Identifier, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemServiceImpl}
+import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, EnrolmentStoreProxyConnector, IfConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameWorkItemRepository, JobMonitoringRepository}
-import uk.gov.hmrc.agentuserclientdetails.services.{AgentCacheProvider, AssignedUsersService, ClientNameService, FriendlyNameWorkItemServiceImpl}
+import uk.gov.hmrc.agentuserclientdetails.services.{AgentCacheProvider, AssignedUsersService, ClientNameService, FriendlyNameWorkItemServiceImpl, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
@@ -54,7 +51,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
 
   lazy val assignedUsersService = app.injector.instanceOf[AssignedUsersService]
-  lazy val jobMonitoringRepository = app.injector.instanceOf[JobMonitoringRepository]
+  lazy val jobMonitoringService = app.injector.instanceOf[JobMonitoringService]
   lazy val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -97,7 +94,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       esp,
       ugs,
       assignedUsersService,
-      jobMonitoringRepository,
+      jobMonitoringService,
       desConnector,
       appConfig
     )

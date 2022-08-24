@@ -16,115 +16,50 @@
 
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
-import com.google.inject.ImplementedBy
-import com.mongodb.client.model.IndexOptions
-import com.mongodb.client.result.UpdateResult
-import org.mongodb.scala.model.Filters.{and, equal, exists}
-import org.mongodb.scala.model.IndexModel
-import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.Updates.set
-import play.api.Logging
-import play.api.libs.json._
+import com.typesafe.config.Config
+import org.joda.time.DateTime
+import reactivemongo.api.DB
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
-import reactivemongo.bson.BSONObjectID
+import uk.gov.hmrc.agentuserclientdetails.model.JobData
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.workitem.{WorkItem, WorkItemFieldNames, WorkItemRepository}
 
-import java.time.LocalDateTime
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
 
-// Keeping it generic so our options are open in case we want to track other kind of jobs later (e.g. ES11/ES12 assignments, etc.)
-sealed trait JobData
-
-object JobData {
-  implicit val format: Format[JobData] = new Format[JobData] {
-    // Kludgy format unfortunately due to mongo codecs not generating correctly otherwise.
-    def writes(o: JobData): JsValue = o match {
-      case x: FriendlyNameJobData => Json.toJsObject(x)
-    }
-    def reads(json: JsValue): JsResult[JobData] = json match {
-      case x: JsObject =>
-        (x \ "jobType") match {
-          case JsDefined(JsString(FriendlyNameJobData.jobType)) => Json.fromJson[FriendlyNameJobData](x)
-        }
-    }
-  }
-}
-
-case class FriendlyNameJobData(
-  groupId: String,
-  enrolmentKeys: Seq[String],
-  sendEmailOnCompletion: Boolean,
-  agencyName: Option[String],
-  email: Option[String],
-  emailLanguagePreference: Option[String], // "en" or "cy"
-  startTime: LocalDateTime, // Using Java time instead of Joda time as per latest hmrc-mongo recommendations.
-  finishTime: Option[LocalDateTime] = None,
-  _id: Option[BSONObjectID] = None,
-  jobType: String =
-    FriendlyNameJobData.jobType // do not change this. Must include it explicitly or the mongo codec will not generate correctly.
-) extends JobData
-
-object FriendlyNameJobData {
-  val jobType = "FriendlyNameJob"
-  implicit val format: OFormat[FriendlyNameJobData] = Json.format[FriendlyNameJobData]
-}
-
-@ImplementedBy(classOf[JobMonitoringRepositoryImpl])
-trait JobMonitoringRepository {
-  def getUnfinishedFriendlyNameFetchJobData: Future[Seq[FriendlyNameJobData]]
-  def getFriendlyNameFetchJobData(groupId: String): Future[Seq[FriendlyNameJobData]]
-  def createFriendlyNameFetchJobData(jobData: FriendlyNameJobData): Future[Option[BSONObjectID]]
-  def markAsFinishedFriendlyNameFetchJobData(objectId: BSONObjectID, finishTime: LocalDateTime): Future[UpdateResult]
-}
-
+// Notes:
+// - Do not use this directly in your controllers/classes. Use JobMonitoringService, as it is much easier to stub in tests.
+// - In order to line up with WorkItemRepository's internal design, item status should be interpreted as follows:
+// --- ToDo: the associated job has not been checked yet
+// --- Failed: we have checked whether the associated job was finished, but it wasn't yet finished (we will check later)
+// --- Succeeded: the associated job has finished (whether successfully or unsuccessfully - check item payload for details)
 @Singleton
-class JobMonitoringRepositoryImpl @Inject() (
-  mongoComponent: MongoComponent
-)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[JobData](
-      collectionName = "job-monitoring",
-      domainFormat = JobData.format,
-      mongoComponent = mongoComponent,
-      extraCodecs = Seq(
-        Codecs.playFormatCodec(FriendlyNameJobData.format),
-        Codecs.playFormatCodec(reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat)
-      ),
-      indexes = Seq(
-        IndexModel(ascending("groupId"), new IndexOptions().name("groupIdIdx").unique(false)),
-        IndexModel(ascending("jobType"), new IndexOptions().name("jobTypeIdx").unique(false))
-      )
-    ) with JobMonitoringRepository with Logging {
+class JobMonitoringRepository @Inject() (
+  mongoComponent: MongoComponent,
+  config: Config
+)(implicit mongo: () => DB)
+    extends WorkItemRepository[JobData, BSONObjectID](
+      "job-monitoring-work-items",
+      mongo,
+      WorkItem.workItemMongoFormat[JobData],
+      config
+    ) {
+  lazy val inProgressRetryAfterProperty = "work-item-repository.job-monitoring.retry-in-progress-after-millis"
 
-  def getFriendlyNameFetchJobData(groupId: String): Future[Seq[FriendlyNameJobData]] =
-    collection
-      .find(and(equal("jobType", FriendlyNameJobData.jobType), equal("groupId", groupId)))
-      .collect()
-      .head()
-      .map(_.collect { case x: FriendlyNameJobData => x })
-
-  def createFriendlyNameFetchJobData(jobData: FriendlyNameJobData): Future[Option[BSONObjectID]] = {
-    val objId = jobData._id.getOrElse(BSONObjectID.generate)
-    collection
-      .insertOne(jobData.copy(_id = Some(objId), finishTime = None))
-      .headOption()
-      .map(_.map(_ => objId))
+  lazy val workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
+    val receivedAt = "createdAt"
+    val updatedAt = "lastUpdated"
+    val availableAt = "availableAt"
+    val status = "status"
+    val id = "_id"
+    val failureCount = "failures"
   }
 
-  def markAsFinishedFriendlyNameFetchJobData(
-    objectId: BSONObjectID,
-    finishTime: LocalDateTime
-  ): Future[UpdateResult] =
-    collection
-      .updateOne(equal("_id", objectId), set("finishTime", finishTime))
-      .toFuture
+  override def now: DateTime = DateTime.now
 
-  def getUnfinishedFriendlyNameFetchJobData: Future[Seq[FriendlyNameJobData]] =
-    collection
-      .find(and(equal("jobType", FriendlyNameJobData.jobType), exists("finishTime", false)))
-      .collect()
-      .head()
-      .map(_.collect { case x: FriendlyNameJobData => x })
+  override def indexes: Seq[Index] = super.indexes ++ Seq(
+    Index(key = Seq("item.groupId" -> IndexType.Ascending), unique = false, background = true),
+    Index(key = Seq("item.jobType" -> IndexType.Ascending), unique = false, background = true)
+  )
 }

@@ -73,6 +73,10 @@ trait AppConfig {
   val jobMonitoringWorkerIntervalSeconds: Int
   val jobMonitoringWorkerInitialDelaySeconds: Int
 
+  val jobMonitoringAvailableBeforeSeconds: Int
+  val jobMonitoringFailedBeforeSeconds: Int
+  val jobMonitoringGiveUpAfterMinutes: Int
+
   val maxFriendlyNameUpdateBatchSize: Int
 
   val stubsCompatibilityMode: Boolean
@@ -156,6 +160,13 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
     servicesConfig.getInt("job-scheduling.job-monitoring.initialDelaySeconds")
   lazy val jobMonitoringWorkerInitialDelaySeconds: Int =
     servicesConfig.getInt("job-scheduling.job-monitoring.intervalSeconds")
+
+  val jobMonitoringAvailableBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.job-monitoring.available-before-seconds")
+  val jobMonitoringFailedBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.job-monitoring.failed-before-seconds")
+  val jobMonitoringGiveUpAfterMinutes: Int =
+    servicesConfig.getInt("work-item-repository.job-monitoring.give-up-after-minutes")
 
   lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 

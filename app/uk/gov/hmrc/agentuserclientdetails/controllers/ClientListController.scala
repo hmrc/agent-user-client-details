@@ -28,14 +28,12 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolme
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameJobData, JobMonitoringRepository}
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, ClientNameService, FriendlyNameWorkItemService}
+import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.workitem.{Failed, PermanentlyFailed, ProcessingStatus, ToDo}
 
-import java.time.LocalDateTime
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -47,7 +45,7 @@ class ClientListController @Inject() (
   espConnector: EnrolmentStoreProxyConnector,
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
   assignedUsersService: AssignedUsersService,
-  jobMonitoringRepository: JobMonitoringRepository,
+  jobMonitoringService: JobMonitoringService,
   desConnector: DesConnector,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
@@ -249,17 +247,18 @@ class ClientListController @Inject() (
                                agentDetailsDesResponse =>
                                  val agencyName = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyName)
                                  val agencyEmail = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyEmail)
-                                 jobMonitoringRepository.createFriendlyNameFetchJobData(
-                                   FriendlyNameJobData(
-                                     groupId = groupId,
-                                     enrolmentKeys = toBeAdded.map(_.enrolmentKey),
-                                     sendEmailOnCompletion = true,
-                                     agencyName = agencyName,
-                                     email = agencyEmail,
-                                     emailLanguagePreference = Some(lang.code),
-                                     startTime = LocalDateTime.now()
+                                 jobMonitoringService
+                                   .createFriendlyNameFetchJobData(
+                                     FriendlyNameJobData(
+                                       groupId = groupId,
+                                       enrolmentKeys = toBeAdded.map(_.enrolmentKey),
+                                       sendEmailOnCompletion = true,
+                                       agencyName = agencyName,
+                                       email = agencyEmail,
+                                       emailLanguagePreference = Some(lang.code)
+                                     )
                                    )
-                                 )
+                                   .map(Some(_))
                              }
       } yield maybeBSONObjectID
 

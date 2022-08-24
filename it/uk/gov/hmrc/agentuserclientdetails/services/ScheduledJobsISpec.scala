@@ -22,12 +22,11 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.i18n.Lang
 import play.api.test.PlayRunners
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
-import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.{AssignmentsWorkItemRepository, FriendlyNameJobData, FriendlyNameWorkItemRepository, JobMonitoringRepository}
+import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameJobData, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.repositories.{AssignmentsWorkItemRepository, FriendlyNameWorkItemRepository, JobMonitoringRepository}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.Succeeded
@@ -106,10 +105,9 @@ class ScheduledJobsISpec
       running(
         _.configure(configOverrides: _*)
       ) { app =>
-        lazy val jmr = app.injector.instanceOf[JobMonitoringRepository]
-        lazy val jmw = app.injector.instanceOf[JobMonitoringWorker]
+        lazy val jms = app.injector.instanceOf[JobMonitoringService]
 
-        val jobId = jmr
+        jms
           .createFriendlyNameFetchJobData(
             FriendlyNameJobData(
               groupId = "myGroupId",
@@ -117,8 +115,7 @@ class ScheduledJobsISpec
               sendEmailOnCompletion = false,
               agencyName = None,
               email = None,
-              emailLanguagePreference = Some("en"),
-              startTime = LocalDateTime.now.minusMinutes(1)
+              emailLanguagePreference = Some("en")
             )
           )
           .futureValue
@@ -127,7 +124,7 @@ class ScheduledJobsISpec
 
         // The scheduled job should be marked as complete (since there are no outstanding items in the repo that belong to it)
 
-        jmr.getUnfinishedFriendlyNameFetchJobData.futureValue shouldBe empty
+        jms.getNextJobToCheck.futureValue shouldBe empty
       }
     }
   }

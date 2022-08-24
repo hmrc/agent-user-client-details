@@ -39,7 +39,7 @@ case class AssignmentsWorkItemRepository @Inject() (config: Config)(implicit mon
   implicit val dateFormats: Format[DateTime] =
     ReactiveMongoFormats.dateTimeFormats
 
-  lazy val inProgressRetryAfterProperty = "work-item-repository.assignments.inProgressRetryAfter.millis"
+  lazy val inProgressRetryAfterProperty = "work-item-repository.assignments.retry-in-progress-after-millis"
 
   lazy val workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
     val receivedAt = "createdAt"

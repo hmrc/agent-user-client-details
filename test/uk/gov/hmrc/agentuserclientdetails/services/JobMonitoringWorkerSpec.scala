@@ -25,13 +25,11 @@ import org.scalatest.wordspec.AnyWordSpec
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameJobData, JobMonitoringRepository}
+import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameJobData, FriendlyNameWorkItem, JobData}
 import uk.gov.hmrc.agentuserclientdetails.support._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.workitem._
 
-import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -62,10 +60,17 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
       sendEmailOnCompletion = true,
       agencyName = Some("Perfect Accounts Ltd"),
       email = Some("a@b.com"),
-      emailLanguagePreference = Some("en"),
-      startTime = LocalDateTime.of(2020, 1, 1, 12, 0, 0),
-      finishTime = None,
-      _id = Some(jobId)
+      emailLanguagePreference = Some("en")
+    )
+    val datetime = new DateTime(2020, 1, 1, 12, 0, 0)
+    val jobMonitoringWorkItem = WorkItem[JobData](
+      id = jobId,
+      receivedAt = datetime,
+      updatedAt = datetime,
+      availableAt = datetime,
+      status = ToDo,
+      failureCount = 0,
+      item = jobData
     )
 
     "mark the job as completed and send the email when the job is completed and sending email is enabled" in {
@@ -74,9 +79,9 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
-      val jobRepo = stub[JobMonitoringRepository]
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      val jms = stub[JobMonitoringService]
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
@@ -91,15 +96,15 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .when(groupId, Some(Seq(PermanentlyFailed)), *, *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
-      val jmw = new JobMonitoringWorker(jobRepo, fnwis, email)
-      jmw.processItem(jobData).futureValue
+      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .verify(argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_success"), *, *)
         .once()
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -110,9 +115,9 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
-      val jobRepo = stub[JobMonitoringRepository]
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      val jms = stub[JobMonitoringService]
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
@@ -127,15 +132,17 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .when(groupId, Some(Seq(PermanentlyFailed)), *, *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
-      val jmw = new JobMonitoringWorker(jobRepo, fnwis, email)
-      jmw.processItem(jobData.copy(emailLanguagePreference = Some("cy"))).futureValue // Welsh language preference
+      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      val workItemWithLanguageSetToWelsh =
+        jobMonitoringWorkItem.copy(item = jobData.copy(emailLanguagePreference = Some("cy")): JobData)
+      jmw.processItem(workItemWithLanguageSetToWelsh).futureValue // Welsh language preference
 
       (email
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .verify(argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_success_cy"), *, *)
         .once()
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -146,9 +153,9 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
-      val jobRepo = stub[JobMonitoringRepository]
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      val jms = stub[JobMonitoringService]
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
@@ -159,28 +166,31 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           Future.successful(Seq.empty) // No outstanding items
         )
 
-      val jmw = new JobMonitoringWorker(jobRepo, fnwis, email)
-      jmw.processItem(jobData.copy(sendEmailOnCompletion = false)).futureValue
+      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      val workItemWithEmailDisabled =
+        jobMonitoringWorkItem.copy(item = jobData.copy(sendEmailOnCompletion = false): JobData)
+
+      jmw.processItem(workItemWithEmailDisabled).futureValue
 
       (email
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .verify(*, *, *)
         .never()
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
 
-    "don't mark the job as completed and don't send the email when the job is NOT completed" in {
+    "not mark the job as completed and don't send the email when the job is NOT completed" in {
       val email = stub[EmailConnector]
       (email
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
-      val jobRepo = stub[JobMonitoringRepository]
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      val jms = stub[JobMonitoringService]
+      (jms
+        .markAsNotFinished(_: BSONObjectID)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
@@ -195,17 +205,21 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           )
         )
 
-      val jmw = new JobMonitoringWorker(jobRepo, fnwis, email)
-      jmw.processItem(jobData).futureValue
+      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .verify(*, *, *)
         .never()
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .verify(jobId, *)
         .never()
+      (jms
+        .markAsNotFinished(_: BSONObjectID)(_: ExecutionContext))
+        .verify(jobId, *)
+        .once()
     }
 
     "mark the job as completed and send the 'partial failure' email when there have been any failures" in {
@@ -214,9 +228,9 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
-      val jobRepo = stub[JobMonitoringRepository]
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      val jms = stub[JobMonitoringService]
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
@@ -235,15 +249,15 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           ) // one permanently failed item
         )
 
-      val jmw = new JobMonitoringWorker(jobRepo, fnwis, email)
-      jmw.processItem(jobData).futureValue
+      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
         .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
         .verify(argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_some_failed"), *, *)
         .once()
-      (jobRepo
-        .markAsFinishedFriendlyNameFetchJobData(_: BSONObjectID, _: LocalDateTime))
+      (jms
+        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }

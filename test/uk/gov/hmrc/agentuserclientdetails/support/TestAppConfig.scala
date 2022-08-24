@@ -40,6 +40,9 @@ class TestAppConfig extends AppConfig {
   val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int = 0
   val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int = 1
   val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int = 1440
+  val jobMonitoringAvailableBeforeSeconds: Int = 0
+  val jobMonitoringFailedBeforeSeconds: Int = 1
+  val jobMonitoringGiveUpAfterMinutes: Int = 1440
   val stubsCompatibilityMode: Boolean = true
   val friendlyNameJobRestartRepoQueueInitialDelaySeconds: Int = 60
   val friendlyNameJobRestartRepoQueueIntervalSeconds: Int = 60

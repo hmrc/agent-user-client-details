@@ -19,25 +19,20 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-
-import java.time.LocalDateTime
+import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, JobData}
 
 class JobDataSpec extends BaseSpec {
 
   "JobData" should {
 
     "serialise and deseralise FriendlyNameJobData correctly" in {
-      val id: BSONObjectID = BSONObjectID.generate()
       val jobData: JobData = FriendlyNameJobData(
         groupId = "someGroupId",
         enrolmentKeys = Seq("A~B~C", "D~E~F"),
         sendEmailOnCompletion = true,
         agencyName = Some("Perfect Accounts Ltd"),
         email = Some("a@b.com"),
-        emailLanguagePreference = Some("en"),
-        startTime = LocalDateTime.of(2020, 1, 1, 12, 0, 0),
-        finishTime = None,
-        _id = Some(id)
+        emailLanguagePreference = Some("en")
       )
 
       val json = Json.toJson(jobData)
