@@ -23,15 +23,16 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.PlayRunners
+import play.api.inject.bind
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameJobData, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.{AssignmentsWorkItemRepository, FriendlyNameWorkItemRepository, JobMonitoringRepository}
+import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.Succeeded
 
-import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class ScheduledJobsISpec
@@ -66,11 +67,11 @@ class ScheduledJobsISpec
     "clean up the repository periodically" in {
       running(
         _.configure(configOverrides: _*)
+          .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
       ) { app =>
-        lazy val wir = app.injector.instanceOf[FriendlyNameWorkItemRepository]
-        lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
+        lazy val wis = app.injector.instanceOf[FriendlyNameWorkItemService]
 
-        val main = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         wis.removeAll().futureValue
         wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), Succeeded).futureValue
         wis.collectStats.futureValue.values.sum shouldBe 1
@@ -84,11 +85,11 @@ class ScheduledJobsISpec
     "clean up the repository periodically" in {
       running(
         _.configure(configOverrides: _*)
+          .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
       ) { app =>
-        lazy val wir = app.injector.instanceOf[AssignmentsWorkItemRepository]
-        lazy val wis = new AssignmentsWorkItemServiceImpl(wir)
+        lazy val wis = app.injector.instanceOf[AssignmentsWorkItemService]
 
-        val main = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         wis.removeAll().futureValue
         wis
           .pushNew(Seq(AssignmentWorkItem(Assign, testGroupId, testEnrolmentKey, testArn)), DateTime.now(), Succeeded)
@@ -104,9 +105,13 @@ class ScheduledJobsISpec
     "check job completion periodically and mark as complete accordingly" in {
       running(
         _.configure(configOverrides: _*)
+          .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
       ) { app =>
+        lazy val jmr = app.injector.instanceOf[JobMonitoringRepository]
         lazy val jms = app.injector.instanceOf[JobMonitoringService]
 
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        jmr.collection.drop(failIfNotFound = false).futureValue
         jms
           .createFriendlyNameFetchJobData(
             FriendlyNameJobData(

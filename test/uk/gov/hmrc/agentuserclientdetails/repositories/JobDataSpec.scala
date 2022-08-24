@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import play.api.libs.json.Json
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, JobData}
 

@@ -28,6 +28,7 @@ import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem._
@@ -37,6 +38,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class AssignmentsWorkItemRepositoryISpec
     extends AnyWordSpec with Matchers with ScalaFutures with BeforeAndAfterEach with IntegrationPatience
     with GuiceOneServerPerSuite with MongoSpecSupport with MockFactory {
+
+  implicit val mongoProvider = MongoProvider(mongo)
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val wir = AssignmentsWorkItemRepository(config)

@@ -161,11 +161,11 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
   lazy val jobMonitoringWorkerInitialDelaySeconds: Int =
     servicesConfig.getInt("job-scheduling.job-monitoring.intervalSeconds")
 
-  val jobMonitoringAvailableBeforeSeconds: Int =
+  lazy val jobMonitoringAvailableBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.job-monitoring.available-before-seconds")
-  val jobMonitoringFailedBeforeSeconds: Int =
+  lazy val jobMonitoringFailedBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.job-monitoring.failed-before-seconds")
-  val jobMonitoringGiveUpAfterMinutes: Int =
+  lazy val jobMonitoringGiveUpAfterMinutes: Int =
     servicesConfig.getInt("work-item-repository.job-monitoring.give-up-after-minutes")
 
   lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")

@@ -19,20 +19,20 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 import play.api.libs.json._
-import reactivemongo.api.DB
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.workitem.{WorkItem, _}
 import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 
 import javax.inject.Inject
 
-case class FriendlyNameWorkItemRepository @Inject() (config: Config)(implicit mongo: () => DB)
+case class FriendlyNameWorkItemRepository @Inject() (config: Config)(implicit mongo: MongoProvider)
     extends WorkItemRepository[FriendlyNameWorkItem, BSONObjectID](
       "client-name-work-items",
-      mongo,
+      mongo.value,
       WorkItem.workItemMongoFormat[FriendlyNameWorkItem],
       config
     ) {

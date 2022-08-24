@@ -76,10 +76,10 @@ class JobMonitoringWorker @Inject() (
       case job: FriendlyNameJobData =>
         hasCompleted(job).flatMap {
           case false =>
-            logger.info(s"Job monitor: Job ${workItem.id} has not yet finished.")
+            logger.info(s"Job monitor: Job ${workItem.id.stringify} has not yet finished.")
             jobMonitoringService.markAsNotFinished(workItem.id).map(_ => ())
           case true =>
-            logger.info(s"Job monitor: Job ${workItem.id} has finished.")
+            logger.info(s"Job monitor: Job ${workItem.id.stringify} has finished.")
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)
               _ <- if (job.sendEmailOnCompletion) {

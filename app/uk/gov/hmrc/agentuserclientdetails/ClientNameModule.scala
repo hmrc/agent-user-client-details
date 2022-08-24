@@ -21,7 +21,7 @@ import com.google.inject.{AbstractModule, Provides}
 import net.codingwell.scalaguice.ScalaModule
 import play.api.Configuration
 import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.DB
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.clusterworkthrottling.{DefaultServiceInstances, ServiceInstances}
 import uk.gov.hmrc.mongo.MongoComponent
 
@@ -33,8 +33,8 @@ class ClientNameModule extends AbstractModule with ScalaModule {
 
   @Provides
   @Singleton
-  def mongoDbProvider(reactiveMongoComponent: ReactiveMongoComponent): () => DB =
-    reactiveMongoComponent.mongoConnector.db
+  def mongoDbProvider(reactiveMongoComponent: ReactiveMongoComponent): MongoProvider =
+    MongoProvider(reactiveMongoComponent.mongoConnector.db)
 
   @Provides
   @Singleton

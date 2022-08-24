@@ -19,19 +19,19 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 import play.api.libs.json._
-import reactivemongo.api.DB
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.workitem._
 
 import javax.inject.Inject
 
-case class AssignmentsWorkItemRepository @Inject() (config: Config)(implicit mongo: () => DB)
+case class AssignmentsWorkItemRepository @Inject() (config: Config)(implicit mongo: MongoProvider)
     extends WorkItemRepository[AssignmentWorkItem, BSONObjectID](
       "assignments-work-items",
-      mongo,
+      mongo.value,
       WorkItem.workItemMongoFormat[AssignmentWorkItem],
       config
     ) {

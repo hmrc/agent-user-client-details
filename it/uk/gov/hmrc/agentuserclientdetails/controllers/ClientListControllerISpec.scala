@@ -31,8 +31,9 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, EnrolmentStoreProxyConnector, IfConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameWorkItemRepository, JobMonitoringRepository}
+import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.{AgentCacheProvider, AssignedUsersService, ClientNameService, FriendlyNameWorkItemServiceImpl, JobMonitoringService}
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
@@ -41,6 +42,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSupport {
+
+  implicit val mongoProvider = MongoProvider(mongo)
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]

@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 
@@ -35,6 +36,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupport {
+
+  implicit val mongoProvider = MongoProvider(mongo)
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]

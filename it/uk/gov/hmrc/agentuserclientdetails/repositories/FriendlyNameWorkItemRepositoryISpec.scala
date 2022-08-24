@@ -23,6 +23,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem._
@@ -30,6 +31,8 @@ import uk.gov.hmrc.workitem._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSpecSupport {
+
+  implicit val mongoProvider = MongoProvider(mongo)
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val wir = FriendlyNameWorkItemRepository(config)

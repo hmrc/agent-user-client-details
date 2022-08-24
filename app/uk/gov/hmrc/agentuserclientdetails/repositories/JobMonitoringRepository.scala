@@ -18,12 +18,11 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
 import org.joda.time.DateTime
-import reactivemongo.api.DB
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
 import uk.gov.hmrc.agentuserclientdetails.model.JobData
-import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.workitem.{WorkItem, WorkItemFieldNames, WorkItemRepository}
 
 import javax.inject.{Inject, Singleton}
@@ -36,12 +35,11 @@ import javax.inject.{Inject, Singleton}
 // --- Succeeded: the associated job has finished (whether successfully or unsuccessfully - check item payload for details)
 @Singleton
 class JobMonitoringRepository @Inject() (
-  mongoComponent: MongoComponent,
   config: Config
-)(implicit mongo: () => DB)
+)(implicit mongo: MongoProvider)
     extends WorkItemRepository[JobData, BSONObjectID](
       "job-monitoring-work-items",
-      mongo,
+      mongo.value,
       WorkItem.workItemMongoFormat[JobData],
       config
     ) {
