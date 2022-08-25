@@ -19,14 +19,17 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import org.joda.time.DateTime
 import play.api.Logging
 import play.api.http.HttpEntity.NoEntity
+import play.api.i18n.Lang
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
 import reactivemongo.api.commands.WriteError
+import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService}
+import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.workitem.{Failed, PermanentlyFailed, ProcessingStatus, ToDo}
@@ -41,64 +44,66 @@ class ClientListController @Inject() (
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
-  appConfig: AppConfig,
-  assignedUsersService: AssignedUsersService
+  assignedUsersService: AssignedUsersService,
+  jobMonitoringService: JobMonitoringService,
+  desConnector: DesConnector,
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
-  def getClientsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
-    getClientsForGroupIdFn(groupId)
+  def getClients(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withGroupIdFor(arn) { groupId =>
+      getClientsFn(arn, groupId)
+    }
   }
 
-  def getClientsForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
-    adaptForArn(getClientsForGroupIdFn)(arn)
-  }
-
-  def getClientListStatusForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
-    adaptForArn(getClientsForGroupIdFn)(arn).map { result =>
-      result.header.status match {
-        case OK | ACCEPTED => result.copy(body = NoEntity)
-        case _             => result
+  def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withGroupIdFor(arn) { groupId =>
+      getClientsFn(arn, groupId).map { result =>
+        result.header.status match {
+          case OK | ACCEPTED => result.copy(body = NoEntity)
+          case _             => result
+        }
       }
     }
   }
 
-  def forceRefreshFriendlyNamesForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
-    forceRefreshFriendlyNamesForGroupIdFn(groupId)
-  }
-
-  def forceRefreshFriendlyNamesForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
-    adaptForArn(forceRefreshFriendlyNamesForGroupIdFn)(arn)
+  def forceRefreshFriendlyNames(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withGroupIdFor(arn) { groupId =>
+      forceRefreshFriendlyNamesForGroupIdFn(groupId)
+    }
   }
 
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
     getOutstandingWorkItemsForGroupIdFn(groupId)
   }
 
-  def getOutstandingWorkItemsForArn(arn: String): Action[AnyContent] = Action.async { implicit request =>
-    adaptForArn(getOutstandingWorkItemsForGroupIdFn)(arn)
-  }
-
-  def getClientsWithAssignedUsers(arn: String): Action[AnyContent] = Action.async { implicit request =>
-    adaptForArn(getClientsWithAssignedUsersForGroupIdFn)(arn)
-  }
-
-  private def getClientsWithAssignedUsersForGroupIdFn(
-    groupId: String
-  )(implicit request: RequestHeader): Future[Result] =
-    espConnector.getGroupDelegatedEnrolments(groupId) flatMap {
-      case None =>
-        Future successful NotFound
-      case Some(groupDelegatedEnrolments) =>
-        for {
-          assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments)
-          userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
-          assignedClientsWithUgsFilteredUsers =
-            assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo))
-        } yield Ok(Json.toJson(GroupDelegatedEnrolments(assignedClientsWithUgsFilteredUsers)))
+  def getClientsWithAssignedUsers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withGroupIdFor(arn) { groupId =>
+      espConnector.getGroupDelegatedEnrolments(groupId) flatMap {
+        case None =>
+          Future successful NotFound
+        case Some(groupDelegatedEnrolments) =>
+          for {
+            assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments)
+            userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
+            assignedClientsWithUgsFilteredUsers =
+              assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo))
+          } yield Ok(Json.toJson(GroupDelegatedEnrolments(assignedClientsWithUgsFilteredUsers)))
+      }
     }
+  }
 
-  protected def getClientsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] = {
+  def getOutstandingWorkItemsForArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withGroupIdFor(arn) { groupId =>
+      getOutstandingWorkItemsForGroupIdFn(groupId)
+    }
+  }
+
+  protected def getClientsFn(
+    arn: Arn,
+    groupId: String
+  )(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
       val mSessionId: Option[String] =
         if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
@@ -129,6 +134,7 @@ class ClientListController @Inject() (
               s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
             )
           _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
+          _ <- createFriendlyNameJobFetchEntry(arn, groupId, toBeAdded, langPreferenceFromHeaders.getOrElse(Lang("en")))
         } yield
           if (clientsWantingName.isEmpty)
             Ok(Json.toJson(clients))
@@ -140,6 +146,9 @@ class ClientListController @Inject() (
         Future.failed(uer)
     }
   }
+
+  private def langPreferenceFromHeaders(implicit request: RequestHeader): Option[Lang] =
+    request.headers.get("PLAY_LANG").map(Lang(_))
 
   protected def forceRefreshFriendlyNamesForGroupIdFn(
     groupId: String
@@ -169,7 +178,7 @@ class ClientListController @Inject() (
     }
   }
 
-  def getOutstandingWorkItemsForGroupIdFn(groupId: String)(implicit request: RequestHeader): Future[Result] =
+  def getOutstandingWorkItemsForGroupIdFn(groupId: String): Future[Result] =
     workItemService.query(groupId, None).map { wis =>
       Ok(
         Json.toJson[Seq[Client]](
@@ -202,14 +211,13 @@ class ClientListController @Inject() (
     c1s.filterNot(client => e2ek.contains(client.enrolmentKey))
   }
 
-  private def adaptForArn(
+  private def withGroupIdFor(arn: Arn)(
     groupIdAction: String => Future[Result]
-  )(arn: String)(implicit request: RequestHeader): Future[Result] =
-    if (!Arn.isValid(arn)) {
-      logger.error(s"Invalid ARN: $arn")
-      Future.successful(BadRequest)
-    } else
-      espConnector.getPrincipalGroupIdFor(Arn(arn)).transformWith {
+  )(implicit request: RequestHeader): Future[Result] =
+    if (!Arn.isValid(arn.value))
+      Future.successful(BadRequest("Invalid ARN"))
+    else {
+      espConnector.getPrincipalGroupIdFor(arn).transformWith {
         case Success(Some(groupId)) => groupIdAction(groupId)
         case Success(None) =>
           logger.error(s"ARN $arn not found.")
@@ -218,4 +226,41 @@ class ClientListController @Inject() (
         case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED => Future.successful(Unauthorized)
         case Failure(_) => Future.successful(InternalServerError)
       }
+    }
+
+  def createFriendlyNameJobFetchEntry(
+    arn: Arn,
+    groupId: String,
+    toBeAdded: Seq[Client],
+    lang: Lang
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[BSONObjectID]] =
+    if (toBeAdded.isEmpty) Future.successful(None)
+    else {
+      for {
+        maybeAgentDetailsDesResponse <- desConnector.getAgencyDetails(arn)
+        _ =
+          if (maybeAgentDetailsDesResponse.isEmpty)
+            logger.warn(
+              s"Agency details could not be retrieved for ${arn.value}. It will not be possible to notify them by email when the client name fetch job is complete."
+            )
+        maybeBSONObjectID <- maybeAgentDetailsDesResponse.fold[Future[Option[BSONObjectID]]](Future successful None) {
+                               agentDetailsDesResponse =>
+                                 val agencyName = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyName)
+                                 val agencyEmail = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyEmail)
+                                 jobMonitoringService
+                                   .createFriendlyNameFetchJobData(
+                                     FriendlyNameJobData(
+                                       groupId = groupId,
+                                       enrolmentKeys = toBeAdded.map(_.enrolmentKey),
+                                       sendEmailOnCompletion = true,
+                                       agencyName = agencyName,
+                                       email = agencyEmail,
+                                       emailLanguagePreference = Some(lang.code)
+                                     )
+                                   )
+                                   .map(Some(_))
+                             }
+      } yield maybeBSONObjectID
+
+    }
 }

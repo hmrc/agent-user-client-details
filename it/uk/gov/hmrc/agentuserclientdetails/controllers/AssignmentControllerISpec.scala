@@ -32,6 +32,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, UserEnrolment, UserEnrolmentA
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 
@@ -41,6 +42,7 @@ class AssignmentControllerISpec
     extends AnyWordSpec with Matchers with ScalaFutures with BeforeAndAfterEach with IntegrationPatience
     with GuiceOneServerPerSuite with MongoSpecSupport with MockFactory {
 
+  implicit val mongoProvider = MongoProvider(mongo)
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]
   lazy val configuration = app.injector.instanceOf[Configuration]

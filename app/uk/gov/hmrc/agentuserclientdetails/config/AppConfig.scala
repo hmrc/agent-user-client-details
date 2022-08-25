@@ -30,6 +30,8 @@ trait AppConfig {
 
   val citizenDetailsBaseUrl: String
 
+  def emailBaseUrl: String
+
   val enrolmentStoreProxyUrl: String
 
   val desBaseUrl: String
@@ -68,6 +70,13 @@ trait AppConfig {
   val assignEnrolmentJobLogRepoStatsQueueInitialDelaySeconds: Int
   val assignEnrolmentJobLogRepoStatsQueueIntervalSeconds: Int
 
+  val jobMonitoringWorkerIntervalSeconds: Int
+  val jobMonitoringWorkerInitialDelaySeconds: Int
+
+  val jobMonitoringAvailableBeforeSeconds: Int
+  val jobMonitoringFailedBeforeSeconds: Int
+  val jobMonitoringGiveUpAfterMinutes: Int
+
   val maxFriendlyNameUpdateBatchSize: Int
 
   val stubsCompatibilityMode: Boolean
@@ -86,6 +95,8 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
   private def baseUrl(key: String) = servicesConfig.baseUrl(key)
 
   lazy val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
+
+  override lazy val emailBaseUrl: String = baseUrl("email")
 
   lazy val enrolmentStoreProxyUrl: String = baseUrl("enrolment-store-proxy")
 
@@ -144,6 +155,18 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
     servicesConfig.getInt("job-scheduling.assign-enrolment.log-repo-stats.initialDelaySeconds")
   lazy val assignEnrolmentJobLogRepoStatsQueueIntervalSeconds: Int =
     servicesConfig.getInt("job-scheduling.assign-enrolment.log-repo-stats.intervalSeconds")
+
+  lazy val jobMonitoringWorkerIntervalSeconds: Int =
+    servicesConfig.getInt("job-scheduling.job-monitoring.initialDelaySeconds")
+  lazy val jobMonitoringWorkerInitialDelaySeconds: Int =
+    servicesConfig.getInt("job-scheduling.job-monitoring.intervalSeconds")
+
+  lazy val jobMonitoringAvailableBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.job-monitoring.available-before-seconds")
+  lazy val jobMonitoringFailedBeforeSeconds: Int =
+    servicesConfig.getInt("work-item-repository.job-monitoring.failed-before-seconds")
+  lazy val jobMonitoringGiveUpAfterMinutes: Int =
+    servicesConfig.getInt("work-item-repository.job-monitoring.give-up-after-minutes")
 
   lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 

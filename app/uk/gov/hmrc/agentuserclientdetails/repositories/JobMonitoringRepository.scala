@@ -18,29 +18,32 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
 import org.joda.time.DateTime
-import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.workitem.{WorkItem, _}
 import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
+import uk.gov.hmrc.agentuserclientdetails.model.JobData
 import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
+import uk.gov.hmrc.workitem.{WorkItem, WorkItemFieldNames, WorkItemRepository}
 
-import javax.inject.Inject
+import javax.inject.{Inject, Singleton}
 
-case class FriendlyNameWorkItemRepository @Inject() (config: Config)(implicit mongo: MongoProvider)
-    extends WorkItemRepository[FriendlyNameWorkItem, BSONObjectID](
-      "client-name-work-items",
+// Notes:
+// - Do not use this directly in your controllers/classes. Use JobMonitoringService, as it is much easier to stub in tests.
+// - In order to line up with WorkItemRepository's internal design, item status should be interpreted as follows:
+// --- ToDo: the associated job has not been checked yet
+// --- Failed: we have checked whether the associated job was finished, but it wasn't yet finished (we will check later)
+// --- Succeeded: the associated job has finished (whether successfully or unsuccessfully - check item payload for details)
+@Singleton
+class JobMonitoringRepository @Inject() (
+  config: Config
+)(implicit mongo: MongoProvider)
+    extends WorkItemRepository[JobData, BSONObjectID](
+      "job-monitoring-work-items",
       mongo.value,
-      WorkItem.workItemMongoFormat[FriendlyNameWorkItem],
+      WorkItem.workItemMongoFormat[JobData],
       config
     ) {
-
-  implicit val dateFormats: Format[DateTime] =
-    ReactiveMongoFormats.dateTimeFormats
-
-  lazy val inProgressRetryAfterProperty = "work-item-repository.friendly-name.retry-in-progress-after-millis"
+  lazy val inProgressRetryAfterProperty = "work-item-repository.job-monitoring.retry-in-progress-after-millis"
 
   lazy val workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
     val receivedAt = "createdAt"
@@ -54,7 +57,7 @@ case class FriendlyNameWorkItemRepository @Inject() (config: Config)(implicit mo
   override def now: DateTime = DateTime.now
 
   override def indexes: Seq[Index] = super.indexes ++ Seq(
-    Index(key = Seq("item.groupId" -> IndexType.Ascending), unique = false, background = true)
+    Index(key = Seq("item.groupId" -> IndexType.Ascending), unique = false, background = true),
+    Index(key = Seq("item.jobType" -> IndexType.Ascending), unique = false, background = true)
   )
-
 }

@@ -23,10 +23,12 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.PlayRunners
+import play.api.inject.bind
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
-import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.{AssignmentsWorkItemRepository, FriendlyNameWorkItemRepository}
+import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameJobData, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
+import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.Succeeded
@@ -43,23 +45,33 @@ class ScheduledJobsISpec
   val testArn = "BARN9706518"
   val client1 = Client(testEnrolmentKey, "John Innes")
 
+  val configOverrides = Seq( // override config values to reduce delays required to test scheduled jobs
+    "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds"    -> 0,
+    "job-scheduling.friendly-name.restart-repo-queue.intervalSeconds"        -> 60,
+    "job-scheduling.friendly-name.repo-cleanup.initialDelaySeconds"          -> 0,
+    "job-scheduling.friendly-name.repo-cleanup.intervalSeconds"              -> 2,
+    "job-scheduling.friendly-name.log-repo-stats.initialDelaySeconds"        -> 0,
+    "job-scheduling.friendly-name.log-repo-stats.intervalSeconds"            -> 1,
+    "job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds" -> 0,
+    "job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds"     -> 60,
+    "job-scheduling.assign-enrolment.repo-cleanup.initialDelaySeconds"       -> 0,
+    "job-scheduling.assign-enrolment.repo-cleanup.intervalSeconds"           -> 2,
+    "job-scheduling.assign-enrolment.log-repo-stats.initialDelaySeconds"     -> 0,
+    "job-scheduling.assign-enrolment.log-repo-stats.intervalSeconds"         -> 1,
+    "job-scheduling.job-monitoring.initialDelaySeconds"                      -> 0,
+    "job-scheduling.job-monitoring.intervalSeconds"                          -> 1,
+    "agent.cache.enabled"                                                    -> false
+  )
+
   "'friendly name' repository cleanup job" should {
     "clean up the repository periodically" in {
       running(
-        _.configure(
-          "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds" -> 0,
-          "job-scheduling.friendly-name.restart-repo-queue.intervalSeconds"     -> 60,
-          "job-scheduling.friendly-name.repo-cleanup.initialDelaySeconds"       -> 0,
-          "job-scheduling.friendly-name.repo-cleanup.intervalSeconds"           -> 2,
-          "job-scheduling.friendly-name.log-repo-stats.initialDelaySeconds"     -> 0,
-          "job-scheduling.friendly-name.log-repo-stats.intervalSeconds"         -> 1,
-          "agent.cache.enabled"                                                 -> false
-        )
+        _.configure(configOverrides: _*)
+          .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
       ) { app =>
-        lazy val wir = app.injector.instanceOf[FriendlyNameWorkItemRepository]
-        lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
+        lazy val wis = app.injector.instanceOf[FriendlyNameWorkItemService]
 
-        val main = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         wis.removeAll().futureValue
         wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), Succeeded).futureValue
         wis.collectStats.futureValue.values.sum shouldBe 1
@@ -72,20 +84,12 @@ class ScheduledJobsISpec
   "'assign enrolment' repository cleanup job" should {
     "clean up the repository periodically" in {
       running(
-        _.configure(
-          "job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds" -> 0,
-          "job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds"     -> 60,
-          "job-scheduling.assign-enrolment.repo-cleanup.initialDelaySeconds"       -> 0,
-          "job-scheduling.assign-enrolment.repo-cleanup.intervalSeconds"           -> 2,
-          "job-scheduling.assign-enrolment.log-repo-stats.initialDelaySeconds"     -> 0,
-          "job-scheduling.assign-enrolment.log-repo-stats.intervalSeconds"         -> 1,
-          "agent.cache.enabled"                                                    -> false
-        )
+        _.configure(configOverrides: _*)
+          .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
       ) { app =>
-        lazy val wir = app.injector.instanceOf[AssignmentsWorkItemRepository]
-        lazy val wis = new AssignmentsWorkItemServiceImpl(wir)
+        lazy val wis = app.injector.instanceOf[AssignmentsWorkItemService]
 
-        val main = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         wis.removeAll().futureValue
         wis
           .pushNew(Seq(AssignmentWorkItem(Assign, testGroupId, testEnrolmentKey, testArn)), DateTime.now(), Succeeded)
@@ -93,6 +97,39 @@ class ScheduledJobsISpec
         wis.collectStats.futureValue.values.sum shouldBe 1
         Thread.sleep(5000) // Wait for the scheduled job to be executed
         wis.collectStats.futureValue.values.sum shouldBe 0
+      }
+    }
+  }
+
+  "job monitoring job" should {
+    "check job completion periodically and mark as complete accordingly" in {
+      running(
+        _.configure(configOverrides: _*)
+          .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
+      ) { app =>
+        lazy val jmr = app.injector.instanceOf[JobMonitoringRepository]
+        lazy val jms = app.injector.instanceOf[JobMonitoringService]
+
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        jmr.collection.drop(failIfNotFound = false).futureValue
+        jms
+          .createFriendlyNameFetchJobData(
+            FriendlyNameJobData(
+              groupId = "myGroupId",
+              enrolmentKeys = Seq("HMRC-MTD-VAT~VRN~123456789"),
+              sendEmailOnCompletion = false,
+              agencyName = None,
+              email = None,
+              emailLanguagePreference = Some("en")
+            )
+          )
+          .futureValue
+
+        Thread.sleep(5000) // Wait for the scheduled job to be executed
+
+        // The scheduled job should be marked as complete (since there are no outstanding items in the repo that belong to it)
+
+        jms.getNextJobToCheck.futureValue shouldBe empty
       }
     }
   }

@@ -44,7 +44,12 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
 
   // Service that returns a successful response
   val mockCnsOK: ClientNameService =
-    new ClientNameService(FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector, agentCacheProvider)
+    new ClientNameService(
+      FakeCitizenDetailsConnector,
+      FakeDesConnector,
+      FakeIfConnector,
+      agentCacheProvider
+    )
   // Service that returns a failure with a HTTP status
   def mockCnsFail(failStatus: Int): ClientNameService = new ClientNameService(
     FailingCitizenDetailsConnector(failStatus),
@@ -54,7 +59,12 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
   )
   // Service that returns a non-HTTP exception
   val mockCnsConnectFail: ClientNameService =
-    new ClientNameService(FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector, agentCacheProvider) {
+    new ClientNameService(
+      FakeCitizenDetailsConnector,
+      FakeDesConnector,
+      FakeIfConnector,
+      agentCacheProvider
+    ) {
       override def getClientNameByService(clientId: String, service: String)(implicit
         hc: HeaderCarrier,
         ec: ExecutionContext
