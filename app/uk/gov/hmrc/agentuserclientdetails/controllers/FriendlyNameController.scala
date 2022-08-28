@@ -20,7 +20,7 @@ import org.joda.time.DateTime
 import play.api.Logging
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, EnrolmentKey}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameWorkItem, UpdateFriendlyNameRequest}
@@ -48,9 +48,7 @@ class FriendlyNameController @Inject() (
       if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
       else None // only required for local testing against stubs
     withGroupIdForArn(arn) { groupId =>
-      withJsonBody[Seq[Enrolment]] { enrolments =>
-        val clientsToUpdate: Seq[Client] =
-          enrolments.flatMap(enr => EnrolmentKey.enrolmentKeys(enr).map(Client(_, enr.friendlyName)))
+      withJsonBody[Seq[Client]] { clientsToUpdate =>
         val processAsynchronously = clientsToUpdate.length > appConfig.maxFriendlyNameUpdateBatchSize
         val (clientsToDoNow, clientsToDoLater) =
           if (processAsynchronously) (Seq.empty, clientsToUpdate) else (clientsToUpdate, Seq.empty)
@@ -76,12 +74,9 @@ class FriendlyNameController @Inject() (
                                 FriendlyNameWorkItem(groupId, client, mSessionId)
                               )
           _ <- workItemService.pushNew(workItemsForLater, DateTime.now(), ToDo)
-          permanentlyFailedEnrolments =
-            enrolments.filter(enr =>
-              permanentFailures.map(_._1.enrolmentKey).contains(Client.fromEnrolment(enr).enrolmentKey)
-            )
+
           info = Json.obj(
-                   "delayed"           -> Json.toJson((retriableFailures.map(_._1) ++ clientsToDoLater)),
+                   "delayed"           -> Json.toJson(retriableFailures.map(_._1) ++ clientsToDoLater),
                    "permanentlyFailed" -> Json.toJson(permanentFailures.map(_._1))
                  )
         } yield

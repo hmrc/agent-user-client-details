@@ -18,12 +18,12 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.joda.time.DateTime
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, Identifier, UserDetails}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfigImpl
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository, RecordInserted, RecordUpdated, UpsertType}
+import uk.gov.hmrc.agentuserclientdetails.repositories._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 import uk.gov.hmrc.workitem.ProcessingStatus.processingStatuses
@@ -84,18 +84,10 @@ class AgentChecksServiceSpec extends BaseSpec {
 
   "Get AgentSize" when {
 
-    val enrolment1: Enrolment =
-      Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-    val enrolment2: Enrolment = Enrolment(
-      "HMRC-PPT-ORG",
-      "Activated",
-      "Frank Wright",
-      Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345"))
-    )
-    val enrolment3: Enrolment =
-      Enrolment("HMRC-CGT-PD", "Activated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
-    val enrolment4: Enrolment =
-      Enrolment("HMRC-CGT-PD", "NotYetActivated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
+    val client1: Client = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
+    val client2: Client = Client("HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", "Frank Wright")
+    val client3: Client = Client("HMRC-CGT-PD~CgtRef~XMCGTP123456789", "George Candy")
+    val client4: Client = Client("HMRC-MTD-VAT~VRN~101747642", "Ross Barker")
 
     "an AgentSize record that was last refreshed within the refresh duration exists" should {
 
@@ -137,17 +129,17 @@ class AgentChecksServiceSpec extends BaseSpec {
         }
 
         "enrolment store proxy returns non-empty list of enrolments" should {
-          "return correct count of enrolments having Activated state" in new TestScope {
+          "return correct count of enrolments" in new TestScope {
             mockAgentSizeRepositoryGet(None)(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(enrolment1, enrolment2, enrolment3, enrolment4))(
+            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(client1, client2, client3, client4))(
               mockEnrolmentStoreProxyConnector
             )
             mockAgentSizeRepositoryUpsert(Some(RecordInserted))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
             agentSize.arn shouldBe arn
-            agentSize.clientCount shouldBe 3
+            agentSize.clientCount shouldBe 4
           }
         }
 
@@ -182,18 +174,18 @@ class AgentChecksServiceSpec extends BaseSpec {
         }
 
         "enrolment store proxy returns non-empty list of enrolments" should {
-          "return correct count of enrolments having Activated state" in new TestScope {
+          "return correct count of enrolments" in new TestScope {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
             mockServicesConfigGetDuration(mockServicesConfig)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(enrolment1, enrolment2, enrolment3, enrolment4))(
+            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(client1, client2, client3, client4))(
               mockEnrolmentStoreProxyConnector
             )
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
             agentSize.arn shouldBe arn
-            agentSize.clientCount shouldBe 3
+            agentSize.clientCount shouldBe 4
           }
         }
 
@@ -447,12 +439,12 @@ class AgentChecksServiceSpec extends BaseSpec {
     (mockServicesConfig.getDuration _).expects(refreshdurationConfigKey).returning(refreshDuration)
 
   private def mockEnrolmentStoreProxyConnectorGetEnrolments(
-    enrolments: Seq[Enrolment]
+    clients: Seq[Client]
   )(mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) =
     (mockEnrolmentStoreProxyConnector
-      .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(groupId, *, *)
-      .returning(Future.successful(enrolments))
+      .returning(Future.successful(clients))
 
   private def mockAgentSizeRepositoryUpsert(maybeUpsertType: Option[UpsertType])(
     mockAgentSizeRepository: AgentSizeRepository
