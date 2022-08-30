@@ -29,6 +29,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @ImplementedBy(classOf[JobMonitoringServiceImpl])
 trait JobMonitoringService {
+  /*
+   This has the side-effect of putting the job to be checked into a 'check in progress' state.
+   Please remember to mark it as finished or not finished before calling this method again.
+   */
   def getNextJobToCheck(implicit ec: ExecutionContext): Future[Option[WorkItem[JobData]]]
   def createFriendlyNameFetchJobData(jobData: FriendlyNameJobData)(implicit ec: ExecutionContext): Future[BSONObjectID]
   def markAsFinished(objectId: BSONObjectID)(implicit ec: ExecutionContext): Future[Unit]

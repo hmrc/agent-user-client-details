@@ -30,9 +30,9 @@ import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, EnrolmentStoreProxyConnector, IfConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
-import uk.gov.hmrc.agentuserclientdetails.services.{AgentCacheProvider, AssignedUsersService, ClientNameService, FriendlyNameWorkItemServiceImpl, JobMonitoringService}
+import uk.gov.hmrc.agentuserclientdetails.model.{AgencyDetails, AgentDetailsDesResponse, FriendlyNameJobData, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameWorkItemRepository, JobMonitoringRepository}
+import uk.gov.hmrc.agentuserclientdetails.services.{AgentCacheProvider, AssignedUsersService, ClientNameService, FriendlyNameWorkItemServiceImpl, JobMonitoringServiceImpl}
 import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
@@ -54,7 +54,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
 
   lazy val assignedUsersService = app.injector.instanceOf[AssignedUsersService]
-  lazy val jobMonitoringService = app.injector.instanceOf[JobMonitoringService]
+  lazy val jobMonitoringRepository = new JobMonitoringRepository(config)
+  lazy val jobMonitoringService = new JobMonitoringServiceImpl(jobMonitoringRepository, appConfig)
   lazy val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -77,11 +78,12 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   override def beforeEach(): Unit = {
     super.beforeEach()
     dropTestCollection(wir.collection.name)
+    dropTestCollection(jobMonitoringRepository.collection.name)
   }
 
   trait TestScope {
     val citizenDetailsConnector = mock[CitizenDetailsConnector]
-    val desConnector = mock[DesConnector]
+    val desConnector = stub[DesConnector]
     val ifConnector = mock[IfConnector]
     val ugs = mock[UsersGroupsSearchConnector]
     val esp = mock[EnrolmentStoreProxyConnector]
@@ -102,12 +104,14 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       appConfig
     )
 
+    val testAgencyDetails = AgencyDetails(Some("Perfect Accounts Ltd"), Some("a@b.c"))
+
     def mockDesConnectorGetAgencyDetails(
       maybeAgentDetailsDesResponse: Option[AgentDetailsDesResponse]
     ): CallHandler3[Arn, HeaderCarrier, ExecutionContext, Future[Option[AgentDetailsDesResponse]]] = (desConnector
       .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-      .expects(*, *, *)
-      .returning(Future successful maybeAgentDetailsDesResponse)
+      .when(*, *, *)
+      .returns(Future successful maybeAgentDetailsDesResponse)
   }
 
   "GET /arn/:arn/client-list" should {
@@ -121,9 +125,14 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithFriendlyNames))
 
+      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+
       val request = FakeRequest("GET", "")
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
+
+      // Do not create a job monitoring item if there was no work to be done.
+      jobMonitoringService.getNextJobToCheck.futureValue shouldBe None
     }
 
     "respond with 400 status if given an ARN in invalid format" in new TestScope {
@@ -164,11 +173,18 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
-      mockDesConnectorGetAgencyDetails(None)
+      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 202
-      // TODO check content
+
+      // Create a job monitoring item if there was no work to be done, which should contain all the enrolment keys for which there was no name.
+      val maybeJob = jobMonitoringService.getNextJobToCheck.futureValue
+      maybeJob should not be empty
+      maybeJob.get.item should matchPattern {
+        case job: FriendlyNameJobData
+            if job.enrolmentKeys.length == enrolmentsWithoutSomeFriendlyNames.count(_.friendlyName.isEmpty) =>
+      }
     }
     "respond with 200 status if any of the retrieved enrolments don't have a friendly name but they have been tried before and marked as permanently failed" in new TestScope {
       wis
@@ -189,10 +205,13 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(enrolmentsWithoutSomeFriendlyNames))
+      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
-      // TODO check content
+
+      // Do not create a job monitoring item if there was no work to be done.
+      jobMonitoringService.getNextJobToCheck.futureValue shouldBe None
     }
   }
 
