@@ -47,9 +47,7 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
       Environment -> s"${if (viaIF) { ifEnvironment }
         else { desEnvironment }}",
       CorrelationId -> UUID.randomUUID().toString
-    ) ++ hc.sessionId.toSeq.map { sessionId =>
-      SessionId -> sessionId.value
-    }
+    )
 
     if (viaIF) {
       apiName.fold(baseHeaders) {

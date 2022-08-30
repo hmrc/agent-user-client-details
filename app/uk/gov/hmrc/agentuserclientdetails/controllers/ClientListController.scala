@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import org.joda.time.DateTime
 import play.api.Logging
 import play.api.http.HttpEntity.NoEntity
-import play.api.i18n.Lang
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
 import reactivemongo.api.commands.WriteError
@@ -134,7 +133,7 @@ class ClientListController @Inject() (
               s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
             )
           _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
-          _ <- createFriendlyNameJobFetchEntry(arn, groupId, toBeAdded, langPreferenceFromHeaders.getOrElse(Lang("en")))
+          _ <- createFriendlyNameJobFetchEntry(arn, groupId, toBeAdded, langPreferenceFromHeaders.getOrElse("en"))
         } yield
           if (clientsWantingName.isEmpty)
             Ok(Json.toJson(clients))
@@ -147,8 +146,8 @@ class ClientListController @Inject() (
     }
   }
 
-  private def langPreferenceFromHeaders(implicit request: RequestHeader): Option[Lang] =
-    request.headers.get("PLAY_LANG").map(Lang(_))
+  private def langPreferenceFromHeaders(implicit request: RequestHeader): Option[String] =
+    request.headers.get("PLAY_LANG")
 
   protected def forceRefreshFriendlyNamesForGroupIdFn(
     groupId: String
@@ -232,7 +231,7 @@ class ClientListController @Inject() (
     arn: Arn,
     groupId: String,
     toBeAdded: Seq[Client],
-    lang: Lang
+    lang: String // 'en' or 'cy' -- defaults to 'en' if invalid
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[BSONObjectID]] =
     if (toBeAdded.isEmpty) Future.successful(None)
     else {
@@ -255,7 +254,9 @@ class ClientListController @Inject() (
                                        sendEmailOnCompletion = true,
                                        agencyName = agencyName,
                                        email = agencyEmail,
-                                       emailLanguagePreference = Some(lang.code)
+                                       emailLanguagePreference =
+                                         if (List("cy", "en").contains(lang)) Some(lang)
+                                         else Some("en")
                                      )
                                    )
                                    .map(Some(_))
