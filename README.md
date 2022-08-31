@@ -1,7 +1,7 @@
 
 # agent-user-client-details
 
-This microservice is used for creating and maintinaing Agent Access Groups. It supports the frontend microservice agent-permissions-frontend along with agent-permissions. It's primary function is to orchestrate changes in EACD after an Access Group has been created or modified. 
+This microservice is used for creating and maintaining Agent Access Groups. It supports the frontend microservice agent-permissions-frontend along with agent-permissions. It's primary function is to orchestrate changes in EACD after an Access Group has been created or modified. 
 
 ### License
 
