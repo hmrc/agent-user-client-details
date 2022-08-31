@@ -38,7 +38,6 @@ class AgentChecksService @Inject() (
   assignmentsWorkItemService: AssignmentsWorkItemService
 ) extends Logging {
 
-  private val ENROLMENT_STATE_ACTIVATED = "Activated"
   private val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
 
   def getAgentSize(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Option[AgentSize]] =
@@ -114,8 +113,8 @@ class AgentChecksService @Inject() (
                          Future.successful(None)
                        case Some(groupId) =>
                          enrolmentStoreProxyConnector
-                           .getEnrolmentsForGroupId(groupId)
-                           .map(enrolments => Option(enrolments.count(_.state == ENROLMENT_STATE_ACTIVATED)))
+                           .getClientsForGroupId(groupId)
+                           .map(clients => Option(clients.size))
                      }
     } yield clientCount
 

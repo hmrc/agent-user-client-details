@@ -26,7 +26,7 @@ import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -53,9 +53,9 @@ trait EnrolmentStoreProxyConnector {
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
   // ES3 - Query Enrolments allocated to a Group
-  def getEnrolmentsForGroupId(
+  def getClientsForGroupId(
     groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]]
 
   // ES11 - Assign enrolment to user
   def assignEnrolment(userId: String, enrolmentKey: String)(implicit
@@ -91,6 +91,8 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
+
+  private val ENROLMENT_STATE_ACTIVATED = "Activated"
 
   // ES0 Query users who have an assigned enrolment
   override def getUsersAssignedToEnrolment(enrolmentKey: String, `type`: String)(implicit
@@ -168,17 +170,22 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   }
 
   // ES3 - Query Enrolments allocated to a Group
-  def getEnrolmentsForGroupId(
+  def getClientsForGroupId(
     groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]] = {
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]] = {
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated")
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
       // Do not cache this
       http.GET[HttpResponse](url.toString).map { response =>
         response.status match {
-          case Status.OK         => (response.json \ "enrolments").as[Seq[Enrolment]]
-          case Status.NO_CONTENT => Seq.empty
+          case Status.OK =>
+            (response.json \ "enrolments")
+              .as[Seq[Enrolment]]
+              .filter(_.state == ENROLMENT_STATE_ACTIVATED)
+              .map(Client.fromEnrolment)
+          case Status.NO_CONTENT =>
+            Seq.empty
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }

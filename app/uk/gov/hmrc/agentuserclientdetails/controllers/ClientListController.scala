@@ -109,15 +109,13 @@ class ClientListController @Inject() (
         else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
-    espConnector.getEnrolmentsForGroupId(groupId).transformWith {
+    espConnector.getClientsForGroupId(groupId).transformWith {
       // if friendly names are populated for all enrolments, return 200
-      case Success(enrolments) if enrolments.forall(_.friendlyName.nonEmpty) =>
-        logger.info(s"${enrolments.length} enrolments found for groupId $groupId. No friendly name lookups needed.")
-        val clients = enrolments.map(Client.fromEnrolment)
+      case Success(clients) if clients.forall(_.friendlyName.nonEmpty) =>
+        logger.info(s"${clients.length} enrolments found for groupId $groupId. No friendly name lookups needed.")
         Future.successful(Ok(Json.toJson(clients)))
       // Otherwise ...
-      case Success(enrolments) =>
-        val clients = enrolments.map(Client.fromEnrolment)
+      case Success(clients) =>
         val clientsWithNoFriendlyName = clients.filter(_.friendlyName.isEmpty)
         for {
           wisAlreadyInRepo <- workItemService.query(groupId, None)
@@ -158,9 +156,8 @@ class ClientListController @Inject() (
         else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
-    espConnector.getEnrolmentsForGroupId(groupId).transformWith {
-      case Success(enrolments) =>
-        val clients = enrolments.map(Client.fromEnrolment)
+    espConnector.getClientsForGroupId(groupId).transformWith {
+      case Success(clients) =>
         for {
           _ <- workItemService.removeByGroupId(groupId)
           _ =

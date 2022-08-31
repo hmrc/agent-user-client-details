@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import com.google.inject.AbstractModule
 import play.api.http.Status.{CREATED, NOT_FOUND, NO_CONTENT, OK}
 import play.api.libs.json.{Json, Writes}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, EnrolmentKey, GroupDelegatedEnrolments, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, EnrolmentKey, GroupDelegatedEnrolments, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
@@ -41,6 +41,8 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
   val enrolment1: Enrolment = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
   val enrolment2: Enrolment =
     Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
+  val enrolment3: Enrolment =
+    Enrolment("HMRC-CGT-PD", "NotYetActivated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
 
   trait TestScope {
     lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -172,15 +174,18 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
       )(httpClient)
       esp.getPrincipalGroupIdFor(Arn(arn)).futureValue shouldBe None
     }
-    "complete ES3 call successfully" in new TestScope {
+    "complete ES3 call successfully, discounting states that are not 'Activated'" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       val mockResponse: HttpResponse =
-        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2))).toString)
+        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2, enrolment3))).toString)
       mockHttpGet(
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated",
         mockResponse
       )(httpClient)
-      esp.getEnrolmentsForGroupId(testGroupId).futureValue.toSet shouldBe Set(enrolment1, enrolment2)
+      esp.getClientsForGroupId(testGroupId).futureValue.toSet shouldBe Set(
+        Client.fromEnrolment(enrolment1),
+        Client.fromEnrolment(enrolment2)
+      )
     }
     "complete ES19 call successfully" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
