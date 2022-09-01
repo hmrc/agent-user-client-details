@@ -50,15 +50,15 @@ class ClientListController @Inject() (
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
-  def getClients(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getClients(arn: Arn, lang: Option[String] = None): Action[AnyContent] = Action.async { implicit request =>
     withGroupIdFor(arn) { groupId =>
-      getClientsFn(arn, groupId)
+      getClientsFn(arn, groupId, lang)
     }
   }
 
   def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withGroupIdFor(arn) { groupId =>
-      getClientsFn(arn, groupId).map { result =>
+      getClientsFn(arn, groupId, None).map { result =>
         result.header.status match {
           case OK | ACCEPTED => result.copy(body = NoEntity)
           case _             => result
@@ -101,7 +101,8 @@ class ClientListController @Inject() (
 
   protected def getClientsFn(
     arn: Arn,
-    groupId: String
+    groupId: String,
+    lang: Option[String] // The language to be used for notification emails. "en" or "cy"
   )(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
       val mSessionId: Option[String] =
@@ -131,7 +132,7 @@ class ClientListController @Inject() (
               s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
             )
           _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
-          _ <- createFriendlyNameJobFetchEntry(arn, groupId, toBeAdded, langPreferenceFromHeaders.getOrElse("en"))
+          _ <- createFriendlyNameJobFetchEntry(arn, groupId, toBeAdded, lang.getOrElse("en"))
         } yield
           if (clientsWantingName.isEmpty)
             Ok(Json.toJson(clients))
@@ -143,9 +144,6 @@ class ClientListController @Inject() (
         Future.failed(uer)
     }
   }
-
-  private def langPreferenceFromHeaders(implicit request: RequestHeader): Option[String] =
-    request.headers.get("PLAY_LANG")
 
   protected def forceRefreshFriendlyNamesForGroupIdFn(
     groupId: String
