@@ -163,7 +163,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       val result = clc.getClients(testArn)(request).futureValue
       result.header.status shouldBe 404
     }
-    
+
     "respond with 202 status if any of the retrieved enrolments don't have a friendly name" in new TestScope {
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -179,17 +179,18 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       result.header.status shouldBe 202
 
       // Create a job monitoring item if there was any work to be done, which should contain all the enrolment keys for which there was no name.
+      // The option to send email should be OFF as we did not explicitly ask for it in the request
       val maybeJob = jobMonitoringService.getNextJobToCheck.futureValue
       maybeJob should not be empty
       maybeJob.get.item should matchPattern {
         case job: FriendlyNameJobData
             if job.enrolmentKeys.length == clientsWithoutSomeFriendlyNames.count(
               _.friendlyName.isEmpty
-            ) && job.emailLanguagePreference.forall(_ == "en") =>
+            ) && !job.sendEmailOnCompletion =>
       }
     }
 
-    "if creating a job monitoring item, set the language to welsh if specified in the request" in new TestScope {
+    "if creating a job monitoring item, turn on the flag to send an email notification if specified in the request" in new TestScope {
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -200,14 +201,36 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
         .returning(Future.successful(clientsWithoutSomeFriendlyNames))
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn, lang = Some("cy"))(request).futureValue
+      val result = clc.getClients(testArn, sendEmail = Some(true))(request).futureValue
       result.header.status shouldBe 202
 
       // Create a job monitoring item with the language preference for the email set to welsh
       val maybeJob = jobMonitoringService.getNextJobToCheck.futureValue
       maybeJob should not be empty
       maybeJob.get.item should matchPattern {
-        case job: FriendlyNameJobData if job.emailLanguagePreference.contains("cy") =>
+        case job: FriendlyNameJobData if job.sendEmailOnCompletion && job.emailLanguagePreference.forall(_ == "en") =>
+      }
+    }
+
+    "if creating a job monitoring item, set the email language to welsh if specified in the request" in new TestScope {
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (esp
+        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(*, *, *)
+        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      val request = FakeRequest("GET", "")
+      val result = clc.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
+      result.header.status shouldBe 202
+
+      // Create a job monitoring item with the language preference for the email set to welsh
+      val maybeJob = jobMonitoringService.getNextJobToCheck.futureValue
+      maybeJob should not be empty
+      maybeJob.get.item should matchPattern {
+        case job: FriendlyNameJobData if job.sendEmailOnCompletion && job.emailLanguagePreference.contains("cy") =>
       }
     }
 

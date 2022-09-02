@@ -50,15 +50,16 @@ class ClientListController @Inject() (
 )(implicit ec: ExecutionContext)
     extends BackendController(cc) with Logging {
 
-  def getClients(arn: Arn, lang: Option[String] = None): Action[AnyContent] = Action.async { implicit request =>
-    withGroupIdFor(arn) { groupId =>
-      getClientsFn(arn, groupId, lang)
+  def getClients(arn: Arn, sendEmail: Option[Boolean] = None, lang: Option[String] = None): Action[AnyContent] =
+    Action.async { implicit request =>
+      withGroupIdFor(arn) { groupId =>
+        getClientsFn(arn, groupId, sendEmail.getOrElse(false), lang)
+      }
     }
-  }
 
   def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withGroupIdFor(arn) { groupId =>
-      getClientsFn(arn, groupId, None).map { result =>
+      getClientsFn(arn, groupId, false, None).map { result =>
         result.header.status match {
           case OK | ACCEPTED => result.copy(body = NoEntity)
           case _             => result
@@ -102,6 +103,7 @@ class ClientListController @Inject() (
   protected def getClientsFn(
     arn: Arn,
     groupId: String,
+    sendEmail: Boolean, // whether to send an email to inform the agent that the fetching of client names has finished
     lang: Option[String] // The language to be used for notification emails. "en" or "cy"
   )(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
@@ -132,7 +134,9 @@ class ClientListController @Inject() (
               s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
             )
           _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
-          _ <- createFriendlyNameJobFetchEntry(arn, groupId, toBeAdded, lang.getOrElse("en"))
+          _ <- createFriendlyNameMonitoringJob(arn, groupId, clientsWantingName, sendEmail, lang.getOrElse("en"))
+          // ^ Note: we must put _all_ the clients that lack a name in the list of the monitoring job, not just those that we are _adding_ to the work repo now,
+          // because there could be some work items created by a previous call that we still need to check for completion.
         } yield
           if (clientsWantingName.isEmpty)
             Ok(Json.toJson(clients))
@@ -222,10 +226,11 @@ class ClientListController @Inject() (
       }
     }
 
-  def createFriendlyNameJobFetchEntry(
+  def createFriendlyNameMonitoringJob(
     arn: Arn,
     groupId: String,
     toBeAdded: Seq[Client],
+    sendEmail: Boolean,
     lang: String // 'en' or 'cy' -- defaults to 'en' if invalid
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[BSONObjectID]] =
     if (toBeAdded.isEmpty) Future.successful(None)
@@ -246,7 +251,7 @@ class ClientListController @Inject() (
                                      FriendlyNameJobData(
                                        groupId = groupId,
                                        enrolmentKeys = toBeAdded.map(_.enrolmentKey),
-                                       sendEmailOnCompletion = true,
+                                       sendEmailOnCompletion = sendEmail,
                                        agencyName = agencyName,
                                        email = agencyEmail,
                                        emailLanguagePreference =
