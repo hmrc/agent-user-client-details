@@ -75,10 +75,10 @@ class FriendlyNameWorker @Inject() (
   def start(): Future[Unit] =
     running.get() match {
       case true =>
-        logger.debug("Friendly name processing triggered but was already running.")
+        logger.info("Friendly name processing triggered but was already running.")
         Future.successful(())
       case false =>
-        logger.debug("Friendly name triggered. Starting...")
+        logger.info("Friendly name triggered. Starting...")
         running.set(true)
         val workItems: Enumerator[WorkItem[FriendlyNameWorkItem]] = Enumerator.generateM(pullWorkItemWhile(continue))
         val processWorkItems: Iteratee[WorkItem[FriendlyNameWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) =>
@@ -86,7 +86,7 @@ class FriendlyNameWorker @Inject() (
         }
         val result = workItems.run(processWorkItems)
         result.onComplete { case _ =>
-          logger.debug("Friendly name processing finished.")
+          logger.info("Friendly name processing finished.")
           running.set(false)
         }
         result
@@ -138,7 +138,9 @@ class FriendlyNameWorker @Inject() (
           case Success(Some(friendlyName)) =>
             throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
               case Success(_) =>
-                logger.info(s"Friendly name for $enrolmentKey retrieved and updated via ES19.")
+                logger.info(
+                  s"[remove this before prod] Friendly name: $friendlyName for $enrolmentKey retrieved and updated via ES19."
+                )
                 workItemService.complete(workItem.id, Succeeded).map(_ => ())
               case Failure(_) =>
                 for {
