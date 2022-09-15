@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
+import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import play.api.Configuration
 import play.api.libs.json._
@@ -24,18 +25,20 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
 import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupport {
+class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupport with AuthorisationMockSupport {
 
   implicit val mongoProvider = MongoProvider(mongo)
 
@@ -46,6 +49,9 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
 
   lazy val wir = FriendlyNameWorkItemRepository(config)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
+
+  implicit lazy val mockAuthConnector = mock[AuthConnector]
+  implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
@@ -60,6 +66,11 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
   val client4: Client = Client("HMRC-MTD-VAT~VRN~101747642", "Ross Barker")
   val clientsWithFriendlyNames: Seq[Client] = Seq(client1, client2, client3, client4)
 
+  override def moduleOverrides: AbstractModule = new AbstractModule {
+    override def configure(): Unit =
+      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+  }
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     dropTestCollection(wir.collection.name)
@@ -67,6 +78,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
 
   "POST /arn/:arn/friendly-name" should {
     "respond with 200 status if all of the requests were processed successfully" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -85,6 +97,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
       wis.collectStats.futureValue.values.sum shouldBe 0
     }
     "respond with 200 status if some of the requests permanently failed and there is no further work outstanding" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -109,6 +122,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
       wis.collectStats.futureValue.values.sum shouldBe 0
     }
     "respond with 202 status if some of the requests temporarily failed and work items for the failed item should be created" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -131,6 +145,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
       wis.collectStats.futureValue.values.sum shouldBe 1
     }
     "respond with 202 status if the request has too many enrolments to process and add work items to the repository" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -152,6 +167,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
       wis.collectStats.futureValue.values.sum shouldBe 100
     }
     "respond with 400 status if the request is malformed" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -163,6 +179,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
       status(result) shouldBe 400
     }
     "respond with 404 status if the groupId provided is unknown" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -179,7 +196,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
     "respond 204 No Content if successful" in {
 
       val friendlyNameRequest = """{"enrolmentKey": "HMRC-MTD-VAT~VRN~123456789","friendlyName": "jr"}"""
-
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
@@ -198,7 +215,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
     "respond 400 Bad Request when something wrong with request" in {
 
       val friendlyNameRequest = """{"mistake": "HMRC-MTD-VAT~VRN~123456789","friendlyName": "jr"}"""
-
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))

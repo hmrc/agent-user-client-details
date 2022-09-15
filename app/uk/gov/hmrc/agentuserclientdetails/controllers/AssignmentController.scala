@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.joda.time.DateTime
-import play.api.Logging
 import play.api.libs.json.JsValue
 import play.api.mvc._
 import uk.gov.hmrc.agentmtdidentifiers.model.{UserEnrolment, UserEnrolmentAssignments}
+import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Unassign}
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemService
@@ -35,23 +35,26 @@ class AssignmentController @Inject() (
   cc: ControllerComponents,
   workItemService: AssignmentsWorkItemService,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc) with Logging {
+)(implicit authAction: AuthAction, ec: ExecutionContext)
+    extends BackendController(cc) with AuthorisedAgentSupport {
 
   def assignEnrolments: Action[JsValue] = Action.async(parse.json) { implicit request =>
     lazy val mSessionId: Option[String] =
       if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
       else None // only required for local testing against stubs
-    withJsonBody[UserEnrolmentAssignments] { aer =>
-      val assignWorkItems = aer.assign.map { case UserEnrolment(userId, enrolmentKey) =>
-        AssignmentWorkItem(Assign, userId, enrolmentKey, aer.arn.value, mSessionId)
+
+    withAuthorisedAgent { _ =>
+      withJsonBody[UserEnrolmentAssignments] { aer =>
+        val assignWorkItems = aer.assign.map { case UserEnrolment(userId, enrolmentKey) =>
+          AssignmentWorkItem(Assign, userId, enrolmentKey, aer.arn.value, mSessionId)
+        }
+        val unassignWorkItems = aer.unassign.map { case UserEnrolment(userId, enrolmentKey) =>
+          AssignmentWorkItem(Unassign, userId, enrolmentKey, aer.arn.value, mSessionId)
+        }
+        for {
+          _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, DateTime.now(), ToDo)
+        } yield Accepted
       }
-      val unassignWorkItems = aer.unassign.map { case UserEnrolment(userId, enrolmentKey) =>
-        AssignmentWorkItem(Unassign, userId, enrolmentKey, aer.arn.value, mSessionId)
-      }
-      for {
-        _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, DateTime.now(), ToDo)
-      } yield Accepted
     }
   }
 }

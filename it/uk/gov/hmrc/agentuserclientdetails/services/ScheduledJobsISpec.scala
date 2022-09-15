@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameJobData, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
 import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.Succeeded
@@ -44,6 +45,7 @@ class ScheduledJobsISpec
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~101747641"
   val testArn = "BARN9706518"
   val client1 = Client(testEnrolmentKey, "John Innes")
+  lazy val mockAuthConnector = mock[AuthConnector]
 
   val configOverrides = Seq( // override config values to reduce delays required to test scheduled jobs
     "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds"    -> 0,
@@ -68,6 +70,7 @@ class ScheduledJobsISpec
       running(
         _.configure(configOverrides: _*)
           .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
+          .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
         lazy val wis = app.injector.instanceOf[FriendlyNameWorkItemService]
 
@@ -86,6 +89,7 @@ class ScheduledJobsISpec
       running(
         _.configure(configOverrides: _*)
           .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
+          .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
         lazy val wis = app.injector.instanceOf[AssignmentsWorkItemService]
 
@@ -106,6 +110,7 @@ class ScheduledJobsISpec
       running(
         _.configure(configOverrides: _*)
           .overrides(bind[MongoProvider].toInstance(MongoProvider(this.mongo)))
+          .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
         lazy val jmr = app.injector.instanceOf[JobMonitoringRepository]
         lazy val jms = app.injector.instanceOf[JobMonitoringService]

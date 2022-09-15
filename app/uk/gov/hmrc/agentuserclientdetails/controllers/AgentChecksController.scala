@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import play.api.Logging
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentChecksService
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -30,41 +30,52 @@ import scala.util.{Failure, Success, Try}
 
 @Singleton()
 class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(implicit
+  authAction: AuthAction,
   cc: ControllerComponents,
   ec: ExecutionContext
-) extends BackendController(cc) with Logging {
+) extends BackendController(cc) with AuthorisedAgentSupport {
 
   def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    agentChecksService.getAgentSize(arn).map {
-      case None            => NotFound
-      case Some(agentSize) => Ok(Json.toJson(Json.obj("client-count" -> agentSize.clientCount)))
+    withAuthorisedAgent { _ =>
+      agentChecksService.getAgentSize(arn).map {
+        case None            => NotFound
+        case Some(agentSize) => Ok(Json.toJson(Json.obj("client-count" -> agentSize.clientCount)))
+      }
     } transformWith failureHandler
   }
 
   def userCheck(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    agentChecksService.userCheck(arn).map { count =>
-      if (count > 1) NoContent
-      else Forbidden
+    withAuthorisedAgent { _ =>
+      agentChecksService.userCheck(arn).map { count =>
+        if (count > 1) NoContent
+        else Forbidden
+      }
     } transformWith failureHandler
   }
 
   def outstandingWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    agentChecksService.outstandingWorkItemsExist(arn).map { workItemsExist =>
-      if (workItemsExist) Ok
-      else NoContent
+    withAuthorisedAgent { _ =>
+      agentChecksService.outstandingWorkItemsExist(arn).map { workItemsExist =>
+        if (workItemsExist) Ok
+        else NoContent
+      }
     } transformWith failureHandler
   }
 
-  def outstandingAssignmentsWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async {
-    agentChecksService.outstandingAssignmentsWorkItemsExist(arn).map { workItemsExist =>
-      if (workItemsExist) Ok
-      else NoContent
+  def outstandingAssignmentsWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent { _ =>
+      agentChecksService.outstandingAssignmentsWorkItemsExist(arn).map { workItemsExist =>
+        if (workItemsExist) Ok
+        else NoContent
+      }
     } transformWith failureHandler
   }
 
   def getTeamMembers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    agentChecksService.getTeamMembers(arn).map { teamMembers =>
-      Ok(Json.toJson(teamMembers))
+    withAuthorisedAgent { _ =>
+      agentChecksService.getTeamMembers(arn).map { teamMembers =>
+        Ok(Json.toJson(teamMembers))
+      }
     } transformWith failureHandler
   }
 

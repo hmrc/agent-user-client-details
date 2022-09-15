@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.joda.time.DateTime
-import play.api.Logging
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client}
+import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameWorkItem, UpdateFriendlyNameRequest}
@@ -40,56 +40,60 @@ class FriendlyNameController @Inject() (
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc) with Logging {
+)(implicit authAction: AuthAction, ec: ExecutionContext)
+    extends BackendController(cc) with AuthorisedAgentSupport {
 
   def updateFriendlyName(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
     lazy val mSessionId: Option[String] =
       if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
       else None // only required for local testing against stubs
-    withGroupIdForArn(arn) { groupId =>
-      withJsonBody[Seq[Client]] { clientsToUpdate =>
-        val processAsynchronously = clientsToUpdate.length > appConfig.maxFriendlyNameUpdateBatchSize
-        val (clientsToDoNow, clientsToDoLater) =
-          if (processAsynchronously) (Seq.empty, clientsToUpdate) else (clientsToUpdate, Seq.empty)
-        for {
-          // Try making any ES19 calls before returning. Keep any failures for later inspection.
-          results: Seq[Option[(Client, Throwable)]] <- Future.traverse(clientsToDoNow) { client =>
-                                                         espConnector
-                                                           .updateEnrolmentFriendlyName(
-                                                             groupId,
-                                                             client.enrolmentKey,
-                                                             client.friendlyName
-                                                           )
-                                                           .transformWith {
-                                                             case Success(()) => Future.successful(None)
-                                                             case Failure(e)  => Future.successful(Some((client, e)))
-                                                           }
-                                                       }
-          failures: Seq[(Client, Throwable)] = results.flatten
-          // Check which failures are temporary and could be retried.
-          (retriableFailures, permanentFailures) = failures.partition { case (_, e) => StatusUtil.isRetryable(e) }
-          // Add the tasks to be retried to the work item repository.
-          workItemsForLater = (retriableFailures.map(_._1) ++ clientsToDoLater).map(client =>
-                                FriendlyNameWorkItem(groupId, client, mSessionId)
-                              )
-          _ <- workItemService.pushNew(workItemsForLater, DateTime.now(), ToDo)
+    withAuthorisedAgent { _ =>
+      withGroupIdForArn(arn) { groupId =>
+        withJsonBody[Seq[Client]] { clientsToUpdate =>
+          val processAsynchronously = clientsToUpdate.length > appConfig.maxFriendlyNameUpdateBatchSize
+          val (clientsToDoNow, clientsToDoLater) =
+            if (processAsynchronously) (Seq.empty, clientsToUpdate) else (clientsToUpdate, Seq.empty)
+          for {
+            // Try making any ES19 calls before returning. Keep any failures for later inspection.
+            results: Seq[Option[(Client, Throwable)]] <- Future.traverse(clientsToDoNow) { client =>
+                                                           espConnector
+                                                             .updateEnrolmentFriendlyName(
+                                                               groupId,
+                                                               client.enrolmentKey,
+                                                               client.friendlyName
+                                                             )
+                                                             .transformWith {
+                                                               case Success(()) => Future.successful(None)
+                                                               case Failure(e)  => Future.successful(Some((client, e)))
+                                                             }
+                                                         }
+            failures: Seq[(Client, Throwable)] = results.flatten
+            // Check which failures are temporary and could be retried.
+            (retriableFailures, permanentFailures) = failures.partition { case (_, e) => StatusUtil.isRetryable(e) }
+            // Add the tasks to be retried to the work item repository.
+            workItemsForLater = (retriableFailures.map(_._1) ++ clientsToDoLater).map(client =>
+                                  FriendlyNameWorkItem(groupId, client, mSessionId)
+                                )
+            _ <- workItemService.pushNew(workItemsForLater, DateTime.now(), ToDo)
 
-          info = Json.obj(
-                   "delayed"           -> Json.toJson(retriableFailures.map(_._1) ++ clientsToDoLater),
-                   "permanentlyFailed" -> Json.toJson(permanentFailures.map(_._1))
-                 )
-        } yield
-          if (workItemsForLater.nonEmpty) Accepted(info)
-          else Ok(info)
+            info = Json.obj(
+                     "delayed"           -> Json.toJson(retriableFailures.map(_._1) ++ clientsToDoLater),
+                     "permanentlyFailed" -> Json.toJson(permanentFailures.map(_._1))
+                   )
+          } yield
+            if (workItemsForLater.nonEmpty) Accepted(info)
+            else Ok(info)
+        }
       }
     }
   }
 
   def updateOneFriendlyName(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    withGroupIdForArn(arn) { groupId =>
-      withJsonBody[UpdateFriendlyNameRequest] { req =>
-        espConnector.updateEnrolmentFriendlyName(groupId, req.enrolmentKey, req.friendlyName).map(_ => NoContent)
+    withAuthorisedAgent { _ =>
+      withGroupIdForArn(arn) { groupId =>
+        withJsonBody[UpdateFriendlyNameRequest] { req =>
+          espConnector.updateEnrolmentFriendlyName(groupId, req.enrolmentKey, req.friendlyName).map(_ => NoContent)
+        }
       }
     }
   }
