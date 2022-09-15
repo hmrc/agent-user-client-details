@@ -16,12 +16,14 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
+import com.google.inject.AbstractModule
 import com.kenshoo.play.metrics.Metrics
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
@@ -35,6 +37,13 @@ class CitizenDetailsConnectorISpec extends BaseIntegrationSpec {
   lazy val metrics = app.injector.instanceOf[Metrics]
   lazy val desIfHeaders = app.injector.instanceOf[DesIfHeaders]
   implicit val hc: HeaderCarrier = HeaderCarrier()
+
+  lazy val mockAuthConnector = mock[AuthConnector]
+
+  override def moduleOverrides: AbstractModule = new AbstractModule {
+    override def configure(): Unit =
+      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+  }
 
   def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
     (mockHttpClient

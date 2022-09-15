@@ -16,32 +16,35 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
+import com.google.inject.AbstractModule
 import com.kenshoo.play.metrics.Metrics
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Vrn}
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesConnectorISpec
-    extends AnyWordSpec with Matchers with ScalaFutures with IntegrationPatience with GuiceOneServerPerSuite
-    with MockFactory {
+class DesConnectorISpec extends BaseIntegrationSpec {
 
   lazy val appConfig = app.injector.instanceOf[AppConfig]
   lazy val cache = app.injector.instanceOf[AgentCacheProvider]
   lazy val metrics = app.injector.instanceOf[Metrics]
   lazy val desIfHeaders = app.injector.instanceOf[DesIfHeaders]
   implicit val hc: HeaderCarrier = HeaderCarrier()
+
+  lazy val mockAuthConnector = mock[AuthConnector]
+
+  override def moduleOverrides: AbstractModule = new AbstractModule {
+    override def configure(): Unit =
+      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+  }
 
   def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
     (mockHttpClient

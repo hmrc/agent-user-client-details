@@ -19,9 +19,10 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import com.google.inject.AbstractModule
 import play.api.http.Status.{CREATED, NOT_FOUND, NO_CONTENT, OK}
 import play.api.libs.json.{Json, Writes}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, EnrolmentKey, GroupDelegatedEnrolments, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -33,9 +34,13 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
 
   val httpClient: HttpClient = stub[HttpClient]
 
+  lazy val mockAuthConnector = mock[AuthConnector]
+
   override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
+    override def configure(): Unit = {
       bind(classOf[HttpClient]).toInstance(httpClient)
+      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
   }
 
   val enrolment1: Enrolment = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))

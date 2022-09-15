@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
+import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 import reactivemongo.bson.BSONObjectID
@@ -24,6 +25,7 @@ import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
 import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem._
@@ -45,6 +47,13 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
   val client2 = Client("HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", "Frank Wright")
   val client3 = Client("HMRC-CGT-PD~CgtRef~XMCGTP123456789", "George Candy")
   val client4 = Client("HMRC-MTD-VAT~VRN~VRN", "Ross Barker")
+
+  lazy val mockAuthConnector = mock[AuthConnector]
+
+  override def moduleOverrides: AbstractModule = new AbstractModule {
+    override def configure(): Unit =
+      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+  }
 
   override def beforeEach(): Unit = {
     super.beforeEach()

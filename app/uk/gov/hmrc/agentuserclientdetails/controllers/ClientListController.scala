@@ -17,16 +17,15 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.joda.time.DateTime
-import play.api.Logging
 import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
 import reactivemongo.api.commands.WriteError
 import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments}
+import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
-import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -47,56 +46,68 @@ class ClientListController @Inject() (
   jobMonitoringService: JobMonitoringService,
   desConnector: DesConnector,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
-    extends BackendController(cc) with Logging {
+)(implicit authAction: AuthAction, ec: ExecutionContext)
+    extends BackendController(cc) with AuthorisedAgentSupport {
 
   def getClients(arn: Arn, sendEmail: Option[Boolean] = None, lang: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
-      withGroupIdFor(arn) { groupId =>
-        getClientsFn(arn, groupId, sendEmail.getOrElse(false), lang)
+      withAuthorisedAgent { _ =>
+        withGroupIdFor(arn) { groupId =>
+          getClientsFn(arn, groupId, sendEmail.getOrElse(false), lang)
+        }
       }
     }
 
   def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withGroupIdFor(arn) { groupId =>
-      getClientsFn(arn, groupId, false, None).map { result =>
-        result.header.status match {
-          case OK | ACCEPTED => result.copy(body = NoEntity)
-          case _             => result
+    withAuthorisedAgent { _ =>
+      withGroupIdFor(arn) { groupId =>
+        getClientsFn(arn, groupId, false, None).map { result =>
+          result.header.status match {
+            case OK | ACCEPTED => result.copy(body = NoEntity)
+            case _             => result
+          }
         }
       }
     }
   }
 
   def forceRefreshFriendlyNames(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withGroupIdFor(arn) { groupId =>
-      forceRefreshFriendlyNamesForGroupIdFn(groupId)
+    withAuthorisedAgent { _ =>
+      withGroupIdFor(arn) { groupId =>
+        forceRefreshFriendlyNamesForGroupIdFn(groupId)
+      }
     }
   }
 
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
-    getOutstandingWorkItemsForGroupIdFn(groupId)
+    withAuthorisedAgent { _ =>
+      getOutstandingWorkItemsForGroupIdFn(groupId)
+    }
   }
 
   def getClientsWithAssignedUsers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withGroupIdFor(arn) { groupId =>
-      espConnector.getGroupDelegatedEnrolments(groupId) flatMap {
-        case None =>
-          Future successful NotFound
-        case Some(groupDelegatedEnrolments) =>
-          for {
-            assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments)
-            userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
-            assignedClientsWithUgsFilteredUsers =
-              assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo))
-          } yield Ok(Json.toJson(GroupDelegatedEnrolments(assignedClientsWithUgsFilteredUsers)))
+    withAuthorisedAgent { _ =>
+      withGroupIdFor(arn) { groupId =>
+        espConnector.getGroupDelegatedEnrolments(groupId) flatMap {
+          case None =>
+            Future successful NotFound
+          case Some(groupDelegatedEnrolments) =>
+            for {
+              assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments)
+              userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
+              assignedClientsWithUgsFilteredUsers =
+                assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo))
+            } yield Ok(Json.toJson(GroupDelegatedEnrolments(assignedClientsWithUgsFilteredUsers)))
+        }
       }
     }
   }
 
   def getOutstandingWorkItemsForArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withGroupIdFor(arn) { groupId =>
-      getOutstandingWorkItemsForGroupIdFn(groupId)
+    withAuthorisedAgent { _ =>
+      withGroupIdFor(arn) { groupId =>
+        getOutstandingWorkItemsForGroupIdFn(groupId)
+      }
     }
   }
 
@@ -185,19 +196,23 @@ class ClientListController @Inject() (
       )
     }
 
-  def getWorkItemStats: Action[AnyContent] = Action.async { _ =>
-    workItemService.collectStats.map { stats =>
-      Ok(Json.toJson(stats))
+  def getWorkItemStats: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent { _ =>
+      workItemService.collectStats.map { stats =>
+        Ok(Json.toJson(stats))
+      }
     }
   }
 
-  def cleanupWorkItems: Action[AnyContent] = Action.async { _ =>
-    implicit val writeErrorFormat = Json.format[WriteError]
-    workItemService.cleanup.map {
-      case result if result.ok =>
-        Ok(JsNumber(result.n))
-      case result if !result.ok =>
-        InternalServerError(Json.toJson(result.writeErrors))
+  def cleanupWorkItems: Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent { _ =>
+      implicit val writeErrorFormat = Json.format[WriteError]
+      workItemService.cleanup.map {
+        case result if result.ok =>
+          Ok(JsNumber(result.n))
+        case result if !result.ok =>
+          InternalServerError(Json.toJson(result.writeErrors))
+      }
     }
   }
 

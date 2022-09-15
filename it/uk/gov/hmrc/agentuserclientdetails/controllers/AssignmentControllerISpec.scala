@@ -16,31 +16,27 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
+import com.google.inject.AbstractModule
 import com.typesafe.config.Config
-import org.scalamock.scalatest.MockFactory
-import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Configuration
 import play.api.libs.json._
 import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, UserEnrolment, UserEnrolmentAssignments}
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
 import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
+import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoSpecSupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AssignmentControllerISpec
-    extends AnyWordSpec with Matchers with ScalaFutures with BeforeAndAfterEach with IntegrationPatience
-    with GuiceOneServerPerSuite with MongoSpecSupport with MockFactory {
+class AssignmentControllerISpec extends BaseIntegrationSpec with MongoSpecSupport with AuthorisationMockSupport {
 
   implicit val mongoProvider = MongoProvider(mongo)
   lazy val cc = app.injector.instanceOf[ControllerComponents]
@@ -51,6 +47,9 @@ class AssignmentControllerISpec
   lazy val wir = AssignmentsWorkItemRepository(config)
   lazy val wis = new AssignmentsWorkItemServiceImpl(wir)
 
+  implicit lazy val mockAuthConnector = mock[AuthConnector]
+  implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
+
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testUserId = "ABCEDEFGI1234568"
   val ue1 = UserEnrolment(testUserId, "HMRC-MTD-VAT~VRN~101747641")
@@ -59,6 +58,11 @@ class AssignmentControllerISpec
   val ue4 = UserEnrolment(testUserId, "HMRC-MTD-VAT~VRN~VRN")
   val testArn = Arn("BARN9706518")
 
+  override def moduleOverrides: AbstractModule = new AbstractModule {
+    override def configure(): Unit =
+      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+  }
+
   override def beforeEach(): Unit = {
     super.beforeEach()
     dropTestCollection(wir.collection.name)
@@ -66,6 +70,7 @@ class AssignmentControllerISpec
 
   "POST /assign-enrolments" should {
     "respond with 202 Accepted and add items to the queue (assign)" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(
         Json.toJson(UserEnrolmentAssignments(assign = Set(ue1, ue2, ue3, ue4), unassign = Set.empty, arn = testArn))
       )
@@ -75,6 +80,7 @@ class AssignmentControllerISpec
       wis.collectStats.futureValue.values.sum shouldBe 4
     }
     "respond with 202 Accepted and add items to the queue (unassign)" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(
         Json.toJson(UserEnrolmentAssignments(assign = Set.empty, unassign = Set(ue1, ue2, ue3, ue4), arn = testArn))
       )
@@ -84,6 +90,7 @@ class AssignmentControllerISpec
       wis.collectStats.futureValue.values.sum shouldBe 4
     }
     "respond with 202 Accepted and add items to the queue (mixed)" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(
         Json.toJson(UserEnrolmentAssignments(assign = Set(ue1), unassign = Set(ue2, ue3, ue4), arn = testArn))
       )
@@ -93,6 +100,7 @@ class AssignmentControllerISpec
       wis.collectStats.futureValue.values.sum shouldBe 4
     }
     "respond with 400 status if the request is malformed" in {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(Json.obj("someJson" -> JsNumber(0xbad)))
       val fnc = new AssignmentController(cc, wis, appConfig)
       val result = fnc.assignEnrolments(request)

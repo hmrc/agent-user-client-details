@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
+import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 import org.scalamock.handlers.CallHandler3
@@ -27,13 +28,14 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
-import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, EnrolmentStoreProxyConnector, IfConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors._
 import uk.gov.hmrc.agentuserclientdetails.model.{AgencyDetails, AgentDetailsDesResponse, FriendlyNameJobData, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameWorkItemRepository, JobMonitoringRepository}
-import uk.gov.hmrc.agentuserclientdetails.services.{AgentCacheProvider, AssignedUsersService, ClientNameService, FriendlyNameWorkItemServiceImpl, JobMonitoringServiceImpl}
+import uk.gov.hmrc.agentuserclientdetails.services._
 import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
+import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.MongoSpecSupport
 import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
@@ -41,7 +43,7 @@ import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSupport {
+class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSupport with AuthorisationMockSupport {
 
   implicit val mongoProvider = MongoProvider(mongo)
 
@@ -52,6 +54,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   lazy val wir = FriendlyNameWorkItemRepository(config)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
+
+  implicit lazy val mockAuthConnector = mock[AuthConnector]
+  implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
   lazy val assignedUsersService = app.injector.instanceOf[AssignedUsersService]
   lazy val jobMonitoringRepository = new JobMonitoringRepository(config)
@@ -73,6 +78,11 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
   val clientsWithoutAnyFriendlyNames = clientsWithFriendlyNames.map(_.copy(friendlyName = ""))
   val clientsWithoutSomeFriendlyNames =
     clientsWithFriendlyNames.take(2) ++ clientsWithoutAnyFriendlyNames.drop(2)
+
+  override def moduleOverrides: AbstractModule = new AbstractModule {
+    override def configure(): Unit =
+      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+  }
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -115,6 +125,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "GET /arn/:arn/client-list" should {
     "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -135,12 +146,14 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
 
     "respond with 400 status if given an ARN in invalid format" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       val result = clc.getClients(badArn)(request).futureValue
       result.header.status shouldBe Status.BAD_REQUEST
     }
 
     "respond with 404 status if given a valid but non-existent ARN" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(unknownArn, *, *)
@@ -151,6 +164,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
 
     "respond with 404 status if the groupId associated with the arn is unknown" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -165,6 +179,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
 
     "respond with 202 status if any of the retrieved enrolments don't have a friendly name" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -191,6 +206,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
 
     "if creating a job monitoring item, turn on the flag to send an email notification if specified in the request" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -213,6 +229,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
 
     "if creating a job monitoring item, set the email language to welsh if specified in the request" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -235,6 +252,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
 
     "respond with 200 status if any of the retrieved enrolments don't have a friendly name but they have been tried before and marked as permanently failed" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       wis
         .pushNew(
           clientsWithoutSomeFriendlyNames
@@ -265,6 +283,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "GET /arn/:arn/client-list-status" should {
     "respond with 200 status if all of the retrieved enrolments have friendly names" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -280,6 +299,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
     }
 
     "respond with 202 status if some of the retrieved enrolments have friendly names" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -300,6 +320,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
     "ESP connector returns nothing for group delegated enrolments" should {
       "return 404" in new TestScope {
+        mockAuthResponseWithoutException(buildAuthorisedResponse)
         (esp
           .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
           .expects(testArn, *, *)
@@ -319,6 +340,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
       "UGS does not return any matching user details" should {
         "return 200 with empty list of clients" in new TestScope {
+          mockAuthResponseWithoutException(buildAuthorisedResponse)
           (esp
             .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
             .expects(testArn, *, *)
@@ -350,6 +372,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
       "UGS returns matching user details" should {
         "return 200 with non-empty list of clients" in new TestScope {
+          mockAuthResponseWithoutException(buildAuthorisedResponse)
           (esp
             .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
             .expects(testArn, *, *)
@@ -383,6 +406,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "POST /groupid/:groupid/refresh-names" should {
     "delete all work items from the repo for the given groupId and recreate work items, ignoring any names already present in the enrolment store" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
@@ -429,6 +453,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "/work-items/clean" should {
     "trigger cleanup of work items when requested" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), Succeeded)
@@ -441,6 +466,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "/work-items/stats" should {
     "collect repository stats when requested" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), ToDo)
@@ -453,6 +479,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   "/groupid/:groupid/outstanding-work-items" should {
     "query repository by groupId" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), ToDo)
