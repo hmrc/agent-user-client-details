@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import org.joda.time.DateTime
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client}
@@ -27,9 +26,10 @@ import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameWorkItem, UpdateFri
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
 import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.workitem.ToDo
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -74,7 +74,7 @@ class FriendlyNameController @Inject() (
             workItemsForLater = (retriableFailures.map(_._1) ++ clientsToDoLater).map(client =>
                                   FriendlyNameWorkItem(groupId, client, mSessionId)
                                 )
-            _ <- workItemService.pushNew(workItemsForLater, DateTime.now(), ToDo)
+            _ <- workItemService.pushNew(workItemsForLater, Instant.now(), ToDo)
 
             info = Json.obj(
                      "delayed"           -> Json.toJson(retriableFailures.map(_._1) ++ clientsToDoLater),

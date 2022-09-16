@@ -17,39 +17,25 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
-import org.joda.time.DateTime
-import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
+import java.time.{Duration, Instant}
 import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 
-case class AssignmentsWorkItemRepository @Inject() (config: Config)(implicit mongo: MongoProvider)
-    extends WorkItemRepository[AssignmentWorkItem, BSONObjectID](
-      "assignments-work-items",
-      mongo.value,
-      WorkItem.workItemMongoFormat[AssignmentWorkItem],
-      config
+case class AssignmentsWorkItemRepository @Inject() (config: Config, mongoComponent: MongoComponent)(implicit
+  ec: ExecutionContext
+) extends WorkItemRepository[AssignmentWorkItem](
+      collectionName = "assignments-work-items",
+      mongoComponent = mongoComponent,
+      itemFormat = AssignmentWorkItem.format,
+      workItemFields = WorkItemFields.default
     ) {
 
-  implicit val dateFormats: Format[DateTime] =
-    ReactiveMongoFormats.dateTimeFormats
+  override def now(): Instant = Instant.now()
 
-  lazy val inProgressRetryAfterProperty = "work-item-repository.assignments.retry-in-progress-after-millis"
-
-  lazy val workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
-    val receivedAt = "createdAt"
-    val updatedAt = "lastUpdated"
-    val availableAt = "availableAt"
-    val status = "status"
-    val id = "_id"
-    val failureCount = "failures"
-  }
-
-  override def now: DateTime = DateTime.now
-
+  override def inProgressRetryAfter: Duration =
+    config.getDuration("work-item-repository.assignments.retry-in-progress-after")
 }

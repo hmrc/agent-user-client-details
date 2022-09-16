@@ -16,8 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import org.joda.time.DateTime
-import reactivemongo.bson.BSONObjectID
+import org.bson.types.ObjectId
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfigImpl
@@ -25,11 +24,11 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnect
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories._
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import uk.gov.hmrc.workitem.ProcessingStatus.processingStatuses
-import uk.gov.hmrc.workitem._
 
-import java.time.LocalDateTime
+import java.time.{Instant, LocalDateTime}
 import scala.concurrent.duration.{DAYS, Duration}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -69,9 +68,9 @@ class AgentChecksServiceSpec extends BaseSpec {
     def buildAgentSize(refreshDateTime: LocalDateTime): AgentSize = AgentSize(arn, 50, refreshDateTime)
 
     def buildWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
-      val now = DateTime.now()
+      val now = Instant.now()
       WorkItem(
-        id = BSONObjectID.generate(),
+        id = ObjectId.get(),
         receivedAt = now,
         updatedAt = now,
         availableAt = now,
@@ -246,7 +245,8 @@ class AgentChecksServiceSpec extends BaseSpec {
       val client = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
 
       val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
-      val nonOutstandingProcessingStatuses: Set[ProcessingStatus] = processingStatuses -- outstandingProcessingStatuses
+      val nonOutstandingProcessingStatuses: Set[ProcessingStatus] =
+        ProcessingStatus.values -- outstandingProcessingStatuses
 
       "workItemService returns an empty list of work items" should {
         "return false" in new TestScope {
@@ -322,7 +322,8 @@ class AgentChecksServiceSpec extends BaseSpec {
   "Outstanding Assignments Work Items exist" when {
 
     val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
-    val nonOutstandingProcessingStatuses: Set[ProcessingStatus] = processingStatuses -- outstandingProcessingStatuses
+    val nonOutstandingProcessingStatuses: Set[ProcessingStatus] =
+      ProcessingStatus.values -- outstandingProcessingStatuses
 
     "workItemService returns an empty list of work items" should {
       "return false" in new TestScope {
@@ -463,15 +464,15 @@ class AgentChecksServiceSpec extends BaseSpec {
     workItems: Seq[WorkItem[FriendlyNameWorkItem]]
   )(mockWorkItemService: FriendlyNameWorkItemService) =
     (mockWorkItemService
-      .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-      .expects(groupId, None, *, *)
+      .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+      .expects(groupId, None, *)
       .returning(Future.successful(workItems))
 
   private def mockAssignmentsWorkItemServiceQuery(
     workItems: Seq[WorkItem[AssignmentWorkItem]]
   )(mockAssignmentsWorkItemService: AssignmentsWorkItemService) =
     (mockAssignmentsWorkItemService
-      .queryBy(_: Arn, _: Int)(_: ExecutionContext))
-      .expects(arn, *, *)
+      .queryBy(_: Arn)(_: ExecutionContext))
+      .expects(arn, *)
       .returning(Future.successful(workItems))
 }

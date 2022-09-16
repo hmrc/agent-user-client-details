@@ -18,27 +18,27 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
-import org.joda.time.DateTime
-import reactivemongo.bson.BSONObjectID
+import org.bson.types.ObjectId
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.test.MongoSupport
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSpecSupport {
-
-  implicit val mongoProvider = MongoProvider(mongo)
+class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
 
   lazy val config = app.injector.instanceOf[Config]
-  lazy val wir = AssignmentsWorkItemRepository(config)
-  lazy val wis = new AssignmentsWorkItemServiceImpl(wir)
+  lazy val appConfig = app.injector.instanceOf[AppConfig]
+  lazy val wir = AssignmentsWorkItemRepository(config, mongoComponent)
+  lazy val wis = new AssignmentsWorkItemServiceImpl(wir, appConfig)
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testUserId = "ABCEDEFGI1234568"
@@ -57,13 +57,13 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    dropTestCollection(wir.collection.name)
+    wir.collection.drop().toFuture().futureValue
   }
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
-    val now = DateTime.now()
+    val now = Instant.now()
     WorkItem(
-      id = BSONObjectID.generate(),
+      id = ObjectId.get(),
       receivedAt = now,
       updatedAt = now,
       availableAt = now,
@@ -81,15 +81,15 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
             AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
             AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
           ),
-          DateTime.now(),
+          Instant.now(),
           ToDo
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), DateTime.now(), Succeeded)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), Instant.now(), Succeeded)
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
         .futureValue
       val stats = wis.collectStats.futureValue
       stats.get(ToDo.name) shouldBe Some(2)
@@ -107,15 +107,15 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
             AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
             AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
           ),
-          DateTime.now(),
+          Instant.now(),
           ToDo
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), DateTime.now(), Succeeded)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), Instant.now(), Succeeded)
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
         .futureValue
       wis.query(Seq(ToDo)).futureValue.length shouldBe 2
       wis.query(Seq(ToDo, Succeeded)).futureValue.length shouldBe 3
@@ -131,15 +131,15 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
             AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
             AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
           ),
-          DateTime.now(),
+          Instant.now(),
           ToDo
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), DateTime.now(), Succeeded)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), Instant.now(), Succeeded)
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
         .futureValue
 
       wis.queryBy(testArn).futureValue.length shouldBe 4
@@ -147,29 +147,39 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
   }
 
   "cleanup" should {
-    "remove any items that are either succeeded or duplicate" in {
+    "remove any items that are either succeeded or duplicate (if they were last updated earlier than the given cutoff)" in {
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), DateTime.now(), Succeeded)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), Instant.now(), Succeeded)
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)), DateTime.now(), Duplicate)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)), Instant.now(), Duplicate)
         .futureValue
       wis
         .pushNew(
           Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)),
-          DateTime.now(),
+          Instant.now(),
           PermanentlyFailed
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), DateTime.now(), Failed)
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
         .futureValue
-      wis.cleanup().futureValue
+      wis.cleanup(Instant.now().plusSeconds(24 * 3600 /* 1 day */ )).futureValue
       wis.query(Seq(Succeeded)).futureValue.length shouldBe 0
       wis.query(Seq(Duplicate)).futureValue.length shouldBe 0
       wis.query(Seq(PermanentlyFailed)).futureValue.length shouldBe 1
       wis.query(Seq(Failed)).futureValue.length shouldBe 1
     }
+    "not remove an item that was recently updated" in {
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), Instant.now(), Succeeded)
+        .futureValue
+      wis
+        .cleanup(Instant.now().plusSeconds(60))
+        .futureValue // item was updated only 1 minute before the cleanup time, so it should be kept
+      wis.query(Seq(Succeeded)).futureValue.length shouldBe 1
+    }
+
   }
 
 }

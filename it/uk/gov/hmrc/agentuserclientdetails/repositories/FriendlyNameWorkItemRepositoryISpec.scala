@@ -18,27 +18,27 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
-import org.joda.time.DateTime
-import reactivemongo.bson.BSONObjectID
+import org.bson.types.ObjectId
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.test.MongoSupport
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSpecSupport {
-
-  implicit val mongoProvider = MongoProvider(mongo)
+class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
 
   lazy val config = app.injector.instanceOf[Config]
-  lazy val wir = FriendlyNameWorkItemRepository(config)
-  lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
+  lazy val appConfig = app.injector.instanceOf[AppConfig]
+  lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
+  lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
@@ -57,13 +57,13 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    dropTestCollection(wir.collection.name)
+    wir.collection.drop().toFuture.futureValue
   }
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
-    val now = DateTime.now()
+    val now = Instant.now()
     WorkItem(
-      id = BSONObjectID.generate(),
+      id = ObjectId.get(),
       receivedAt = now,
       updatedAt = now,
       availableAt = now,
@@ -78,12 +78,12 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
       wis
         .pushNew(
           Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
-          DateTime.now(),
+          Instant.now(),
           ToDo
         )
         .futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), Instant.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), Instant.now(), Failed).futureValue
       val stats = wis.collectStats.futureValue
       stats.get(ToDo.name) shouldBe Some(2)
       stats.get(Succeeded.name) shouldBe Some(1)
@@ -97,12 +97,12 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
       wis
         .pushNew(
           Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
-          DateTime.now(),
+          Instant.now(),
           ToDo
         )
         .futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), Instant.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), Instant.now(), Failed).futureValue
       wis.query(testGroupId, Some(Seq(ToDo))).futureValue.length shouldBe 2
       wis.query(testGroupId, Some(Seq(ToDo, Succeeded))).futureValue.length shouldBe 3
       wis.query(testGroupId, Some(Seq(Duplicate, PermanentlyFailed))).futureValue.length shouldBe 0
@@ -112,17 +112,27 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
   }
 
   "cleanup" should {
-    "remove any items that are either succeeded or duplicate" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client2)), DateTime.now(), Duplicate).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), PermanentlyFailed).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), DateTime.now(), Failed).futureValue
-      wis.cleanup().futureValue
+    "remove any items that are either succeeded or duplicate (if they were last updated earlier than the given cutoff)" in {
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client2)), Instant.now(), Duplicate).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), Instant.now(), PermanentlyFailed).futureValue
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), Instant.now(), Failed).futureValue
+      wis.cleanup(Instant.now().plusSeconds(24 * 3600 /* 1 day */ )).futureValue
       wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length shouldBe 0
       wis.query(testGroupId, Some(Seq(Duplicate))).futureValue.length shouldBe 0
       wis.query(testGroupId, Some(Seq(PermanentlyFailed))).futureValue.length shouldBe 1
       wis.query(testGroupId, Some(Seq(Failed))).futureValue.length shouldBe 1
     }
+    "not remove an item that was recently updated" in {
+      wis
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded)
+        .futureValue
+      wis
+        .cleanup(Instant.now().plusSeconds(60))
+        .futureValue // item was updated only 1 minute before the cleanup time, so it should be kept
+      wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length shouldBe 1
+    }
+
   }
 
 }

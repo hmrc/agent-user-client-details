@@ -27,25 +27,30 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, UserEnrolment, UserEnrolmentA
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.MongoSpecSupport
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AssignmentControllerISpec extends BaseIntegrationSpec with MongoSpecSupport with AuthorisationMockSupport {
+class AssignmentControllerISpec
+    extends BaseIntegrationSpec with DefaultPlayMongoRepositorySupport[WorkItem[AssignmentWorkItem]]
+    with AuthorisationMockSupport {
 
-  implicit val mongoProvider = MongoProvider(mongo)
+  override protected def repository: PlayMongoRepository[WorkItem[AssignmentWorkItem]] = wir
+
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]
   lazy val configuration = app.injector.instanceOf[Configuration]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
 
-  lazy val wir = AssignmentsWorkItemRepository(config)
-  lazy val wis = new AssignmentsWorkItemServiceImpl(wir)
+  lazy val wir = AssignmentsWorkItemRepository(config, mongoComponent)
+  lazy val wis = new AssignmentsWorkItemServiceImpl(wir, appConfig)
 
   implicit lazy val mockAuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
@@ -65,7 +70,7 @@ class AssignmentControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    dropTestCollection(wir.collection.name)
+    dropCollection()
   }
 
   "POST /assign-enrolments" should {

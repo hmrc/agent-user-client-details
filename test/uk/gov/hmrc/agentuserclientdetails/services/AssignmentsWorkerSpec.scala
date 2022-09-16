@@ -17,20 +17,21 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import akka.actor.ActorSystem
-import org.joda.time.DateTime
+import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Unassign}
 import uk.gov.hmrc.agentuserclientdetails.support._
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, ResultStatus, WorkItem}
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -47,9 +48,9 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
   }
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
-    val now = DateTime.now()
+    val now = Instant.now()
     WorkItem(
-      id = BSONObjectID.generate(),
+      id = ObjectId.get(),
       receivedAt = now,
       updatedAt = now,
       availableAt = now,
@@ -62,7 +63,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "make a call to ES11 and mark the item as succeeded when call succeeds" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -80,7 +81,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .verify(testUserId, testEnrolmentKey, *, *)
         .once()
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Succeeded, *)
         .once()
     }
@@ -88,11 +89,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "when the ES11 call fails with a retryable failure such as a 429 status, mark the item as failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
-        .pushNew(_: Seq[AssignmentWorkItem], _: DateTime, _: ProcessingStatus)(_: ExecutionContext))
+        .pushNew(_: Seq[AssignmentWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -106,7 +107,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -114,11 +115,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "when the ES11 call fails with a non-response exception, mark the item as failed (retryable)" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
-        .pushNew(_: Seq[AssignmentWorkItem], _: DateTime, _: ProcessingStatus)(_: ExecutionContext))
+        .pushNew(_: Seq[AssignmentWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -132,7 +133,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -140,11 +141,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "when the ES11 call fails with a non-retryable failure, mark the item as permanently failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
-        .pushNew(_: Seq[AssignmentWorkItem], _: DateTime, _: ProcessingStatus)(_: ExecutionContext))
+        .pushNew(_: Seq[AssignmentWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -158,7 +159,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }
@@ -166,7 +167,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -178,11 +179,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
       val workItem =
         mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
-          .copy(receivedAt = DateTime.now().minusDays(2))
+          .copy(receivedAt = Instant.now().minusSeconds(2 * 24 * 3600 /* 2 days */ ))
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }
@@ -192,7 +193,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "make a call to ES12 and mark the item as succeeded when call succeeds" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -210,7 +211,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .verify(testUserId, testEnrolmentKey, *, *)
         .once()
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Succeeded, *)
         .once()
     }
@@ -218,11 +219,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "when the ES12 call fails with a retryable failure such as a 429 status, mark the item as failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
-        .pushNew(_: Seq[AssignmentWorkItem], _: DateTime, _: ProcessingStatus)(_: ExecutionContext))
+        .pushNew(_: Seq[AssignmentWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -236,7 +237,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -244,11 +245,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "when the ES12 call fails with a non-response exception, mark the item as failed (retryable)" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
-        .pushNew(_: Seq[AssignmentWorkItem], _: DateTime, _: ProcessingStatus)(_: ExecutionContext))
+        .pushNew(_: Seq[AssignmentWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -262,7 +263,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -270,11 +271,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "when the ES12 call fails with a non-retryable failure, mark the item as permanently failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
-        .pushNew(_: Seq[AssignmentWorkItem], _: DateTime, _: ProcessingStatus)(_: ExecutionContext))
+        .pushNew(_: Seq[AssignmentWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -288,7 +289,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }
@@ -296,7 +297,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -308,11 +309,11 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
       val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
       val workItem =
         mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
-          .copy(receivedAt = DateTime.now().minusDays(2))
+          .copy(receivedAt = Instant.now().minusSeconds(2 * 24 * 3600 /* 2 days */ ))
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: BSONObjectID, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }

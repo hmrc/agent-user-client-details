@@ -23,8 +23,10 @@ import play.api.inject.ApplicationLifecycle
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignmentsWorkItemService, AssignmentsWorker, FriendlyNameWorkItemService, FriendlyNameWorker, JobMonitoringWorker}
+import uk.gov.hmrc.agentuserclientdetails.services.{AssignmentsWorkItemService, AssignmentsWorker, FriendlyNameWorkItemService, FriendlyNameWorker, JobMonitoringService, JobMonitoringWorker}
+import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 
+import java.time.Instant
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,6 +38,8 @@ class AgentUserClientDetailsMain @Inject() (
   assignmentsWorker: AssignmentsWorker,
   assignmentsWorkItemService: AssignmentsWorkItemService,
   jobMonitoringWorker: JobMonitoringWorker,
+  jobMonitoringService: JobMonitoringService,
+  serviceInstances: ServiceInstances,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
     extends Logging {
@@ -73,36 +77,6 @@ class AgentUserClientDetailsMain @Inject() (
   }
 
   actorSystem.scheduler.schedule(
-    initialDelay = appConfig.friendlyNameJobRepoCleanupInitialDelaySeconds.seconds,
-    interval = appConfig.friendlyNameJobRepoCleanupIntervalSeconds.seconds
-  ) {
-    logger.info("[Friendly name job] Starting work item cleanup.")
-    friendlyNameWorkItemService.cleanup().map {
-      case result if result.ok =>
-        logger.info(s"[Friendly name job] Work item cleanup complete. ${result.n} work items deleted.")
-      case result if !result.ok =>
-        logger.error(
-          s"[Friendly name job] Work item cleanup finished with errors. ${result.n} work items deleted, ${result.writeErrors.length} write errors."
-        )
-    }
-  }
-
-  actorSystem.scheduler.schedule(
-    initialDelay = appConfig.assignEnrolmentJobRepoCleanupInitialDelaySeconds.seconds,
-    interval = appConfig.assignEnrolmentJobRepoCleanupIntervalSeconds.seconds
-  ) {
-    logger.info("[Assign enrolment job] Starting work item cleanup.")
-    assignmentsWorkItemService.cleanup().map {
-      case result if result.ok =>
-        logger.info(s"[Assign enrolment job] Work item cleanup complete. ${result.n} work items deleted.")
-      case result if !result.ok =>
-        logger.error(
-          s"[Assign enrolment job] Work item cleanup finished with errors. ${result.n} work items deleted, ${result.writeErrors.length} write errors."
-        )
-    }
-  }
-
-  actorSystem.scheduler.schedule(
     initialDelay = appConfig.jobMonitoringWorkerInitialDelaySeconds.seconds,
     interval = appConfig.jobMonitoringWorkerIntervalSeconds.seconds
   ) {
@@ -116,24 +90,63 @@ class AgentUserClientDetailsMain @Inject() (
   }
 
   actorSystem.scheduler.schedule(
-    initialDelay = appConfig.friendlyNameJobLogRepoStatsQueueInitialDelaySeconds.seconds,
-    interval = appConfig.friendlyNameJobLogRepoStatsQueueIntervalSeconds.seconds
+    initialDelay = appConfig.serviceJobInitialDelaySeconds.seconds,
+    interval = appConfig.serviceJobIntervalSeconds.seconds
   ) {
-    friendlyNameWorkItemService.collectStats.map { stats =>
-      logger.info(
-        s"[Friendly name job] Work item stats: ${if (stats.isEmpty) "No work items" else Json.toJson(stats).toString}"
-      )
-    }
-  }
+    // This is necessary so that we can keep track of how many instances are running, for request throttling purposes.
+    def heartbeat(): Future[Unit] = serviceInstances
+      .heartbeat()
+      .map { nrInstances =>
+        logger.info(s"[ServiceInstances] $nrInstances running instance(s) detected.")
+      }
+      .recover { case e =>
+        logger.error(s"[ServiceInstance] Heartbeat failed: $e")
+      }
 
-  actorSystem.scheduler.schedule(
-    initialDelay = appConfig.assignEnrolmentJobLogRepoStatsQueueInitialDelaySeconds.seconds,
-    interval = appConfig.assignEnrolmentJobLogRepoStatsQueueIntervalSeconds.seconds
-  ) {
-    assignmentsWorkItemService.collectStats.map { stats =>
-      logger.info(
-        s"[Assign enrolment job] Work item stats: ${if (stats.isEmpty) "No work items" else Json.toJson(stats).toString}"
-      )
-    }
+    // Print repo stats.
+    def friendlyNameRepoStats(): Future[Unit] = friendlyNameWorkItemService.collectStats
+      .map { stats =>
+        logger.info(
+          s"[Friendly name job] Work item stats: ${if (stats.isEmpty) "No work items" else Json.toJson(stats).toString}"
+        )
+      }
+      .recover { case _ => () }
+    def assignmentsRepoStats(): Future[Unit] = assignmentsWorkItemService.collectStats
+      .map { stats =>
+        logger.info(
+          s"[Assign enrolment job] Work item stats: ${if (stats.isEmpty) "No work items"
+            else Json.toJson(stats).toString}"
+        )
+      }
+      .recover { case _ => () }
+
+    // Perform cleanup of completed items.
+    val cleanupJobs = Seq(
+      "Assign enrolment job" -> (() => assignmentsWorkItemService.cleanup(Instant.now())),
+      "Friendly name job"    -> (() => friendlyNameWorkItemService.cleanup(Instant.now())),
+      "Job monitor"          -> (() => jobMonitoringService.cleanup(Instant.now()))
+    )
+    def cleanup(): Future[Unit] = Future
+      .traverse(cleanupJobs) { case (name, f) =>
+        logger.info(s"[$name] Starting work item cleanup.")
+        f()
+          .map { result =>
+            logger.info(s"[$name] Work item cleanup complete. ${result.getDeletedCount} work items deleted.")
+          }
+          .recover { case e =>
+            logger.error(s"[$name] Work item cleanup threw an exception: $e.")
+            () // We do not want any of these jobs failing to bring down the whole thread.
+          }
+      }
+      .map(_ => ())
+
+    logger.info("Service job started.")
+    for {
+      _ <- heartbeat()
+      _ <- friendlyNameRepoStats()
+      _ <- assignmentsRepoStats()
+      _ <- cleanup()
+      _ = logger.info("Service job finished.")
+    } yield ()
   }
 }

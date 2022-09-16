@@ -22,7 +22,8 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 
 import java.time.LocalDateTime
 import javax.inject.{Inject, Singleton}

@@ -27,8 +27,10 @@ import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -97,8 +99,8 @@ class FriendlyNameWorker @Inject() (
   )(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     if (continue) {
       workItemService.pullOutstanding(
-        failedBefore = DateTime.now().minusSeconds(appConfig.friendlyNameWorkItemRepoFailedBeforeSeconds),
-        availableBefore = DateTime.now().minusSeconds(appConfig.friendlyNameWorkItemRepoAvailableBeforeSeconds)
+        failedBefore = Instant.now().minusSeconds(appConfig.friendlyNameWorkItemRepoFailedBeforeSeconds),
+        availableBefore = Instant.now().minusSeconds(appConfig.friendlyNameWorkItemRepoAvailableBeforeSeconds)
       )
     } else {
       Future.successful(None)
@@ -147,7 +149,7 @@ class FriendlyNameWorker @Inject() (
                   // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
                   _ <- workItemService.pushNew(
                          Seq(wi.item.copy(client = wi.item.client.copy(friendlyName = friendlyName))),
-                         DateTime.now(),
+                         Instant.now(),
                          ToDo
                        )
                   // mark the old work item as duplicate
@@ -180,7 +182,7 @@ class FriendlyNameWorker @Inject() (
 
   // Determine whether we should give up trying to process this work item if it fails again.
   protected def giveUp(wi: WorkItem[FriendlyNameWorkItem]): Boolean =
-    wi.receivedAt.isBefore(DateTime.now().minusMinutes(appConfig.friendlyNameWorkItemRepoGiveUpAfterMinutes))
+    wi.receivedAt.isBefore(Instant.now().minusSeconds(60 * appConfig.friendlyNameWorkItemRepoGiveUpAfterMinutes))
 
   private def logFriendlyMessage(e: Throwable): String = e match {
     case uer: UpstreamErrorResponse => s"Upstream status ${uer.statusCode}: ${uer.message}"

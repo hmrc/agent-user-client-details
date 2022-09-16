@@ -26,8 +26,10 @@ import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Una
 import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
 import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
+import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -84,8 +86,8 @@ class AssignmentsWorker @Inject() (
   )(implicit ec: ExecutionContext): Future[Option[WorkItem[AssignmentWorkItem]]] =
     if (continue) {
       workItemService.pullOutstanding(
-        failedBefore = DateTime.now().minusSeconds(appConfig.assignEnrolmentWorkItemRepoFailedBeforeSeconds),
-        availableBefore = DateTime.now().minusSeconds(appConfig.assignEnrolmentWorkItemRepoAvailableBeforeSeconds)
+        failedBefore = Instant.now().minusSeconds(appConfig.assignEnrolmentWorkItemRepoFailedBeforeSeconds),
+        availableBefore = Instant.now().minusSeconds(appConfig.assignEnrolmentWorkItemRepoAvailableBeforeSeconds)
       )
     } else {
       Future.successful(None)
@@ -129,7 +131,7 @@ class AssignmentsWorker @Inject() (
 
   // Determine whether we should give up trying to process this work item if it fails again.
   protected def giveUp(wi: WorkItem[AssignmentWorkItem]): Boolean =
-    wi.receivedAt.isBefore(DateTime.now().minusMinutes(appConfig.assignEnrolmentWorkItemRepoGiveUpAfterMinutes))
+    wi.receivedAt.isBefore(Instant.now().minusSeconds(60 * appConfig.assignEnrolmentWorkItemRepoGiveUpAfterMinutes))
 
   private def logFriendlyMessage(e: Throwable): String = e match {
     case uer: UpstreamErrorResponse => s"Upstream status ${uer.statusCode}: ${uer.message}"
