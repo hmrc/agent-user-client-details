@@ -17,13 +17,16 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.google.inject.ImplementedBy
-import org.joda.time.{DateTime => JodaDateTime}
-import reactivemongo.bson.BSONObjectID
+import org.mongodb.scala.bson.ObjectId
+import org.mongodb.scala.model.Filters
+import org.mongodb.scala.result.DeleteResult
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, JobData}
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
-import uk.gov.hmrc.workitem.{Failed, Succeeded, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -34,9 +37,10 @@ trait JobMonitoringService {
    Please remember to mark it as finished or not finished before calling this method again.
    */
   def getNextJobToCheck(implicit ec: ExecutionContext): Future[Option[WorkItem[JobData]]]
-  def createFriendlyNameFetchJobData(jobData: FriendlyNameJobData)(implicit ec: ExecutionContext): Future[BSONObjectID]
-  def markAsFinished(objectId: BSONObjectID)(implicit ec: ExecutionContext): Future[Unit]
-  def markAsNotFinished(objectId: BSONObjectID)(implicit ec: ExecutionContext): Future[Unit]
+  def createFriendlyNameFetchJobData(jobData: FriendlyNameJobData)(implicit ec: ExecutionContext): Future[ObjectId]
+  def markAsFinished(objectId: ObjectId)(implicit ec: ExecutionContext): Future[Unit]
+  def markAsNotFinished(objectId: ObjectId)(implicit ec: ExecutionContext): Future[Unit]
+  def cleanup(now: Instant)(implicit ec: ExecutionContext): Future[DeleteResult]
 }
 
 @Singleton
@@ -44,21 +48,33 @@ class JobMonitoringServiceImpl @Inject() (jobMonitoringRepository: JobMonitoring
     extends JobMonitoringService {
   def getNextJobToCheck(implicit ec: ExecutionContext): Future[Option[WorkItem[JobData]]] =
     jobMonitoringRepository.pullOutstanding(
-      JodaDateTime.now().minusSeconds(appConfig.jobMonitoringFailedBeforeSeconds),
-      JodaDateTime.now().minusSeconds(appConfig.jobMonitoringAvailableBeforeSeconds)
+      Instant.now().minusSeconds(appConfig.jobMonitoringFailedBeforeSeconds),
+      Instant.now().minusSeconds(appConfig.jobMonitoringAvailableBeforeSeconds)
     )
 
   def createFriendlyNameFetchJobData(
     jobData: FriendlyNameJobData
-  )(implicit ec: ExecutionContext): Future[BSONObjectID] =
+  )(implicit ec: ExecutionContext): Future[ObjectId] =
     jobMonitoringRepository
-      .pushNew(jobData, receivedAt = JodaDateTime.now())
+      .pushNew(jobData)
       .map(_.id)
 
-  def markAsFinished(objectId: BSONObjectID)(implicit ec: ExecutionContext): Future[Unit] =
+  def markAsFinished(objectId: ObjectId)(implicit ec: ExecutionContext): Future[Unit] =
     jobMonitoringRepository.markAs(objectId, Succeeded).map(_ => ())
 
-  def markAsNotFinished(objectId: BSONObjectID)(implicit ec: ExecutionContext): Future[Unit] =
+  def markAsNotFinished(objectId: ObjectId)(implicit ec: ExecutionContext): Future[Unit] =
     jobMonitoringRepository.markAs(objectId, Failed).map(_ => ())
 
+  def cleanup(now: Instant)(implicit ec: ExecutionContext): Future[DeleteResult] = {
+    val cutoff: Instant =
+      now.minusSeconds(appConfig.jobMonitoringDeleteFinishedItemsAfterSeconds)
+    jobMonitoringRepository.collection
+      .deleteMany(
+        Filters.and(
+          Filters.in("status", Succeeded.name, Duplicate.name, PermanentlyFailed.name),
+          Filters.lte("updatedAt", cutoff)
+        )
+      )
+      .toFuture()
+  }
 }

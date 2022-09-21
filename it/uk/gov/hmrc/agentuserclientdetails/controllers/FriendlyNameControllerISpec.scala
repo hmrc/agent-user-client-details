@@ -28,27 +28,31 @@ import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
-import uk.gov.hmrc.mongo.MongoSpecSupport
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupport with AuthorisationMockSupport {
+class FriendlyNameControllerISpec
+    extends BaseIntegrationSpec with DefaultPlayMongoRepositorySupport[WorkItem[FriendlyNameWorkItem]]
+    with AuthorisationMockSupport {
 
-  implicit val mongoProvider = MongoProvider(mongo)
+  override protected def repository: PlayMongoRepository[WorkItem[FriendlyNameWorkItem]] = wir
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]
   lazy val configuration = app.injector.instanceOf[Configuration]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
 
-  lazy val wir = FriendlyNameWorkItemRepository(config)
-  lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
+  lazy val wir: FriendlyNameWorkItemRepository = FriendlyNameWorkItemRepository(config, mongoComponent)
+  lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
   implicit lazy val mockAuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
@@ -73,7 +77,7 @@ class FriendlyNameControllerISpec extends BaseIntegrationSpec with MongoSpecSupp
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    dropTestCollection(wir.collection.name)
+    dropCollection()
   }
 
   "POST /arn/:arn/friendly-name" should {

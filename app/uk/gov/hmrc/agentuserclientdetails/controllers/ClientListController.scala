@@ -16,12 +16,10 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import org.joda.time.DateTime
+import org.mongodb.scala.bson.ObjectId
 import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
-import reactivemongo.api.commands.WriteError
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -29,9 +27,11 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentSto
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.workitem.{Failed, PermanentlyFailed, ProcessingStatus, ToDo}
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -144,7 +144,7 @@ class ClientListController @Inject() (
             logger.info(
               s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
             )
-          _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
+          _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), Instant.now(), ToDo)
           _ <- createFriendlyNameMonitoringJob(arn, groupId, clientsWantingName, sendEmail, lang.getOrElse("en"))
           // ^ Note: we must put _all_ the clients that lack a name in the list of the monitoring job, not just those that we are _adding_ to the work repo now,
           // because there could be some work items created by a previous call that we still need to check for completion.
@@ -178,7 +178,7 @@ class ClientListController @Inject() (
               s"FORCED client list request for groupId $groupId. All work items for this groupId have been deleted and ${clients.length} new work items will be created."
             )
           clientsWithoutName = clients.map(_.copy(friendlyName = ""))
-          _ <- workItemService.pushNew(clientsWithoutName.map(client => makeWorkItem(client)), DateTime.now(), ToDo)
+          _ <- workItemService.pushNew(clientsWithoutName.map(client => makeWorkItem(client)), Instant.now(), ToDo)
         } yield Accepted
       case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
         Future.successful(NotFound)
@@ -206,12 +206,8 @@ class ClientListController @Inject() (
 
   def cleanupWorkItems: Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent { _ =>
-      implicit val writeErrorFormat = Json.format[WriteError]
-      workItemService.cleanup.map {
-        case result if result.ok =>
-          Ok(JsNumber(result.n))
-        case result if !result.ok =>
-          InternalServerError(Json.toJson(result.writeErrors))
+      workItemService.cleanup(Instant.now()).map { result =>
+        Ok(JsNumber(result.getDeletedCount))
       }
     }
   }
@@ -247,7 +243,7 @@ class ClientListController @Inject() (
     toBeAdded: Seq[Client],
     sendEmail: Boolean,
     lang: String // 'en' or 'cy' -- defaults to 'en' if invalid
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[BSONObjectID]] =
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ObjectId]] =
     if (toBeAdded.isEmpty) Future.successful(None)
     else {
       for {
@@ -257,26 +253,26 @@ class ClientListController @Inject() (
             logger.warn(
               s"Agency details could not be retrieved for ${arn.value}. It will not be possible to notify them by email when the client name fetch job is complete."
             )
-        maybeBSONObjectID <- maybeAgentDetailsDesResponse.fold[Future[Option[BSONObjectID]]](Future successful None) {
-                               agentDetailsDesResponse =>
-                                 val agencyName = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyName)
-                                 val agencyEmail = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyEmail)
-                                 jobMonitoringService
-                                   .createFriendlyNameFetchJobData(
-                                     FriendlyNameJobData(
-                                       groupId = groupId,
-                                       enrolmentKeys = toBeAdded.map(_.enrolmentKey),
-                                       sendEmailOnCompletion = sendEmail,
-                                       agencyName = agencyName,
-                                       email = agencyEmail,
-                                       emailLanguagePreference =
-                                         if (List("cy", "en").contains(lang)) Some(lang)
-                                         else Some("en")
-                                     )
-                                   )
-                                   .map(Some(_))
-                             }
-      } yield maybeBSONObjectID
+        maybeObjectId <- maybeAgentDetailsDesResponse.fold[Future[Option[ObjectId]]](Future successful None) {
+                           agentDetailsDesResponse =>
+                             val agencyName = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyName)
+                             val agencyEmail = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyEmail)
+                             jobMonitoringService
+                               .createFriendlyNameFetchJobData(
+                                 FriendlyNameJobData(
+                                   groupId = groupId,
+                                   enrolmentKeys = toBeAdded.map(_.enrolmentKey),
+                                   sendEmailOnCompletion = sendEmail,
+                                   agencyName = agencyName,
+                                   email = agencyEmail,
+                                   emailLanguagePreference =
+                                     if (List("cy", "en").contains(lang)) Some(lang)
+                                     else Some("en")
+                                 )
+                               )
+                               .map(Some(_))
+                         }
+      } yield maybeObjectId
 
     }
 }

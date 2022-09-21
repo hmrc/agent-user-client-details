@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import org.joda.time.DateTime
 import play.api.libs.json.JsValue
 import play.api.mvc._
 import uk.gov.hmrc.agentmtdidentifiers.model.{UserEnrolment, UserEnrolmentAssignments}
@@ -24,9 +23,10 @@ import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSuppo
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Unassign}
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemService
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.workitem.ToDo
 
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
@@ -52,7 +52,7 @@ class AssignmentController @Inject() (
           AssignmentWorkItem(Unassign, userId, enrolmentKey, aer.arn.value, mSessionId)
         }
         for {
-          _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, DateTime.now(), ToDo)
+          _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, Instant.now(), ToDo)
         } yield Accepted
       }
     }

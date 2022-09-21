@@ -19,42 +19,29 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.typesafe.config.Config
 import org.joda.time.DateTime
 import play.api.libs.json._
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.workitem.{WorkItem, _}
-import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
+import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
+import java.time.{Duration, Instant}
 import javax.inject.Inject
+import scala.concurrent.ExecutionContext
 
-case class FriendlyNameWorkItemRepository @Inject() (config: Config)(implicit mongo: MongoProvider)
-    extends WorkItemRepository[FriendlyNameWorkItem, BSONObjectID](
-      "client-name-work-items",
-      mongo.value,
-      WorkItem.workItemMongoFormat[FriendlyNameWorkItem],
-      config
+case class FriendlyNameWorkItemRepository @Inject() (config: Config, mongoComponent: MongoComponent)(implicit
+  ec: ExecutionContext
+) extends WorkItemRepository[FriendlyNameWorkItem](
+      collectionName = "client-name-work-items",
+      mongoComponent = mongoComponent,
+      itemFormat = FriendlyNameWorkItem.format,
+      workItemFields = WorkItemFields.default
     ) {
 
   implicit val dateFormats: Format[DateTime] =
     ReactiveMongoFormats.dateTimeFormats
 
-  lazy val inProgressRetryAfterProperty = "work-item-repository.friendly-name.retry-in-progress-after-millis"
+  override def now: Instant = Instant.now
 
-  lazy val workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
-    val receivedAt = "createdAt"
-    val updatedAt = "lastUpdated"
-    val availableAt = "availableAt"
-    val status = "status"
-    val id = "_id"
-    val failureCount = "failures"
-  }
-
-  override def now: DateTime = DateTime.now
-
-  override def indexes: Seq[Index] = super.indexes ++ Seq(
-    Index(key = Seq("item.groupId" -> IndexType.Ascending), unique = false, background = true)
-  )
-
+  override def inProgressRetryAfter: Duration =
+    config.getDuration("work-item-repository.friendly-name.retry-in-progress-after")
 }

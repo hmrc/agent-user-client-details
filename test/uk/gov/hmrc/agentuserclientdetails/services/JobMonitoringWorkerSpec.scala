@@ -17,19 +17,20 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.mongodb.client.result.UpdateResult
-import org.joda.time.DateTime
+import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import reactivemongo.bson.BSONObjectID
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameJobData, FriendlyNameWorkItem, JobData}
 import uk.gov.hmrc.agentuserclientdetails.support._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.workitem._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,9 +41,9 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
   val client2 = Client("HMRC-MTD-VAT~VRN~000000002", "Howell & Son")
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
-    val now = DateTime.now()
+    val now = Instant.now()
     WorkItem(
-      id = BSONObjectID.generate(),
+      id = ObjectId.get(),
       receivedAt = now,
       updatedAt = now,
       availableAt = now,
@@ -53,7 +54,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
   }
 
   "processItem" should {
-    val jobId = BSONObjectID.generate()
+    val jobId = ObjectId.get()
     val jobData: FriendlyNameJobData = FriendlyNameJobData(
       groupId = groupId,
       enrolmentKeys = Seq("HMRC-MTD-VAT~VRN~000000001", "HMRC-MTD-VAT~VRN~000000002"),
@@ -62,7 +63,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
       email = Some("a@b.com"),
       emailLanguagePreference = Some("en")
     )
-    val datetime = new DateTime(2020, 1, 1, 12, 0, 0)
+    val datetime = Instant.now().minusSeconds(1000)
     val jobMonitoringWorkItem = WorkItem[JobData](
       id = jobId,
       receivedAt = datetime,
@@ -81,19 +82,19 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(Failed, ToDo)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(Failed, ToDo)), *)
         .returns(
           Future.successful(Seq.empty) // No outstanding items
         )
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(PermanentlyFailed)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(PermanentlyFailed)), *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
       val jmw = new JobMonitoringWorker(jms, fnwis, email)
@@ -104,7 +105,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .verify(argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_success"), *, *)
         .once()
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -117,19 +118,19 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(Failed, ToDo)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(Failed, ToDo)), *)
         .returns(
           Future.successful(Seq.empty) // No outstanding items
         )
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(PermanentlyFailed)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(PermanentlyFailed)), *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
       val jmw = new JobMonitoringWorker(jms, fnwis, email)
@@ -142,7 +143,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .verify(argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_success_cy"), *, *)
         .once()
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -155,13 +156,13 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(Failed, ToDo)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(Failed, ToDo)), *)
         .returns(
           Future.successful(Seq.empty) // No outstanding items
         )
@@ -177,7 +178,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .verify(*, *, *)
         .never()
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -190,13 +191,13 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsNotFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsNotFinished(_: ObjectId)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(Failed, ToDo)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(Failed, ToDo)), *)
         .returns(
           Future.successful(
             Seq(
@@ -213,11 +214,11 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .verify(*, *, *)
         .never()
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .verify(jobId, *)
         .never()
       (jms
-        .markAsNotFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsNotFinished(_: ObjectId)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -230,19 +231,19 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(Failed, ToDo)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(Failed, ToDo)), *)
         .returns(
           Future.successful(Seq.empty) // No outstanding items
         )
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]], _: Int)(_: ExecutionContext))
-        .when(groupId, Some(Seq(PermanentlyFailed)), *, *)
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .when(groupId, Some(Seq(PermanentlyFailed)), *)
         .returns(
           Future.successful(
             Seq(mkWorkItem(FriendlyNameWorkItem(groupId, client2), PermanentlyFailed))
@@ -257,7 +258,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .verify(argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_some_failed"), *, *)
         .once()
       (jms
-        .markAsFinished(_: BSONObjectID)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(_: ExecutionContext))
         .verify(jobId, *)
         .once()
     }

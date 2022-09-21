@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
-import org.joda.time.DateTime
 import org.scalamock.handlers.CallHandler3
 import play.api.Configuration
 import play.api.http.HttpEntity.NoEntity
@@ -34,32 +33,30 @@ import uk.gov.hmrc.agentuserclientdetails.connectors._
 import uk.gov.hmrc.agentuserclientdetails.model.{AgencyDetails, AgentDetailsDesResponse, FriendlyNameJobData, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameWorkItemRepository, JobMonitoringRepository}
 import uk.gov.hmrc.agentuserclientdetails.services._
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
-import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.workitem.{PermanentlyFailed, Succeeded, ToDo}
+import uk.gov.hmrc.mongo.test.MongoSupport
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 
+import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSupport with AuthorisationMockSupport {
-
-  implicit val mongoProvider = MongoProvider(mongo)
+class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport with AuthorisationMockSupport {
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]
   lazy val configuration = app.injector.instanceOf[Configuration]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
 
-  lazy val wir = FriendlyNameWorkItemRepository(config)
-  lazy val wis = new FriendlyNameWorkItemServiceImpl(wir)
+  lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
+  lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
   implicit lazy val mockAuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
   lazy val assignedUsersService = app.injector.instanceOf[AssignedUsersService]
-  lazy val jobMonitoringRepository = new JobMonitoringRepository(config)
+  lazy val jobMonitoringRepository = new JobMonitoringRepository(mongoComponent, config)
   lazy val jobMonitoringService = new JobMonitoringServiceImpl(jobMonitoringRepository, appConfig)
   lazy val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
 
@@ -86,8 +83,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    dropTestCollection(wir.collection.name)
-    dropTestCollection(jobMonitoringRepository.collection.name)
+    wir.collection.drop().toFuture().futureValue
+    jobMonitoringRepository.collection.drop().toFuture().futureValue
   }
 
   trait TestScope {
@@ -258,7 +255,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
           clientsWithoutSomeFriendlyNames
             .filter(_.friendlyName.isEmpty)
             .map(e => FriendlyNameWorkItem(testGroupId, e)),
-          DateTime.now(),
+          Instant.now(),
           PermanentlyFailed
         )
         .futureValue
@@ -418,21 +415,21 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       wis
         .pushNew(
           Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(0))),
-          DateTime.now(),
+          Instant.now(),
           Succeeded
         )
         .futureValue
       wis
         .pushNew(
           Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(1))),
-          DateTime.now(),
+          Instant.now(),
           PermanentlyFailed
         )
         .futureValue
       wis
         .pushNew(
           Seq(FriendlyNameWorkItem(anotherTestGroupId, clientsWithFriendlyNames(3))),
-          DateTime.now(),
+          Instant.now(),
           Succeeded
         )
         .futureValue
@@ -456,11 +453,10 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       wis
-        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), Succeeded)
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded)
         .futureValue
       val result = clc.cleanupWorkItems(request).futureValue
       result.header.status shouldBe 200
-      wis.collectStats.futureValue.values.sum shouldBe 0
     }
   }
 
@@ -469,7 +465,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       wis
-        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), ToDo)
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), ToDo)
         .futureValue
       val result = clc.getWorkItemStats(request)
       result.futureValue.header.status shouldBe 200
@@ -482,13 +478,13 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSpecSuppor
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       wis
-        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), DateTime.now(), ToDo)
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), ToDo)
         .futureValue
       wis
-        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), DateTime.now(), Succeeded)
+        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), Instant.now(), Succeeded)
         .futureValue
       wis
-        .pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, client2)), DateTime.now(), ToDo)
+        .pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, client2)), Instant.now(), ToDo)
         .futureValue
       val result = clc.getOutstandingWorkItemsForGroupId(testGroupId)(request)
       result.futureValue.header.status shouldBe 200

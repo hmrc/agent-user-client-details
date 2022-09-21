@@ -17,15 +17,13 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
-import org.joda.time.DateTime
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers.BSONObjectIDFormat
 import uk.gov.hmrc.agentuserclientdetails.model.JobData
-import uk.gov.hmrc.agentuserclientdetails.util.MongoProvider
-import uk.gov.hmrc.workitem.{WorkItem, WorkItemFieldNames, WorkItemRepository}
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
+import java.time.{Duration, Instant}
 import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext
 
 // Notes:
 // - Do not use this directly in your controllers/classes. Use JobMonitoringService, as it is much easier to stub in tests.
@@ -35,29 +33,18 @@ import javax.inject.{Inject, Singleton}
 // --- Succeeded: the associated job has finished (whether successfully or unsuccessfully - check item payload for details)
 @Singleton
 class JobMonitoringRepository @Inject() (
+  mongoComponent: MongoComponent,
   config: Config
-)(implicit mongo: MongoProvider)
-    extends WorkItemRepository[JobData, BSONObjectID](
-      "job-monitoring-work-items",
-      mongo.value,
-      WorkItem.workItemMongoFormat[JobData],
-      config
+)(implicit ec: ExecutionContext)
+    extends WorkItemRepository[JobData](
+      collectionName = "job-monitoring-work-items",
+      mongoComponent = mongoComponent,
+      itemFormat = JobData.format,
+      workItemFields = WorkItemFields.default
     ) {
-  lazy val inProgressRetryAfterProperty = "work-item-repository.job-monitoring.retry-in-progress-after-millis"
 
-  lazy val workItemFields: WorkItemFieldNames = new WorkItemFieldNames {
-    val receivedAt = "createdAt"
-    val updatedAt = "lastUpdated"
-    val availableAt = "availableAt"
-    val status = "status"
-    val id = "_id"
-    val failureCount = "failures"
-  }
+  override def now: Instant = Instant.now
 
-  override def now: DateTime = DateTime.now
-
-  override def indexes: Seq[Index] = super.indexes ++ Seq(
-    Index(key = Seq("item.groupId" -> IndexType.Ascending), unique = false, background = true),
-    Index(key = Seq("item.jobType" -> IndexType.Ascending), unique = false, background = true)
-  )
+  override def inProgressRetryAfter: Duration =
+    config.getDuration("work-item-repository.job-monitoring.retry-in-progress-after")
 }
