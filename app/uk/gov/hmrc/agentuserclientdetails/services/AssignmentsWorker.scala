@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import org.joda.time.DateTime
 import play.api.Logging
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Unassign}
@@ -40,7 +42,8 @@ class AssignmentsWorker @Inject() (
   esConnector: EnrolmentStoreProxyConnector,
   serviceInstances: ServiceInstances,
   actorSystem: ActorSystem,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  mat: Materializer
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -69,11 +72,13 @@ class AssignmentsWorker @Inject() (
       case false =>
         logger.debug("Assignments processing triggered. Starting...")
         running.set(true)
-        val workItems: Enumerator[WorkItem[AssignmentWorkItem]] = Enumerator.generateM(pullWorkItemWhile(continue))
-        val processWorkItems: Iteratee[WorkItem[AssignmentWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) =>
+
+        val workItems: Source[WorkItem[AssignmentWorkItem], NotUsed] =
+          Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
+        val processWorkItems: Sink[WorkItem[AssignmentWorkItem], Future[Unit]] = Sink.foldAsync(()) { case ((), item) =>
           processItem(item)
         }
-        val result = workItems.run(processWorkItems)
+        val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
         result.onComplete { case _ =>
           logger.debug("Assignments processing finished.")
           running.set(false)

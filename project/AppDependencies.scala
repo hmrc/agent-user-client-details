@@ -12,7 +12,6 @@ object AppDependencies {
     "uk.gov.hmrc"             %% "agent-mtd-identifiers"             % "0.47.0-play-28",
     "uk.gov.hmrc"             %% "cluster-work-throttling"           % "8.3.0-play-28",
     "uk.gov.hmrc"             %% "agent-kenshoo-monitoring"          % "4.8.0-play-28",
-    "uk.gov.hmrc"             %% "play-scheduling-play-28"           % "8.0.0",
     "com.github.blemale"      %% "scaffeine"                         % "4.0.1",
     "net.codingwell"          %% "scala-guice"                       % "4.2.9"
   )

@@ -17,6 +17,8 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import akka.actor.ActorSystem
+import akka.stream.Materializer
+import akka.stream.testkit.NoMaterializer
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures._
@@ -85,6 +87,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     override val enableThrottling: Boolean = false
   }
 
+  val materializer: Materializer = NoMaterializer
+
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
     val now = Instant.now()
     WorkItem(
@@ -110,7 +114,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
@@ -136,7 +141,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsNoName, mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsNoName, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
@@ -162,7 +168,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(400), mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(400), mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
@@ -188,7 +195,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(testGroupId, *, *, *, *)
         .returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
@@ -214,7 +222,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(testGroupId, *, *, *, *)
         .returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsConnectFail, mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsConnectFail, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
@@ -240,7 +249,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(testGroupId, *, *, *, *)
         .returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
         .copy(receivedAt = Instant.now().minusSeconds(2 * 24 * 3600 /* 2 days */ ))
       fnWorker.processItem(workItem).futureValue
@@ -271,7 +281,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
@@ -297,7 +308,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
-      val fnWorker = new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig)
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
       val workItem =
         mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name")), ToDo)
       fnWorker.processItem(workItem).futureValue

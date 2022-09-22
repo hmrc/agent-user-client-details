@@ -16,6 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import akka.stream.Materializer
+import akka.stream.testkit.NoMaterializer
 import com.mongodb.client.result.UpdateResult
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
@@ -39,6 +41,8 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
   val groupId = "myGroupId"
   val client1 = Client("HMRC-MTD-VAT~VRN~000000001", "Frank Wright")
   val client2 = Client("HMRC-MTD-VAT~VRN~000000002", "Howell & Son")
+
+  val materializer: Materializer = NoMaterializer
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
     val now = Instant.now()
@@ -97,7 +101,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .when(groupId, Some(Seq(PermanentlyFailed)), *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, materializer)
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
@@ -133,7 +137,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .when(groupId, Some(Seq(PermanentlyFailed)), *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, materializer)
       val workItemWithLanguageSetToWelsh =
         jobMonitoringWorkItem.copy(item = jobData.copy(emailLanguagePreference = Some("cy")): JobData)
       jmw.processItem(workItemWithLanguageSetToWelsh).futureValue // Welsh language preference
@@ -167,7 +171,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           Future.successful(Seq.empty) // No outstanding items
         )
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, materializer)
       val workItemWithEmailDisabled =
         jobMonitoringWorkItem.copy(item = jobData.copy(sendEmailOnCompletion = false): JobData)
 
@@ -206,7 +210,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           )
         )
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, materializer)
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
@@ -250,7 +254,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           ) // one permanently failed item
         )
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, materializer)
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email

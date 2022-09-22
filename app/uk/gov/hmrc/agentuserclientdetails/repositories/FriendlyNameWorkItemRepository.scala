@@ -17,11 +17,8 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
-import org.joda.time.DateTime
-import play.api.libs.json._
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
 import java.time.{Duration, Instant}
@@ -36,9 +33,6 @@ case class FriendlyNameWorkItemRepository @Inject() (config: Config, mongoCompon
       itemFormat = FriendlyNameWorkItem.format,
       workItemFields = WorkItemFields.default
     ) {
-
-  implicit val dateFormats: Format[DateTime] =
-    ReactiveMongoFormats.dateTimeFormats
 
   override def now: Instant = Instant.now
 
