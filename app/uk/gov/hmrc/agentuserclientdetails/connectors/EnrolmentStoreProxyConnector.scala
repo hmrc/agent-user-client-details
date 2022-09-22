@@ -244,9 +244,9 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
       http.PUT[ES19Request, HttpResponse](url.toString, ES19Request(friendlyName)).map { response =>
         response.status match {
           case status if is2xx(status) =>
-            if (status != Status.NO_CONTENT)
+            if (status != Status.NO_CONTENT) {
               logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
-            else logger.info(s"[remove this before prod] enrolment key: $enrolmentKey friendly name: $friendlyName")
+            }
           case other =>
             throw UpstreamErrorResponse(response.body, other, other)
         }
