@@ -140,9 +140,6 @@ class FriendlyNameWorker @Inject() (
           case Success(Some(friendlyName)) =>
             throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
               case Success(_) =>
-                logger.info(
-                  s"[remove this before prod] Friendly name: $friendlyName for $enrolmentKey retrieved and updated via ES19."
-                )
                 workItemService.complete(workItem.id, Succeeded).map(_ => ())
               case Failure(_) =>
                 for {
