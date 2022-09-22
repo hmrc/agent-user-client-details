@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import org.joda.time.DateTime
 import play.api.Logging
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
@@ -42,7 +44,8 @@ class FriendlyNameWorker @Inject() (
   serviceInstances: ServiceInstances,
   clientNameService: ClientNameService,
   actorSystem: ActorSystem,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  mat: Materializer
 )(implicit ec: ExecutionContext)
     extends Logging {
 
@@ -82,11 +85,13 @@ class FriendlyNameWorker @Inject() (
       case false =>
         logger.info("Friendly name triggered. Starting...")
         running.set(true)
-        val workItems: Enumerator[WorkItem[FriendlyNameWorkItem]] = Enumerator.generateM(pullWorkItemWhile(continue))
-        val processWorkItems: Iteratee[WorkItem[FriendlyNameWorkItem], Unit] = Iteratee.foldM(()) { case ((), item) =>
-          processItem(item)
+        val workItems: Source[WorkItem[FriendlyNameWorkItem], NotUsed] =
+          Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
+        val processWorkItems: Sink[WorkItem[FriendlyNameWorkItem], Future[Unit]] = Sink.foldAsync(()) {
+          case ((), item) =>
+            processItem(item)
         }
-        val result = workItems.run(processWorkItems)
+        val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
         result.onComplete { case _ =>
           logger.info("Friendly name processing finished.")
           running.set(false)

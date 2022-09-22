@@ -17,6 +17,8 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import akka.actor.ActorSystem
+import akka.stream.Materializer
+import akka.stream.testkit.NoMaterializer
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures._
@@ -47,6 +49,8 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
     override val enableThrottling: Boolean = false
   }
 
+  val materializer: Materializer = NoMaterializer
+
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
     val now = Instant.now()
     WorkItem(
@@ -72,7 +76,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.successful(()))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -102,7 +106,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -128,7 +132,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(new RuntimeException("Unknown error!")))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -154,7 +158,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 404)))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -176,7 +180,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 500)))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem =
         mkWorkItem(AssignmentWorkItem(Assign, testUserId, testEnrolmentKey, testArn), ToDo)
           .copy(receivedAt = Instant.now().minusSeconds(2 * 24 * 3600 /* 2 days */ ))
@@ -202,7 +206,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.successful(()))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -232,7 +236,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -258,7 +262,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(new RuntimeException("Unknown error!")))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -284,7 +288,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 404)))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem = mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
       worker.processItem(workItem).futureValue
 
@@ -306,7 +310,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory w
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 500)))
 
-      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig)
+      val worker = new AssignmentsWorker(stubWis, mockEsp, mockSi, mockActorSystem, appConfig, materializer)
       val workItem =
         mkWorkItem(AssignmentWorkItem(Unassign, testUserId, testEnrolmentKey, testArn), ToDo)
           .copy(receivedAt = Instant.now().minusSeconds(2 * 24 * 3600 /* 2 days */ ))

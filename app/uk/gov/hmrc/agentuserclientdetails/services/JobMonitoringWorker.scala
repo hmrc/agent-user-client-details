@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import akka.NotUsed
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import play.api.Logging
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameJobData, FriendlyNameWorkItem, JobData}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -31,7 +33,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class JobMonitoringWorker @Inject() (
   jobMonitoringService: JobMonitoringService,
   friendlyNameWorkItemService: FriendlyNameWorkItemService,
-  emailConnector: EmailConnector
+  emailConnector: EmailConnector,
+  mat: Materializer
 )(implicit ec: ExecutionContext)
     extends Logging {
   val running = new AtomicBoolean(false)
@@ -48,11 +51,12 @@ class JobMonitoringWorker @Inject() (
       case false =>
         logger.debug("Job monitoring triggered. Starting...")
         running.set(true)
-        val workItems: Enumerator[WorkItem[JobData]] = Enumerator.generateM(pullWorkItemWhile(continue))
-        val processWorkItems: Iteratee[WorkItem[JobData], Unit] = Iteratee.foldM(()) { case ((), item) =>
+        val workItems: Source[WorkItem[JobData], NotUsed] =
+          Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
+        val processWorkItems: Sink[WorkItem[JobData], Future[Unit]] = Sink.foldAsync(()) { case ((), item) =>
           processItem(item)
         }
-        val result = workItems.run(processWorkItems)
+        val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
         result.onComplete { case _ =>
           logger.debug("Job monitoring finished.")
           running.set(false)
