@@ -216,9 +216,9 @@ class FriendlyNameWorker @Inject() (
           logger.info(s"Error received when calling ES19: $e")
           Some(e)
       }
-    val result = Future successful None
-//      if (appConfig.enableThrottling) es19Throttler.throttledStartingFrom(DateTime.now())(f())
-//      else f()
+    val result =
+      if (appConfig.enableThrottling) es19Throttler.throttledStartingFrom(DateTime.now())(f())
+      else f()
     result.flatMap(_.fold(Future.successful(()))(Future.failed))
   }
 }
