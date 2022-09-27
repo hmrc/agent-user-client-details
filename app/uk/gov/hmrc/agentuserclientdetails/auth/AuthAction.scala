@@ -21,7 +21,7 @@ import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentialRole, credentials, name}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentials, name}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, ~}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.AuthRedirects
@@ -49,21 +49,14 @@ class AuthAction @Inject() (
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
     authorised(AuthProviders(GovernmentGateway) and Enrolment(agentEnrolment))
-      .retrieve(allEnrolments and credentialRole and name and credentials) {
-        case enrols ~ credRole ~ name ~ credentials =>
-          getArnAndAgentUser(enrols, name, credentials) match {
-            case Some(authorisedAgent) =>
-              credRole match {
-                case Some(User) | Some(Admin) =>
-                  Future successful Option(authorisedAgent)
-                case _ =>
-                  logger.warn("Invalid credential role")
-                  Future.successful(None)
-              }
-            case None =>
-              logger.warn("No " + agentReferenceNumberIdentifier + " in enrolment")
-              Future.successful(None)
-          }
+      .retrieve(allEnrolments and name and credentials) { case enrols ~ name ~ credentials =>
+        getArnAndAgentUser(enrols, name, credentials) match {
+          case Some(authorisedAgent) =>
+            Future successful Option(authorisedAgent)
+          case None =>
+            logger.warn("No " + agentReferenceNumberIdentifier + " in enrolment")
+            Future.successful(None)
+        }
       } transformWith failureHandler
   }
 
