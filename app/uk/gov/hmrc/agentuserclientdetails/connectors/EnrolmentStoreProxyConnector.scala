@@ -124,7 +124,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
                         .as[Seq[String]]
                   }
                 case other =>
-                  throw UpstreamErrorResponse(response.body, other, other)
+                  throw UpstreamErrorResponse(s"Unexpected status on ES0 request ${response.body}", other, other)
               }
             }
         }
@@ -163,7 +163,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
                 groupIds.headOption
               }
             case other =>
-              throw UpstreamErrorResponse(response.body, other, other)
+              throw UpstreamErrorResponse(s"Unexpected status on ES1 request: ${response.body}", other, other)
           }
         }
     }
@@ -187,7 +187,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
           case Status.NO_CONTENT =>
             Seq.empty
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            throw UpstreamErrorResponse(s"Unexpected status on ES3 request: ${response.body}", other, other)
         }
       }
     }
@@ -206,7 +206,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
             if (status != Status.CREATED)
               logger.warn(s"assignEnrolment: Expected 201 status, got other success status ($status)")
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            throw UpstreamErrorResponse(s"Unexpected status on ES11 request: ${response.body}", other, other)
         }
       }
     }
@@ -225,7 +225,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
             if (status != Status.NO_CONTENT)
               logger.warn(s"assignEnrolment: Expected 204 status, got other success status ($status)")
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            throw UpstreamErrorResponse(s"Unexpected status on ES12 request: ${response.body}", other, other)
         }
       }
     }
@@ -248,7 +248,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
               logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
             }
           case other =>
-            throw UpstreamErrorResponse(response.body, other, other)
+            throw UpstreamErrorResponse(s"Unexpected status on ES19 request: ${response.body}", other, other)
         }
       }
     }
