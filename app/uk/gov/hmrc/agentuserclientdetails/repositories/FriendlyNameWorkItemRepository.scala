@@ -17,13 +17,14 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
+import org.mongodb.scala.model.Indexes
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
 import java.time.{Duration, Instant}
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class FriendlyNameWorkItemRepository @Inject() (config: Config, mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext
@@ -31,8 +32,17 @@ case class FriendlyNameWorkItemRepository @Inject() (config: Config, mongoCompon
       collectionName = "client-name-work-items",
       mongoComponent = mongoComponent,
       itemFormat = FriendlyNameWorkItem.format,
-      workItemFields = WorkItemFields.default
+      workItemFields = WorkItemFields.default,
+      replaceIndexes = false
     ) {
+
+  override def ensureIndexes: Future[Seq[String]] = {
+    collection
+      .createIndex(Indexes.ascending("item.groupId"))
+      .subscribe(_ => ())
+
+    super.ensureIndexes
+  }
 
   override def now: Instant = Instant.now
 
