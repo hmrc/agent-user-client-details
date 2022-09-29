@@ -142,6 +142,27 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       jobMonitoringService.getNextJobToCheck.futureValue shouldBe None
     }
 
+    "Allow Assistant credential role " in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponseAssistant)
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (esp
+        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(*, *, *)
+        .returning(Future.successful(clientsWithFriendlyNames))
+
+      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+
+      val request = FakeRequest("GET", "")
+      val result = clc.getClients(testArn)(request).futureValue
+      result.header.status shouldBe 200
+
+      // Do not create a job monitoring item if there was no work to be done.
+      jobMonitoringService.getNextJobToCheck.futureValue shouldBe None
+    }
+
     "respond with 400 status if given an ARN in invalid format" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")

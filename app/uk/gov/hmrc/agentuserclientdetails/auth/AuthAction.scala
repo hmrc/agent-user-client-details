@@ -21,7 +21,7 @@ import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentials, name}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentialRole, credentials, name}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, ~}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.AuthRedirects
@@ -41,7 +41,7 @@ class AuthAction @Inject() (
   private val agentEnrolment = "HMRC-AS-AGENT"
   private val agentReferenceNumberIdentifier = "AgentReferenceNumber"
 
-  def getAuthorisedAgent()(implicit
+  def getAuthorisedAgent(allowStandardUser: Boolean = false)(implicit
     ec: ExecutionContext,
     request: Request[_]
   ): Future[Option[AuthorisedAgent]] = {
@@ -49,14 +49,22 @@ class AuthAction @Inject() (
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
     authorised(AuthProviders(GovernmentGateway) and Enrolment(agentEnrolment))
-      .retrieve(allEnrolments and name and credentials) { case enrols ~ name ~ credentials =>
-        getArnAndAgentUser(enrols, name, credentials) match {
-          case Some(authorisedAgent) =>
-            Future successful Option(authorisedAgent)
-          case None =>
-            logger.warn("No " + agentReferenceNumberIdentifier + " in enrolment")
-            Future.successful(None)
-        }
+      .retrieve(allEnrolments and credentialRole and name and credentials) {
+        case enrols ~ credRole ~ name ~ credentials =>
+          getArnAndAgentUser(enrols, name, credentials) match {
+            case Some(authorisedAgent) =>
+              if (
+                credRole.contains(User) | credRole.contains(Admin) | (credRole.contains(Assistant) & allowStandardUser)
+              )
+                Future successful Option(authorisedAgent)
+              else {
+                logger.warn("Invalid credential role")
+                Future.successful(None)
+              }
+            case None =>
+              logger.warn("No " + agentReferenceNumberIdentifier + " in enrolment")
+              Future.successful(None)
+          }
       } transformWith failureHandler
   }
 

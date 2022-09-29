@@ -37,10 +37,17 @@ trait AuthorisationMockSupport extends MockFactory {
   val ggCredentials: Credentials = Credentials("user1", "GovernmentGateway")
   val enrolments: Set[Enrolment] = Set(Enrolment(agentEnrolment, agentEnrolmentIdentifiers, "Activated"))
 
-  type GrantAccess = Enrolments ~ Option[Name] ~ Option[Credentials]
+  type GrantAccess = Enrolments ~ Option[CredentialRole] ~ Option[Name] ~ Option[Credentials]
 
   def buildAuthorisedResponse: GrantAccess =
     Enrolments(enrolments) and
+      Some(User) and
+      Some(name) and
+      Some(ggCredentials)
+
+  def buildAuthorisedResponseAssistant: GrantAccess =
+    Enrolments(enrolments) and
+      Some(Assistant) and
       Some(name) and
       Some(ggCredentials)
 
