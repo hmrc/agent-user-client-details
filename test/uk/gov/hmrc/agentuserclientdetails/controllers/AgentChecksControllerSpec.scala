@@ -483,10 +483,10 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAuthActionGetAuthorisedAgent(
       maybeAuthorisedAgent: Option[AuthorisedAgent]
-    ): CallHandler2[ExecutionContext, Request[_], Future[Option[AuthorisedAgent]]] =
+    ): CallHandler3[Boolean, ExecutionContext, Request[_], Future[Option[AuthorisedAgent]]] =
       (mockAuthAction
-        .getAuthorisedAgent()(_: ExecutionContext, _: Request[_]))
-        .expects(*, *)
+        .getAuthorisedAgent(_: Boolean)(_: ExecutionContext, _: Request[_]))
+        .expects(*, *, *)
         .returning(Future.successful(maybeAuthorisedAgent))
   }
 

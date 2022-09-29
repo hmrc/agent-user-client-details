@@ -47,7 +47,7 @@ class FriendlyNameController @Inject() (
     lazy val mSessionId: Option[String] =
       if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
       else None // only required for local testing against stubs
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       withGroupIdForArn(arn) { groupId =>
         withJsonBody[Seq[Client]] { clientsToUpdate =>
           val processAsynchronously = clientsToUpdate.length > appConfig.maxFriendlyNameUpdateBatchSize
@@ -89,7 +89,7 @@ class FriendlyNameController @Inject() (
   }
 
   def updateOneFriendlyName(arn: Arn): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       withGroupIdForArn(arn) { groupId =>
         withJsonBody[UpdateFriendlyNameRequest] { req =>
           espConnector.updateEnrolmentFriendlyName(groupId, req.enrolmentKey, req.friendlyName).map(_ => NoContent)

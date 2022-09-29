@@ -36,7 +36,7 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
 ) extends BackendController(cc) with AuthorisedAgentSupport {
 
   def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       agentChecksService.getAgentSize(arn).map {
         case None            => NotFound
         case Some(agentSize) => Ok(Json.toJson(Json.obj("client-count" -> agentSize.clientCount)))
@@ -45,7 +45,7 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   }
 
   def userCheck(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       agentChecksService.userCheck(arn).map { count =>
         if (count > 1) NoContent
         else Forbidden
@@ -54,7 +54,7 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   }
 
   def outstandingWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       agentChecksService.outstandingWorkItemsExist(arn).map { workItemsExist =>
         if (workItemsExist) Ok
         else NoContent
@@ -63,7 +63,7 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   }
 
   def outstandingAssignmentsWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       agentChecksService.outstandingAssignmentsWorkItemsExist(arn).map { workItemsExist =>
         if (workItemsExist) Ok
         else NoContent
@@ -72,7 +72,7 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   }
 
   def getTeamMembers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       agentChecksService.getTeamMembers(arn).map { teamMembers =>
         Ok(Json.toJson(teamMembers))
       }

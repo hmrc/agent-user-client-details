@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.auth
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import play.api.{Configuration, Environment}
+import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.auth.core._
 
@@ -68,6 +69,22 @@ class AuthActionSpec extends BaseSpec with AuthorisationSupport {
       "not return an authorised agent" in new TestScope {
         mockAuthResponseWithoutException(buildUnauthorisedResponseHavingIncorrectCredentials)
 
+        authAction.getAuthorisedAgent().futureValue shouldBe None
+      }
+    }
+
+    "auth response indicates credential role is Assistant" should {
+      "return a valid authorised agent when assistant credential role is allowed" in new TestScope {
+        mockAuthResponseWithoutException(buildAuthorisedResponseHavingAssistantCredentialRole)
+
+        authAction.getAuthorisedAgent(true).futureValue shouldBe Some(
+          AuthorisedAgent(Arn("KARN0762398"), AgentUser("user1", "Jane Doe"))
+        )
+
+      }
+
+      "not return an authorised agent when assistant credential role is not allowed" in new TestScope {
+        mockAuthResponseWithoutException(buildAuthorisedResponseHavingAssistantCredentialRole)
         authAction.getAuthorisedAgent().futureValue shouldBe None
       }
     }

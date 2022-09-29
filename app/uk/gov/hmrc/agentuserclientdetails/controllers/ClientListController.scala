@@ -51,7 +51,7 @@ class ClientListController @Inject() (
 
   def getClients(arn: Arn, sendEmail: Option[Boolean] = None, lang: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
-      withAuthorisedAgent { _ =>
+      withAuthorisedAgent(allowStandardUser = true) { _ =>
         withGroupIdFor(arn) { groupId =>
           getClientsFn(arn, groupId, sendEmail.getOrElse(false), lang)
         }
@@ -59,7 +59,7 @@ class ClientListController @Inject() (
     }
 
   def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
         getClientsFn(arn, groupId, false, None).map { result =>
           result.header.status match {
@@ -72,7 +72,7 @@ class ClientListController @Inject() (
   }
 
   def forceRefreshFriendlyNames(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
         forceRefreshFriendlyNamesForGroupIdFn(groupId)
       }
@@ -80,13 +80,13 @@ class ClientListController @Inject() (
   }
 
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       getOutstandingWorkItemsForGroupIdFn(groupId)
     }
   }
 
   def getClientsWithAssignedUsers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
         espConnector.getGroupDelegatedEnrolments(groupId) flatMap {
           case None =>
@@ -104,7 +104,7 @@ class ClientListController @Inject() (
   }
 
   def getOutstandingWorkItemsForArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
         getOutstandingWorkItemsForGroupIdFn(groupId)
       }
@@ -197,7 +197,7 @@ class ClientListController @Inject() (
     }
 
   def getWorkItemStats: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       workItemService.collectStats.map { stats =>
         Ok(Json.toJson(stats))
       }
@@ -205,7 +205,7 @@ class ClientListController @Inject() (
   }
 
   def cleanupWorkItems: Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       workItemService.cleanup(Instant.now()).map { result =>
         Ok(JsNumber(result.getDeletedCount))
       }

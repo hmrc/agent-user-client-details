@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.auth
 
-import org.scalamock.handlers.CallHandler2
+import org.scalamock.handlers.CallHandler3
 import play.api.mvc.Results.{Forbidden, Ok}
 import play.api.mvc.{AnyContentAsEmpty, Request, Result}
 import play.api.test.FakeRequest
@@ -31,7 +31,7 @@ class AuthorisedAgentSupportSpec extends BaseSpec {
     s"return $Forbidden" in new TestScope {
       mockAuthActionGetAuthorisedAgent(None)
 
-      authorisedAgentSupport.withAuthorisedAgent(body).futureValue shouldBe Forbidden
+      authorisedAgentSupport.withAuthorisedAgent()(body).futureValue shouldBe Forbidden
     }
   }
 
@@ -39,7 +39,7 @@ class AuthorisedAgentSupportSpec extends BaseSpec {
     s"return $Ok" in new TestScope {
       mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
 
-      authorisedAgentSupport.withAuthorisedAgent(body).futureValue shouldBe Ok
+      authorisedAgentSupport.withAuthorisedAgent()(body).futureValue shouldBe Ok
     }
   }
 
@@ -56,10 +56,10 @@ class AuthorisedAgentSupportSpec extends BaseSpec {
 
     def mockAuthActionGetAuthorisedAgent(
       maybeAuthorisedAgent: Option[AuthorisedAgent]
-    ): CallHandler2[ExecutionContext, Request[_], Future[Option[AuthorisedAgent]]] =
+    ): CallHandler3[Boolean, ExecutionContext, Request[_], Future[Option[AuthorisedAgent]]] =
       (mockAuthAction
-        .getAuthorisedAgent()(_: ExecutionContext, _: Request[_]))
-        .expects(*, *)
+        .getAuthorisedAgent(_: Boolean)(_: ExecutionContext, _: Request[_]))
+        .expects(*, *, *)
         .returning(Future.successful(maybeAuthorisedAgent))
   }
 

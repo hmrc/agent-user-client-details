@@ -77,6 +77,12 @@ trait AuthorisationSupport extends MockFactory {
       Some(name) and
       None
 
+  def buildAuthorisedResponseHavingAssistantCredentialRole: GrantAccess =
+    Enrolments(enrolments) and
+      Some(Assistant) and
+      Some(name) and
+      Some(ggCredentials)
+
   type GrantAccess = Enrolments ~ Option[CredentialRole] ~ Option[Name] ~ Option[Credentials]
 
   def mockAuthResponseWithoutException(response: GrantAccess)(implicit authConnector: AuthConnector): Unit =

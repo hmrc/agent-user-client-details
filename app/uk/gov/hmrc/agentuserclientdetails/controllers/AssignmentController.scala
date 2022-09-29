@@ -43,7 +43,7 @@ class AssignmentController @Inject() (
       if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
       else None // only required for local testing against stubs
 
-    withAuthorisedAgent { _ =>
+    withAuthorisedAgent() { _ =>
       withJsonBody[UserEnrolmentAssignments] { aer =>
         val assignWorkItems = aer.assign.map { case UserEnrolment(userId, enrolmentKey) =>
           AssignmentWorkItem(Assign, userId, enrolmentKey, aer.arn.value, mSessionId)
