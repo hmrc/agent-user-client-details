@@ -72,7 +72,7 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   }
 
   def getTeamMembers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent() { _ =>
+    withAuthorisedAgent(allowStandardUser = true) { _ =>
       agentChecksService.getTeamMembers(arn).map { teamMembers =>
         Ok(Json.toJson(teamMembers))
       }
