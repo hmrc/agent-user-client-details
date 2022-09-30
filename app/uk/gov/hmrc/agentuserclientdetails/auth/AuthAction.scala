@@ -58,7 +58,9 @@ class AuthAction @Inject() (
               )
                 Future successful Option(authorisedAgent)
               else {
-                logger.warn("Invalid credential role")
+                logger.warn(
+                  s"Either invalid credential role $credRole or the endpoint is not allowed for standard users (allowStandardUser:$allowStandardUser)"
+                )
                 Future.successful(None)
               }
             case None =>

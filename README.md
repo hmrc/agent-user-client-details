@@ -19,26 +19,26 @@ This microservice is used for creating and maintaining Agent Access Groups. It s
 
 ### Agent checks
 
-| **Method** | **Path**                       | **Description**                           |Allows Assistant user|
-|------------|--------------------------------|-------------------------------------------|----|
-| GET   | /arn/:arn/agent-size    | returns client count            | true |
-| GET  |  /arn/:arn/user-check            | returns no content if more than one user in group | false |
-| GET  | /arn/:arn/work-items-exist          |  tbc  | false |
-| GET  | /arn/:arn/assignments-work-items-exist           | tbc  | false |
-| GET  | /arn/:arn/team-members            | tbc  | false |
+| **Method** | **Path**                       | **Description**                           | Allows Assistant user |
+|------------|--------------------------------|-------------------------------------------|-----------------------|
+| GET   | /arn/:arn/agent-size    | returns client count            | false                 |
+| GET  |  /arn/:arn/user-check            | returns no content if more than one user in group | false                 |
+| GET  | /arn/:arn/work-items-exist          |  tbc  | false                 |
+| GET  | /arn/:arn/assignments-work-items-exist           | tbc  | false                 |
+| GET  | /arn/:arn/team-members            | tbc  | true                  |
 
 ### Friendly name
 
-| **Method** | **Path**                       | **Description**                           |Allows Assistant user|
-|------------|--------------------------------|-------------------------------------------|----|
-| POST   | /arn/:arn/friendly-name    | updates a batch of friendly names as part of opt-in           | true |
-| PUT  |  /arn/:arn/update-friendly-name            | updates one agent friendlyName field | false |
+| **Method** | **Path**                       | **Description**                           | Allows Assistant user |
+|------------|--------------------------------|-------------------------------------------|-----------------------|
+| POST   | /arn/:arn/friendly-name    | updates a batch of friendly names as part of opt-in           | false                 |
+| PUT  |  /arn/:arn/update-friendly-name            | updates one agent friendlyName field | false                 |
 
 ### Assignments
 
-| **Method** | **Path**                       | **Description**                           |Allows Assistant user|
-|------------|--------------------------------|-------------------------------------------|----|
-| POST   | /user-enrolment-assignments    | tbc            | true |
+| **Method** | **Path**                       | **Description**                           | Allows Assistant user |
+|------------|--------------------------------|-------------------------------------------|-----------------------|
+| POST   | /user-enrolment-assignments    | tbc            | false                 |
 
 
 
