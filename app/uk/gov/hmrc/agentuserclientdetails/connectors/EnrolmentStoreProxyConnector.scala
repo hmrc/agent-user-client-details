@@ -16,6 +16,9 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+
 import java.net.URL
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
@@ -24,7 +27,7 @@ import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -33,6 +36,7 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 case class ES19Request(friendlyName: String)
@@ -86,7 +90,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   http: HttpClient,
   agentCacheProvider: AgentCacheProvider,
   metrics: Metrics
-)(implicit appConfig: AppConfig)
+)(implicit appConfig: AppConfig, materializer: Materializer)
     extends EnrolmentStoreProxyConnector with HttpAPIMonitor with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -169,28 +173,59 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     }
   }
 
+  case class GetUserEnrolmentsResponse(
+    startRecord: Int,
+    totalRecords: Int,
+    enrolments: Seq[Enrolment]
+  )
+  object GetUserEnrolmentsResponse {
+    implicit val format: OFormat[GetUserEnrolmentsResponse] = Json.format[GetUserEnrolmentsResponse]
+  }
+
   // ES3 - Query Enrolments allocated to a Group
   def getClientsForGroupId(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]] = {
-    val url =
-      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated")
-    monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
-      // Do not cache this
-      http.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case Status.OK =>
-            (response.json \ "enrolments")
-              .as[Seq[Enrolment]]
-              .filter(_.state == ENROLMENT_STATE_ACTIVATED)
-              .map(Client.fromEnrolment)
-          case Status.NO_CONTENT =>
-            Seq.empty
-          case other =>
-            throw UpstreamErrorResponse(s"Unexpected status on ES3 request: ${response.body}", other, other)
+
+    def fetchUserEnrolments(startRecord: Int): Future[Option[GetUserEnrolmentsResponse]] = {
+      val url =
+        new URL(
+          espBaseUrl,
+          s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}"
+        )
+
+      monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
+        http.GET[HttpResponse](url.toString).map { response =>
+          response.status match {
+            case Status.OK =>
+              response.json.asOpt[GetUserEnrolmentsResponse]
+            case Status.NO_CONTENT =>
+              Option.empty[GetUserEnrolmentsResponse]
+            case other =>
+              logger.error(s"Unexpected status on ES3 request: $other, ${response.body}")
+              Option.empty[GetUserEnrolmentsResponse]
+          }
         }
       }
     }
+
+    val clients: mutable.ArrayBuffer[Client] = mutable.ArrayBuffer.empty
+
+    var startRecord = -1
+    Source
+      .fromIterator(() =>
+        Iterator.continually {
+          startRecord = startRecord + 1
+          fetchUserEnrolments(startRecord = 1 + (startRecord * appConfig.es3MaxRecordsFetchCount))
+        }
+      )
+      .mapAsync(parallelism = 1)(identity)
+      .takeWhile(_.fold(false)(userEnrolmentsResponse => userEnrolmentsResponse.totalRecords > 0))
+      .runForeach {
+        clients ++= _.toSeq.flatMap(
+          _.enrolments.filter(_.state == ENROLMENT_STATE_ACTIVATED).map(Client.fromEnrolment)
+        )
+      } flatMap (_ => Future successful clients)
   }
 
   // ES11 - Assign enrolment to user
