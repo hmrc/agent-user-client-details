@@ -181,11 +181,24 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
     }
     "complete ES3 call successfully, discounting states that are not 'Activated'" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
-      val mockResponse: HttpResponse =
-        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2, enrolment3))).toString)
+      def mockResponse(startRecord: Int, totalRecords: Int, enrolments: Seq[Enrolment]): HttpResponse =
+        HttpResponse(
+          OK,
+          Json
+            .obj(
+              "startRecord"  -> startRecord,
+              "totalRecords" -> totalRecords,
+              "enrolments"   -> Json.toJson(enrolments)
+            )
+            .toString
+        )
       mockHttpGet(
-        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated",
-        mockResponse
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=1&max-records=${appConfig.es3MaxRecordsFetchCount}",
+        mockResponse(1, 3, Seq(enrolment1, enrolment2, enrolment3))
+      )(httpClient)
+      mockHttpGet(
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=${1 + appConfig.es3MaxRecordsFetchCount}&max-records=${appConfig.es3MaxRecordsFetchCount}",
+        mockResponse(1 + appConfig.es3MaxRecordsFetchCount, 0, Seq.empty)
       )(httpClient)
       esp.getClientsForGroupId(testGroupId).futureValue.toSet shouldBe Set(
         Client.fromEnrolment(enrolment1),
