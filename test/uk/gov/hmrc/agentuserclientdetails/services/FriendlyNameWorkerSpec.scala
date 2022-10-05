@@ -311,12 +311,12 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
       val fnWorker =
         new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
       val workItem =
-        mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name")), ToDo)
+        mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Co")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
         .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, "Friendly Name", *, *)
+        .verify(testGroupId, *, "Friendly Name and Co", *, *)
         .once()
       (stubWis
         .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
