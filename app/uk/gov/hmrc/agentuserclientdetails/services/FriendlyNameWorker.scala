@@ -207,15 +207,19 @@ class FriendlyNameWorker @Inject() (
   ): Future[Unit] = {
     // return a Future[Option[Throwable]] instead of a failed future because the throttler library
     // doesn't seem to throttle failed futures correctly.
+    val es19CompatibleFriendlyName = friendlyName.replace("&", "and") // temp workaround
     def f(): Future[Option[Throwable]] =
-      esConnector.updateEnrolmentFriendlyName(groupId, enrolmentKey, friendlyName).map(_ => None).recover {
-        case e @ UpstreamErrorResponse(_, status, _, _) =>
-          logger.info(s"$status status received from ES19.")
-          Some(e)
-        case e =>
-          logger.info(s"Error received when calling ES19: $e")
-          Some(e)
-      }
+      esConnector
+        .updateEnrolmentFriendlyName(groupId, enrolmentKey, es19CompatibleFriendlyName)
+        .map(_ => None)
+        .recover {
+          case e @ UpstreamErrorResponse(_, status, _, _) =>
+            logger.info(s"$status status received from ES19.")
+            Some(e)
+          case e =>
+            logger.info(s"Error received when calling ES19: $e")
+            Some(e)
+        }
     val result =
       if (appConfig.enableThrottling) es19Throttler.throttledStartingFrom(DateTime.now())(f())
       else f()
