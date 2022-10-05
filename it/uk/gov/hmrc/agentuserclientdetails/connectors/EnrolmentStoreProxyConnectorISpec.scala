@@ -47,7 +47,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
   val enrolment2: Enrolment =
     Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
   val enrolment3: Enrolment =
-    Enrolment("HMRC-CGT-PD", "NotYetActivated", "George Candy", Seq(Identifier("CgtRef", "XMCGTP123456789")))
+    Enrolment("HMCE-VATDEC-ORG", "Activated", "George Candy", Seq(Identifier("VATRegNo", "101747641")))
 
   trait TestScope {
     lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -179,7 +179,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
       )(httpClient)
       esp.getPrincipalGroupIdFor(Arn(arn)).futureValue shouldBe None
     }
-    "complete ES3 call successfully, discounting states that are not 'Activated'" in new TestScope {
+    "complete ES3 call successfully, discounting legacy enrolments" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       def mockResponse(startRecord: Int, totalRecords: Int, enrolments: Seq[Enrolment]): HttpResponse =
         HttpResponse(

@@ -18,17 +18,14 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-
-import java.net.URL
 import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
-
-import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, MtdIt, Ppt, Trust, TrustNT, Vat}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
@@ -36,6 +33,8 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 
+import java.net.URL
+import javax.inject.{Inject, Singleton}
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -96,7 +95,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
 
-  private val ENROLMENT_STATE_ACTIVATED = "Activated"
+  private lazy val supportedServiceKeys = Seq(MtdIt, Vat, Trust, TrustNT, CapitalGains, Ppt).map(_.enrolmentKey)
 
   // ES0 Query users who have an assigned enrolment
   override def getUsersAssignedToEnrolment(enrolmentKey: String, `type`: String)(implicit
@@ -173,13 +172,13 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     }
   }
 
-  case class GetUserEnrolmentsResponse(
+  case class GroupEnrolmentsResponse(
     startRecord: Int,
     totalRecords: Int,
     enrolments: Seq[Enrolment]
   )
-  object GetUserEnrolmentsResponse {
-    implicit val format: OFormat[GetUserEnrolmentsResponse] = Json.format[GetUserEnrolmentsResponse]
+  object GroupEnrolmentsResponse {
+    implicit val format: OFormat[GroupEnrolmentsResponse] = Json.format[GroupEnrolmentsResponse]
   }
 
   // ES3 - Query Enrolments allocated to a Group
@@ -187,45 +186,53 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]] = {
 
-    def fetchUserEnrolments(startRecord: Int): Future[Option[GetUserEnrolmentsResponse]] = {
-      val url =
-        new URL(
-          espBaseUrl,
-          s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}"
-        )
-
-      monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
-        http.GET[HttpResponse](url.toString).map { response =>
-          response.status match {
-            case Status.OK =>
-              response.json.asOpt[GetUserEnrolmentsResponse]
-            case Status.NO_CONTENT =>
-              Option.empty[GetUserEnrolmentsResponse]
-            case other =>
-              logger.error(s"Unexpected status on ES3 request: $other, ${response.body}")
-              Option.empty[GetUserEnrolmentsResponse]
-          }
-        }
-      }
-    }
-
     val clients: mutable.ArrayBuffer[Client] = mutable.ArrayBuffer.empty
 
     var startRecord = -1
+
     Source
       .fromIterator(() =>
         Iterator.continually {
           startRecord = startRecord + 1
-          fetchUserEnrolments(startRecord = 1 + (startRecord * appConfig.es3MaxRecordsFetchCount))
+          fetchGroupDelegatedEnrolments(
+            groupId,
+            startRecord = 1 + (startRecord * appConfig.es3MaxRecordsFetchCount)
+          )
         }
       )
       .mapAsync(parallelism = 1)(identity)
-      .takeWhile(_.fold(false)(userEnrolmentsResponse => userEnrolmentsResponse.totalRecords > 0))
-      .runForeach {
-        clients ++= _.toSeq.flatMap(
-          _.enrolments.filter(_.state == ENROLMENT_STATE_ACTIVATED).map(Client.fromEnrolment)
-        )
-      } flatMap (_ => Future successful clients)
+      .takeWhile(_.fold(false)(_.totalRecords > 0))
+      .runForeach(_.foreach { groupEnrolmentsResponse =>
+        clients ++= groupEnrolmentsResponse.enrolments
+          .filter(enrolment => supportedServiceKeys.contains(enrolment.service))
+          .map(Client.fromEnrolment)
+      })
+      .flatMap(_ => Future successful clients)
+  }
+
+  private def fetchGroupDelegatedEnrolments(groupId: String, startRecord: Int)(implicit
+    hc: HeaderCarrier,
+    executionContext: ExecutionContext
+  ): Future[Option[GroupEnrolmentsResponse]] = {
+    val url =
+      new URL(
+        espBaseUrl,
+        s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}"
+      )
+
+    monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
+      http.GET[HttpResponse](url.toString).map { response =>
+        response.status match {
+          case Status.OK =>
+            response.json.asOpt[GroupEnrolmentsResponse]
+          case Status.NO_CONTENT =>
+            Option.empty[GroupEnrolmentsResponse]
+          case other =>
+            logger.error(s"Unexpected status on ES3 request: $other, ${response.body}")
+            Option.empty[GroupEnrolmentsResponse]
+        }
+      }
+    }
   }
 
   // ES11 - Assign enrolment to user
