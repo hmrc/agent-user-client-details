@@ -207,7 +207,10 @@ class FriendlyNameWorker @Inject() (
   ): Future[Unit] = {
     // return a Future[Option[Throwable]] instead of a failed future because the throttler library
     // doesn't seem to throttle failed futures correctly.
-    val es19CompatibleFriendlyName = friendlyName.replace("&", "and") // temp workaround
+    val es19CompatibleFriendlyName = friendlyName
+      .replace("&", "and") // temp workaround
+      .replace("'", "")
+
     def f(): Future[Option[Throwable]] =
       esConnector
         .updateEnrolmentFriendlyName(groupId, enrolmentKey, es19CompatibleFriendlyName)
