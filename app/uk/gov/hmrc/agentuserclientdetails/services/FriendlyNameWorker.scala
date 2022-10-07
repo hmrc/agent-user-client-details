@@ -32,6 +32,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, SessionId, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
+import java.net.URLEncoder
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -207,9 +208,7 @@ class FriendlyNameWorker @Inject() (
   ): Future[Unit] = {
     // return a Future[Option[Throwable]] instead of a failed future because the throttler library
     // doesn't seem to throttle failed futures correctly.
-    val es19CompatibleFriendlyName = friendlyName
-      .replace("&", "and") // temp workaround
-      .replace("'", "")
+    val es19CompatibleFriendlyName = URLEncoder.encode(friendlyName, "UTF-8")
 
     def f(): Future[Option[Throwable]] =
       esConnector
