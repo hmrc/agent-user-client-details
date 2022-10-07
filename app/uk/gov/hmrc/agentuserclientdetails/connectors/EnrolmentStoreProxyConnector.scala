@@ -33,7 +33,7 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 
-import java.net.URL
+import java.net.{URL, URLDecoder}
 import javax.inject.{Inject, Singleton}
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -206,6 +206,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
         clients ++= groupEnrolmentsResponse.enrolments
           .filter(enrolment => supportedServiceKeys.contains(enrolment.service))
           .map(Client.fromEnrolment)
+          .map(client => client.copy(friendlyName = URLDecoder.decode(client.friendlyName, "UTF-8")))
       })
       .flatMap(_ => Future successful clients)
   }
