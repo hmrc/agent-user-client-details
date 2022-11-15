@@ -58,27 +58,28 @@ class ClientListController @Inject() (
       }
     }
 
-  def getPaginatedClients(arn: Arn, page: Int = 0, pageSize: Int = 20): Action[AnyContent] = Action.async {
+  def getPaginatedClients(arn: Arn, page: Int = 1, pageSize: Int = 20): Action[AnyContent] = Action.async {
     implicit request =>
       withAuthorisedAgent(allowStandardUser = true) { _ =>
         withGroupIdFor(arn) { groupId =>
           espConnector
             .getClientsForGroupId(groupId)
             .map { clients =>
-              val pageStart = page * pageSize
+              val pageStart = (page - 1) * pageSize
               val pageEnd = pageStart + pageSize
               val currentPageContent = clients.slice(pageStart, Math.min(pageEnd, clients.length - 1))
+              val numberOfPages = Math.ceil(clients.length.toDouble / pageSize.toDouble).toInt
               Ok(
                 Json.toJson(
                   PaginatedList[Client](
                     pageContent = currentPageContent,
                     paginationMetaData = PaginationMetaData(
-                      lastPage = false,
-                      firstPage = page == 0,
+                      firstPage = page == 1,
+                      lastPage = numberOfPages == page,
                       totalSize = clients.length,
                       pageSize = pageSize,
-                      totalPages = clients.length / pageSize,
-                      currentPageNumber = page + 1,
+                      totalPages = numberOfPages,
+                      currentPageNumber = page,
                       currentPageSize = currentPageContent.length
                     )
                   )
