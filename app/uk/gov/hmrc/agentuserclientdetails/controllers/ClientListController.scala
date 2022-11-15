@@ -20,7 +20,7 @@ import org.mongodb.scala.bson.ObjectId
 import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments, PaginatedList, PaginationMetaData}
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
@@ -57,6 +57,37 @@ class ClientListController @Inject() (
         }
       }
     }
+
+  def getPaginatedClients(arn: Arn, page: Int = 0, pageSize: Int = 20): Action[AnyContent] = Action.async {
+    implicit request =>
+      withAuthorisedAgent(allowStandardUser = true) { _ =>
+        withGroupIdFor(arn) { groupId =>
+          espConnector
+            .getClientsForGroupId(groupId)
+            .map { clients =>
+              val pageStart = page * pageSize
+              val pageEnd = pageStart + pageSize
+              val currentPageContent = clients.slice(pageStart, Math.min(pageEnd, clients.length - 1))
+              Ok(
+                Json.toJson(
+                  PaginatedList[Client](
+                    pageContent = currentPageContent,
+                    paginationMetaData = PaginationMetaData(
+                      lastPage = false,
+                      firstPage = page == 0,
+                      totalSize = clients.length,
+                      pageSize = pageSize,
+                      totalPages = clients.length / pageSize,
+                      currentPageNumber = page + 1,
+                      currentPageSize = currentPageContent.length
+                    )
+                  )
+                )
+              )
+            }
+        }
+      }
+  }
 
   def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
@@ -123,6 +154,7 @@ class ClientListController @Inject() (
         else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
+
     espConnector.getClientsForGroupId(groupId).transformWith {
       // if friendly names are populated for all enrolments, return 200
       case Success(clients) if clients.forall(_.friendlyName.nonEmpty) =>
@@ -169,6 +201,7 @@ class ClientListController @Inject() (
         else None // only required for local testing against stubs
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
+
     espConnector.getClientsForGroupId(groupId).transformWith {
       case Success(clients) =>
         for {
