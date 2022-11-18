@@ -20,7 +20,7 @@ import org.mongodb.scala.bson.ObjectId
 import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json.{JsNumber, Json}
 import play.api.mvc._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, GroupDelegatedEnrolments, PaginatedList, PaginationMetaData}
+import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
@@ -58,36 +58,50 @@ class ClientListController @Inject() (
       }
     }
 
-  def getPaginatedClients(arn: Arn, page: Int = 1, pageSize: Int = 20): Action[AnyContent] = Action.async {
-    implicit request =>
-      withAuthorisedAgent(allowStandardUser = true) { _ =>
-        withGroupIdFor(arn) { groupId =>
-          espConnector
-            .getClientsForGroupId(groupId)
-            .map { clients =>
-              val pageStart = (page - 1) * pageSize
-              val pageEnd = pageStart + pageSize
-              val currentPageContent = clients.slice(pageStart, Math.min(pageEnd, clients.length - 1))
-              val numberOfPages = Math.ceil(clients.length.toDouble / pageSize.toDouble).toInt
-              Ok(
-                Json.toJson(
-                  PaginatedList[Client](
-                    pageContent = currentPageContent,
-                    paginationMetaData = PaginationMetaData(
-                      firstPage = page == 1,
-                      lastPage = numberOfPages == page,
-                      totalSize = clients.length,
-                      pageSize = pageSize,
-                      totalPages = numberOfPages,
-                      currentPageNumber = page,
-                      currentPageSize = currentPageContent.length
-                    )
+  def getPaginatedClients(
+    arn: Arn,
+    page: Int = 1,
+    pageSize: Int = 20,
+    search: Option[String] = None,
+    filter: Option[String] = None
+  ): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent(allowStandardUser = true) { _ =>
+      withGroupIdFor(arn) { groupId =>
+        espConnector
+          .getClientsForGroupId(groupId)
+          .map { clients =>
+            val clientsMatchingSearch = search.fold(clients) { searchTerm =>
+              clients.filter(c => c.friendlyName.toLowerCase.contains(searchTerm.toLowerCase))
+            }
+            val taxServiceFilteredClients = filter.fold(clientsMatchingSearch) { term =>
+              if (term == "TRUST") clientsMatchingSearch.filter(_.enrolmentKey.contains("HMRC-TERS"))
+              else clientsMatchingSearch.filter(_.enrolmentKey.contains(term))
+
+            }
+            val pageStart = (page - 1) * pageSize
+            val pageEnd = pageStart + pageSize
+            val currentPageContent =
+              taxServiceFilteredClients.slice(pageStart, Math.min(pageEnd, taxServiceFilteredClients.length - 1))
+            val numberOfPages = Math.ceil(taxServiceFilteredClients.length.toDouble / pageSize.toDouble).toInt
+            Ok(
+              Json.toJson(
+                PaginatedList[Client](
+                  pageContent = currentPageContent,
+                  paginationMetaData = PaginationMetaData(
+                    firstPage = page == 1,
+                    lastPage = numberOfPages == page,
+                    totalSize = taxServiceFilteredClients.length,
+                    pageSize = pageSize,
+                    totalPages = numberOfPages,
+                    currentPageNumber = page,
+                    currentPageSize = currentPageContent.length
                   )
                 )
               )
-            }
-        }
+            )
+          }
       }
+    }
   }
 
   def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
