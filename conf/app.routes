@@ -1,7 +1,7 @@
 # microservice specific routes
 
 GET        /arn/:arn/client-list                     uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, sendEmail: Option[Boolean], lang: Option[String])
-GET        /arn/:arn/clients                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getPaginatedClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, page: Int, pageSize: Int)
+GET        /arn/:arn/clients                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getPaginatedClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, page: Int, pageSize: Int, search: Option[String], filter: Option[String])
 GET        /arn/:arn/client-list-status              uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getClientListStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 GET        /groupid/:groupid/outstanding-work-items  uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.getOutstandingWorkItemsForGroupId(groupid: String)
