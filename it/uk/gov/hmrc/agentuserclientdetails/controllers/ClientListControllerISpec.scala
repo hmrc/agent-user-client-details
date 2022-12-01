@@ -118,6 +118,20 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
       .when(*, *, *)
       .returns(Future successful maybeAgentDetailsDesResponse)
+
+    def mockEspGetClientsForGroupIdWithoutException(
+      clients: Seq[Client]
+    ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] = (esp
+      .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(*, *, *)
+      .returning(Future.successful(clients))
+
+    def mockEspGetClientsForGroupIdWithException(
+      errorResponse: UpstreamErrorResponse
+    ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] = (esp
+      .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(*, *, *)
+      .returning(Future.failed(errorResponse))
   }
 
   "GET /arn/:arn/client-list" should {
@@ -127,10 +141,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+
+      mockEspGetClientsForGroupIdWithoutException(clientsWithFriendlyNames)
 
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
@@ -148,10 +160,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+
+      mockEspGetClientsForGroupIdWithoutException(clientsWithFriendlyNames)
 
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
@@ -187,10 +197,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.failed(UpstreamErrorResponse("", 404)))
+
+      mockEspGetClientsForGroupIdWithException(UpstreamErrorResponse("", 404))
+
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 404
@@ -202,10 +211,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEspGetClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -229,10 +235,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEspGetClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true))(request).futureValue
@@ -252,10 +255,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEspGetClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
@@ -285,10 +285,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEspGetClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -306,10 +303,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+      mockEspGetClientsForGroupIdWithoutException(clientsWithFriendlyNames)
       val request = FakeRequest("GET", "")
       val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 200
@@ -322,10 +316,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEspGetClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       val request = FakeRequest("GET", "")
       mockDesConnectorGetAgencyDetails(None)
       val result = controller.getClientListStatus(testArn)(request).futureValue
@@ -429,10 +420,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+      mockEspGetClientsForGroupIdWithoutException(clientsWithFriendlyNames)
       wis
         .pushNew(
           Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(0))),
