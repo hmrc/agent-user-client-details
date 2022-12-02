@@ -39,6 +39,7 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 case class ES19Request(friendlyName: String)
+
 object ES19Request {
   implicit val format: Format[ES19Request] = Json.format[ES19Request]
 }
@@ -56,6 +57,10 @@ trait EnrolmentStoreProxyConnector {
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
 
   // ES3 - Query Enrolments allocated to a Group
+  def getEnrolmentsForGroupId(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
+
   def getClientsForGroupId(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]]
@@ -177,6 +182,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     totalRecords: Int,
     enrolments: Seq[Enrolment]
   )
+
   object GroupEnrolmentsResponse {
     implicit val format: OFormat[GroupEnrolmentsResponse] = Json.format[GroupEnrolmentsResponse]
   }
@@ -184,9 +190,19 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   // ES3 - Query Enrolments allocated to a Group
   def getClientsForGroupId(
     groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]] = {
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]] =
+    getEnrolmentsForGroupId(groupId)
+      .map(enrols =>
+        enrols
+          .map(Client.fromEnrolment)
+          .map(client => client.copy(friendlyName = URLDecoder.decode(client.friendlyName, "UTF-8")))
+      )
 
-    val clients: mutable.ArrayBuffer[Client] = mutable.ArrayBuffer.empty
+  def getEnrolmentsForGroupId(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]] = {
+
+    val enrolments: mutable.ArrayBuffer[Enrolment] = mutable.ArrayBuffer.empty
 
     var startRecord = -1
 
@@ -203,12 +219,10 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
       .mapAsync(parallelism = 1)(identity)
       .takeWhile(_.fold(false)(_.totalRecords > 0))
       .runForeach(_.foreach { groupEnrolmentsResponse =>
-        clients ++= groupEnrolmentsResponse.enrolments
+        enrolments ++= groupEnrolmentsResponse.enrolments
           .filter(enrolment => supportedServiceKeys.contains(enrolment.service))
-          .map(Client.fromEnrolment)
-          .map(client => client.copy(friendlyName = URLDecoder.decode(client.friendlyName, "UTF-8")))
       })
-      .flatMap(_ => Future successful clients)
+      .flatMap(_ => Future successful enrolments)
   }
 
   private def fetchGroupDelegatedEnrolments(groupId: String, startRecord: Int)(implicit
