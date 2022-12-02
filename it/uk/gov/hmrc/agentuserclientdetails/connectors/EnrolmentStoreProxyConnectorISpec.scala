@@ -43,11 +43,10 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
     }
   }
 
-  val enrolment1: Enrolment = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-  val enrolment2: Enrolment =
+  val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
+  val enrolment2 =
     Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
-  val enrolment3: Enrolment =
-    Enrolment("HMCE-VATDEC-ORG", "Activated", "George Candy", Seq(Identifier("VATRegNo", "101747641")))
+  val enrolment3 = Enrolment("HMCE-VATDEC-ORG", "Activated", "George Candy", Seq(Identifier("VATRegNo", "101747641")))
 
   trait TestScope {
     lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]

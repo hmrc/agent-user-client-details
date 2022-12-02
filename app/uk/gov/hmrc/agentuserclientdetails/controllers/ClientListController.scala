@@ -58,6 +58,19 @@ class ClientListController @Inject() (
       }
     }
 
+  def getTaxGroupInfo(arn: Arn): Action[AnyContent] =
+    Action.async { implicit request =>
+      withAuthorisedAgent(allowStandardUser = true) { _ =>
+        withGroupIdFor(arn) { groupId =>
+          espConnector
+            .getEnrolmentsForGroupId(groupId)
+            .map(enrolments => enrolments.groupBy(enrolment => enrolment.service))
+            .map(_.map(entry => entry._1 -> entry._2.length))
+            .map(m => Ok(Json.toJson(m)))
+        }
+      }
+    }
+
   def getPaginatedClients(
     arn: Arn,
     page: Int = 1,

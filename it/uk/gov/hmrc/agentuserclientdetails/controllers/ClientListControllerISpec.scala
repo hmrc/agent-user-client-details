@@ -99,7 +99,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       ifConnector,
       agentCacheProvider
     )
-    val clc = new ClientListController(
+    val controller = new ClientListController(
       cc,
       wis,
       esp,
@@ -135,7 +135,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn)(request).futureValue
+      val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
 
       // Do not create a job monitoring item if there was no work to be done.
@@ -156,7 +156,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn)(request).futureValue
+      val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
 
       // Do not create a job monitoring item if there was no work to be done.
@@ -166,7 +166,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
     "respond with 400 status if given an ARN in invalid format" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(badArn)(request).futureValue
+      val result = controller.getClients(badArn)(request).futureValue
       result.header.status shouldBe Status.BAD_REQUEST
     }
 
@@ -177,7 +177,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .expects(unknownArn, *, *)
         .returning(Future.successful(None))
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(unknownArn)(request).futureValue
+      val result = controller.getClients(unknownArn)(request).futureValue
       result.header.status shouldBe Status.NOT_FOUND
     }
 
@@ -192,7 +192,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .expects(*, *, *)
         .returning(Future.failed(UpstreamErrorResponse("", 404)))
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn)(request).futureValue
+      val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 404
     }
 
@@ -208,7 +208,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .returning(Future.successful(clientsWithoutSomeFriendlyNames))
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn)(request).futureValue
+      val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 202
 
       // Create a job monitoring item if there was any work to be done, which should contain all the enrolment keys for which there was no name.
@@ -235,7 +235,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .returning(Future.successful(clientsWithoutSomeFriendlyNames))
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn, sendEmail = Some(true))(request).futureValue
+      val result = controller.getClients(testArn, sendEmail = Some(true))(request).futureValue
       result.header.status shouldBe 202
 
       // Create a job monitoring item with the language preference for the email set to welsh
@@ -258,7 +258,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .returning(Future.successful(clientsWithoutSomeFriendlyNames))
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
+      val result = controller.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
       result.header.status shouldBe 202
 
       // Create a job monitoring item with the language preference for the email set to welsh
@@ -291,7 +291,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .returning(Future.successful(clientsWithoutSomeFriendlyNames))
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
-      val result = clc.getClients(testArn)(request).futureValue
+      val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
 
       // Do not create a job monitoring item if there was no work to be done.
@@ -311,7 +311,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .expects(*, *, *)
         .returning(Future.successful(clientsWithFriendlyNames))
       val request = FakeRequest("GET", "")
-      val result = clc.getClientListStatus(testArn)(request).futureValue
+      val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 200
       result.body shouldBe NoEntity
     }
@@ -328,7 +328,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .returning(Future.successful(clientsWithoutSomeFriendlyNames))
       val request = FakeRequest("GET", "")
       mockDesConnectorGetAgencyDetails(None)
-      val result = clc.getClientListStatus(testArn)(request).futureValue
+      val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 202
       result.body shouldBe NoEntity
     }
@@ -349,7 +349,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
           .returning(Future successful None)
 
         val request = FakeRequest("GET", "")
-        val result = clc.getClientsWithAssignedUsers(testArn)(request)
+        val result = controller.getClientsWithAssignedUsers(testArn)(request)
         result.futureValue.header.status shouldBe 404
       }
     }
@@ -382,7 +382,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
             .returning(Future successful Seq.empty)
 
           val request = FakeRequest("GET", "")
-          val result = clc.getClientsWithAssignedUsers(testArn)(request)
+          val result = controller.getClientsWithAssignedUsers(testArn)(request)
           result.futureValue.header.status shouldBe 200
           contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe GroupDelegatedEnrolments(Seq.empty)
         }
@@ -414,7 +414,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
             .returning(Future successful Seq(UserDetails(userId = Some("me"))))
 
           val request = FakeRequest("GET", "")
-          val result = clc.getClientsWithAssignedUsers(testArn)(request)
+          val result = controller.getClientsWithAssignedUsers(testArn)(request)
           result.futureValue.header.status shouldBe 200
           contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe groupDelegatedEnrolments
         }
@@ -455,7 +455,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         )
         .futureValue
       val request = FakeRequest("POST", "")
-      val result = clc.forceRefreshFriendlyNames(testArn)(request).futureValue
+      val result = controller.forceRefreshFriendlyNames(testArn)(request).futureValue
       result.header.status shouldBe Status.ACCEPTED
       // Check that none of the old work items are left and that now we have new to-do ones with no name filled in.
       val workItems = wis.query(testGroupId, None).futureValue
@@ -476,7 +476,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded)
         .futureValue
-      val result = clc.cleanupWorkItems(request).futureValue
+      val result = controller.cleanupWorkItems(request).futureValue
       result.header.status shouldBe 200
     }
   }
@@ -488,7 +488,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       wis
         .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), ToDo)
         .futureValue
-      val result = clc.getWorkItemStats(request)
+      val result = controller.getWorkItemStats(request)
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Map[String, Int]].values.sum shouldBe 1
     }
@@ -507,10 +507,74 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       wis
         .pushNew(Seq(FriendlyNameWorkItem(anotherTestGroupId, client2)), Instant.now(), ToDo)
         .futureValue
-      val result = clc.getOutstandingWorkItemsForGroupId(testGroupId)(request)
+      val result = controller.getOutstandingWorkItemsForGroupId(testGroupId)(request)
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Seq[Client]].toSet shouldBe Set(client1)
     }
 
+  }
+
+  "GET tax summary info on /arn/:arn/clients/tax-group-info" should {
+
+    "respond with 200 status if epsConnector returns data" in new TestScope {
+      // given
+      val vatEnrolments = (1 to 10).map(_ => Enrolment("HMRC-MTD-VAT", "", "", Seq.empty[Identifier]))
+      val cgtEnrolments = (1 to 5).map(_ => Enrolment("HMRC-CGT-PD", "", "", Seq.empty[Identifier]))
+      val pptEnrolments = (1 to 15).map(_ => Enrolment("HMRC-PPT-ORG", "", "", Seq.empty[Identifier]))
+      val mtdEnrolments = (1 to 11).map(_ => Enrolment("HMRC-MTD-IT", "", "", Seq.empty[Identifier]))
+      val enrolments = vatEnrolments ++ cgtEnrolments ++ pptEnrolments ++ mtdEnrolments
+
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (esp
+        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testGroupId, *, *)
+        .returning(Future.successful(enrolments))
+      val request = FakeRequest("GET", "")
+
+      // when
+      val result = controller.getTaxGroupInfo(testArn)(request)
+
+      // then
+      result.futureValue.header.status shouldBe 200
+      contentAsJson(result).as[Map[String, Int]] shouldBe Map(
+        "HMRC-MTD-VAT" -> 10,
+        "HMRC-CGT-PD"  -> 5,
+        "HMRC-PPT-ORG" -> 15,
+        "HMRC-MTD-IT"  -> 11
+      )
+    }
+  }
+
+  "GET paginated clients on /arn/:arn/clients" should {
+
+    "respond with 200 status if epsConnector returns data" in new TestScope {
+      // given
+      val clients = (1 to 20).map(i => Client("HMRC-MTD-VAT~VRN~101747642", s"Ross Barker $i"))
+
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (esp
+        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testGroupId, *, *)
+        .returning(Future.successful(clients))
+      val request = FakeRequest("GET", "")
+
+      // when
+      val result = controller.getPaginatedClients(testArn, 1, 15)(request)
+
+      // then
+      result.futureValue.header.status shouldBe 200
+      contentAsJson(result).as[PaginatedList[Client]] shouldBe PaginatedList(
+        pageContent = clients.take(15),
+        paginationMetaData = PaginationMetaData(false, true, 20, 2, 15, 1, 15)
+      )
+    }
   }
 }
