@@ -199,10 +199,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=${1 + appConfig.es3MaxRecordsFetchCount}&max-records=${appConfig.es3MaxRecordsFetchCount}",
         mockResponse(1 + appConfig.es3MaxRecordsFetchCount, 0, Seq.empty)
       )(httpClient)
-      esp.getClientsForGroupId(testGroupId).futureValue.toSet shouldBe Set(
-        Client.fromEnrolment(enrolment1),
-        Client.fromEnrolment(enrolment2)
-      )
+      esp.getEnrolmentsForGroupId(testGroupId).futureValue.toSet shouldBe Set(enrolment1, enrolment2)
     }
     "complete ES19 call successfully" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"

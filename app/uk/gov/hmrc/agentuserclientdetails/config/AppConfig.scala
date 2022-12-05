@@ -82,6 +82,8 @@ trait AppConfig {
 
   val agentsizeRefreshDuration: Duration
 
+  val es3CacheRefreshDuration: Duration
+
   val userGroupsSearchUrl: String
 
   val es3MaxRecordsFetchCount: Int
@@ -167,6 +169,8 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
   lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 
   lazy val agentsizeRefreshDuration: Duration = servicesConfig.getDuration("agentsize.refreshduration")
+
+  lazy val es3CacheRefreshDuration: Duration = servicesConfig.getDuration("es3Cache.refreshduration")
 
   lazy val userGroupsSearchUrl: String = servicesConfig.baseUrl("users-groups-search")
   override lazy val es3MaxRecordsFetchCount: Int = servicesConfig.getInt("es3.max-records-fetch-count")

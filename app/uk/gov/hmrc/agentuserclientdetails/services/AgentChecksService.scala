@@ -34,6 +34,7 @@ class AgentChecksService @Inject() (
   appConfig: AppConfig,
   agentSizeRepository: AgentSizeRepository,
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
+  es3CacheManager: Es3CacheManager,
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
   workItemService: FriendlyNameWorkItemService,
   assignmentsWorkItemService: AssignmentsWorkItemService
@@ -113,8 +114,8 @@ class AgentChecksService @Inject() (
                        case None =>
                          Future.successful(None)
                        case Some(groupId) =>
-                         enrolmentStoreProxyConnector
-                           .getClientsForGroupId(groupId)
+                         es3CacheManager
+                           .getCachedClients(groupId)
                            .map(clients => Option(clients.size))
                      }
     } yield clientCount

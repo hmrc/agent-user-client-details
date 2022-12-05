@@ -51,6 +51,7 @@ class TestAppConfig extends AppConfig {
   val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int = 60
   val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int = 60
   val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
+  val es3CacheRefreshDuration: Duration = Duration(1, DAYS)
   val userGroupsSearchUrl: String = "http://localhost"
   val maxFriendlyNameUpdateBatchSize: Int = 20
   val emailBaseUrl: String = ""

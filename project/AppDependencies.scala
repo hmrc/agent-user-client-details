@@ -9,10 +9,11 @@ object AppDependencies {
     "uk.gov.hmrc"             %% "bootstrap-backend-play-28"         % "7.7.0",
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-play-28"                % "0.73.0",
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-work-item-repo-play-28" % "0.73.0",
-    "uk.gov.hmrc"             %% "agent-mtd-identifiers"             % "0.48.0-play-28",
+    "uk.gov.hmrc"             %% "agent-mtd-identifiers"             % "0.50.0-play-28",
     "uk.gov.hmrc"             %% "cluster-work-throttling"           % "8.3.0-play-28",
     "uk.gov.hmrc"             %% "agent-kenshoo-monitoring"          % "4.8.0-play-28",
     "com.github.blemale"      %% "scaffeine"                         % "4.0.1",
+    "joda-time"               %  "joda-time"                         % "2.12.1",
     "net.codingwell"          %% "scala-guice"                       % "4.2.9"
   )
 

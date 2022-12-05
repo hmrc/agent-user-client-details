@@ -26,14 +26,14 @@ import play.api.http.Status
 import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, MtdIt, Ppt, Trust, TrustNT, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Client, Enrolment, GroupDelegatedEnrolments}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
 
-import java.net.{URL, URLDecoder}
+import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -60,10 +60,6 @@ trait EnrolmentStoreProxyConnector {
   def getEnrolmentsForGroupId(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]]
-
-  def getClientsForGroupId(
-    groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]]
 
   // ES11 - Assign enrolment to user
   def assignEnrolment(userId: String, enrolmentKey: String)(implicit
@@ -188,16 +184,6 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   }
 
   // ES3 - Query Enrolments allocated to a Group
-  def getClientsForGroupId(
-    groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]] =
-    getEnrolmentsForGroupId(groupId)
-      .map(enrols =>
-        enrols
-          .map(Client.fromEnrolment)
-          .map(client => client.copy(friendlyName = URLDecoder.decode(client.friendlyName, "UTF-8")))
-      )
-
   def getEnrolmentsForGroupId(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]] = {

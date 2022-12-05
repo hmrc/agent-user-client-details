@@ -25,7 +25,7 @@ import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSuppo
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, FriendlyNameWorkItemService, JobMonitoringService}
+import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, Es3CacheManager, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
@@ -41,6 +41,7 @@ class ClientListController @Inject() (
   cc: ControllerComponents,
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
+  es3CacheManager: Es3CacheManager,
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
   assignedUsersService: AssignedUsersService,
   jobMonitoringService: JobMonitoringService,
@@ -62,9 +63,10 @@ class ClientListController @Inject() (
     Action.async { implicit request =>
       withAuthorisedAgent(allowStandardUser = true) { _ =>
         withGroupIdFor(arn) { groupId =>
-          espConnector
-            .getEnrolmentsForGroupId(groupId)
-            .map(enrolments => enrolments.groupBy(enrolment => enrolment.service))
+          es3CacheManager
+            .getCachedClients(groupId)
+            .map(_.map(client => EnrolmentKey.deconstruct(client.enrolmentKey)))
+            .map(tuples => tuples.groupBy(_._1))
             .map(_.map(entry => entry._1 -> entry._2.length))
             .map(m => Ok(Json.toJson(m)))
         }
@@ -80,8 +82,8 @@ class ClientListController @Inject() (
   ): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
-        espConnector
-          .getClientsForGroupId(groupId)
+        es3CacheManager
+          .getCachedClients(groupId)
           .map { clients =>
             val clientsMatchingSearch = search.fold(clients) { searchTerm =>
               clients.filter(c => c.friendlyName.toLowerCase.contains(searchTerm.toLowerCase))
@@ -183,7 +185,7 @@ class ClientListController @Inject() (
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
 
-    espConnector.getClientsForGroupId(groupId).transformWith {
+    es3CacheManager.getCachedClients(groupId).transformWith {
       // if friendly names are populated for all enrolments, return 200
       case Success(clients) if clients.forall(_.friendlyName.nonEmpty) =>
         logger.info(s"${clients.length} enrolments found for groupId $groupId. No friendly name lookups needed.")
@@ -230,7 +232,7 @@ class ClientListController @Inject() (
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
 
-    espConnector.getClientsForGroupId(groupId).transformWith {
+    es3CacheManager.getCachedClients(groupId).transformWith {
       case Success(clients) =>
         for {
           _ <- workItemService.removeByGroupId(groupId)
