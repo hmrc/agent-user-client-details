@@ -93,6 +93,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
     val ifConnector = mock[IfConnector]
     val ugs = mock[UsersGroupsSearchConnector]
     val esp = mock[EnrolmentStoreProxyConnector]
+    val es3CacheManager = mock[Es3CacheManager]
     val clientNameService = new ClientNameService(
       citizenDetailsConnector,
       desConnector,
@@ -103,6 +104,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       cc,
       wis,
       esp,
+      es3CacheManager,
       ugs,
       assignedUsersService,
       jobMonitoringService,
@@ -118,6 +120,20 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
       .when(*, *, *)
       .returns(Future successful maybeAgentDetailsDesResponse)
+
+    def mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(
+      clients: Seq[Client]
+    ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] = (es3CacheManager
+      .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(*, *, *)
+      .returning(Future.successful(clients))
+
+    def mockEs3CacheManagerGetCachedClientsForGroupIdWithException(
+      errorResponse: UpstreamErrorResponse
+    ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] = (es3CacheManager
+      .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .expects(*, *, *)
+      .returning(Future.failed(errorResponse))
   }
 
   "GET /arn/:arn/client-list" should {
@@ -127,10 +143,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
 
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
@@ -148,10 +162,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
 
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
@@ -187,10 +199,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.failed(UpstreamErrorResponse("", 404)))
+
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithException(UpstreamErrorResponse("", 404))
+
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 404
@@ -202,10 +213,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -229,10 +237,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true))(request).futureValue
@@ -252,10 +257,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
@@ -285,10 +287,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -306,10 +305,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
       val request = FakeRequest("GET", "")
       val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 200
@@ -322,10 +318,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithoutSomeFriendlyNames))
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       val request = FakeRequest("GET", "")
       mockDesConnectorGetAgencyDetails(None)
       val result = controller.getClientListStatus(testArn)(request).futureValue
@@ -429,10 +422,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *)
-        .returning(Future.successful(clientsWithFriendlyNames))
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
       wis
         .pushNew(
           Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(0))),
@@ -516,12 +506,24 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
 
   "GET tax summary info on /arn/:arn/clients/tax-group-info" should {
 
-    "respond with 200 status if epsConnector returns data" in new TestScope {
+    "respond with 200 status if es3 cache manager returns data" in new TestScope {
+      private val countVatClients = 10
+      private val countCgtClients = 5
+      private val countPptClients = 15
+      private val countMtditClients = 11
+
       // given
-      val vatEnrolments = (1 to 10).map(_ => Enrolment("HMRC-MTD-VAT", "", "", Seq.empty[Identifier]))
-      val cgtEnrolments = (1 to 5).map(_ => Enrolment("HMRC-CGT-PD", "", "", Seq.empty[Identifier]))
-      val pptEnrolments = (1 to 15).map(_ => Enrolment("HMRC-PPT-ORG", "", "", Seq.empty[Identifier]))
-      val mtdEnrolments = (1 to 11).map(_ => Enrolment("HMRC-MTD-IT", "", "", Seq.empty[Identifier]))
+      val vatEnrolments =
+        (1 to countVatClients).map(_ => Enrolment("HMRC-MTD-VAT", "", "", Seq(Identifier("VRN", "101747641"))))
+      val cgtEnrolments =
+        (1 to countCgtClients).map(_ => Enrolment("HMRC-CGT-PD", "", "", Seq(Identifier("CgtRef", "XMCGTP123456789"))))
+      val pptEnrolments = (1 to countPptClients).map(_ =>
+        Enrolment("HMRC-PPT-ORG", "", "", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
+      )
+      val mtdEnrolments =
+        (1 to countMtditClients).map(_ =>
+          Enrolment("HMRC-MTD-IT", "", "", Seq(Identifier("MTDITID", "GUKL52542245108")))
+        )
       val enrolments = vatEnrolments ++ cgtEnrolments ++ pptEnrolments ++ mtdEnrolments
 
       mockAuthResponseWithoutException(buildAuthorisedResponse)
@@ -529,10 +531,9 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testGroupId, *, *)
-        .returning(Future.successful(enrolments))
+
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(enrolments.map(Client.fromEnrolment))
+
       val request = FakeRequest("GET", "")
 
       // when
@@ -541,10 +542,10 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       // then
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Map[String, Int]] shouldBe Map(
-        "HMRC-MTD-VAT" -> 10,
-        "HMRC-CGT-PD"  -> 5,
-        "HMRC-PPT-ORG" -> 15,
-        "HMRC-MTD-IT"  -> 11
+        "HMRC-MTD-VAT" -> countVatClients,
+        "HMRC-CGT-PD"  -> countCgtClients,
+        "HMRC-PPT-ORG" -> countPptClients,
+        "HMRC-MTD-IT"  -> countMtditClients
       )
     }
   }
@@ -560,8 +561,8 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-      (esp
-        .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      (es3CacheManager
+        .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testGroupId, *, *)
         .returning(Future.successful(clients))
       val request = FakeRequest("GET", "")

@@ -52,6 +52,7 @@ class AgentChecksServiceSpec extends BaseSpec {
     val appconfig = new AppConfigImpl(mockServicesConfig)
     val mockAgentSizeRepository: AgentSizeRepository = mock[AgentSizeRepository]
     val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
+    val mockEs3CacheManager = mock[Es3CacheManager]
     val mockUsersGroupsSearchConnector: UsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
     val mockWorkItemService: FriendlyNameWorkItemService = mock[FriendlyNameWorkItemService]
     val mockAssignmentsWorkItemService: AssignmentsWorkItemService = mock[AssignmentsWorkItemService]
@@ -60,6 +61,7 @@ class AgentChecksServiceSpec extends BaseSpec {
       appconfig,
       mockAgentSizeRepository,
       mockEnrolmentStoreProxyConnector,
+      mockEs3CacheManager,
       mockUsersGroupsSearchConnector,
       mockWorkItemService,
       mockAssignmentsWorkItemService
@@ -118,7 +120,7 @@ class AgentChecksServiceSpec extends BaseSpec {
           "have client count 0" in new TestScope {
             mockAgentSizeRepositoryGet(None)(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq.empty)(mockEnrolmentStoreProxyConnector)
+            mockEs3CacheManagerGetCachedClients(Seq.empty)(mockEs3CacheManager)
             mockAgentSizeRepositoryUpsert(Some(RecordInserted))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
@@ -131,8 +133,8 @@ class AgentChecksServiceSpec extends BaseSpec {
           "return correct count of enrolments" in new TestScope {
             mockAgentSizeRepositoryGet(None)(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(client1, client2, client3, client4))(
-              mockEnrolmentStoreProxyConnector
+            mockEs3CacheManagerGetCachedClients(Seq(client1, client2, client3, client4))(
+              mockEs3CacheManager
             )
             mockAgentSizeRepositoryUpsert(Some(RecordInserted))(mockAgentSizeRepository)
 
@@ -163,7 +165,7 @@ class AgentChecksServiceSpec extends BaseSpec {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
             mockServicesConfigGetDuration(mockServicesConfig)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq.empty)(mockEnrolmentStoreProxyConnector)
+            mockEs3CacheManagerGetCachedClients(Seq.empty)(mockEs3CacheManager)
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
@@ -177,8 +179,8 @@ class AgentChecksServiceSpec extends BaseSpec {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
             mockServicesConfigGetDuration(mockServicesConfig)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockEnrolmentStoreProxyConnectorGetEnrolments(Seq(client1, client2, client3, client4))(
-              mockEnrolmentStoreProxyConnector
+            mockEs3CacheManagerGetCachedClients(Seq(client1, client2, client3, client4))(
+              mockEs3CacheManager
             )
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
 
@@ -439,11 +441,11 @@ class AgentChecksServiceSpec extends BaseSpec {
   private def mockServicesConfigGetDuration(mockServicesConfig: ServicesConfig) =
     (mockServicesConfig.getDuration _).expects(refreshdurationConfigKey).returning(refreshDuration)
 
-  private def mockEnrolmentStoreProxyConnectorGetEnrolments(
+  private def mockEs3CacheManagerGetCachedClients(
     clients: Seq[Client]
-  )(mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) =
-    (mockEnrolmentStoreProxyConnector
-      .getClientsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+  )(mockEs3CacheManager: Es3CacheManager) =
+    (mockEs3CacheManager
+      .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(groupId, *, *)
       .returning(Future.successful(clients))
 
