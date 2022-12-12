@@ -39,7 +39,8 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
 
   "Fetching from DB" should {
     "return cached datae when data exists in DB" in {
-      val enrolments = Seq(Enrolment("HMRC-MTD-IT", "", "", Seq(Identifier("MTDITID", "X12345678909876"))))
+      val enrolments =
+        Seq(Enrolment("HMRC-MTD-IT", "Activated", "friend of a friend", Seq(Identifier("MTDITID", "X12345678909876"))))
 
       es3CacheRepository.save(groupId, enrolments).futureValue shouldBe groupId
       es3CacheRepository.fetch(groupId).futureValue shouldBe Some(Es3Cache(enrolments))
