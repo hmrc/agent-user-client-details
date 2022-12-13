@@ -17,10 +17,11 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.ImplementedBy
+import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
-import play.api.{Configuration, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainText}
 import uk.gov.hmrc.mongo.cache.CacheIdType.SimpleCacheId
 import uk.gov.hmrc.mongo.cache.{DataKey, MongoCacheRepository}
 import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
@@ -47,9 +48,9 @@ trait Es3CacheRepository {
 @Singleton
 class Es3CacheRepositoryImpl @Inject() (
   mongoComponent: MongoComponent,
-  configuration: Configuration,
   timestampSupport: TimestampSupport,
-  appConfig: AppConfig
+  appConfig: AppConfig,
+  crypto: Encrypter with Decrypter
 )(implicit ec: ExecutionContext)
     extends MongoCacheRepository(
       mongoComponent = mongoComponent,
@@ -60,9 +61,30 @@ class Es3CacheRepositoryImpl @Inject() (
     ) with Es3CacheRepository with Logging {
 
   override def save(groupId: String, clients: Seq[Enrolment]): Future[String] =
-    put(groupId)(DataKey[Es3Cache](groupId), Es3Cache(clients)).map(_.id)
+    put(groupId)(
+      DataKey[Es3Cache](groupId),
+      Es3Cache(encryptFields(clients))
+    ).map(_.id)
 
   override def fetch(groupId: String): Future[Option[Es3Cache]] =
-    get[Es3Cache](groupId)(DataKey[Es3Cache](groupId))
+    get[Es3Cache](groupId)(DataKey[Es3Cache](groupId)).map(_.map { es3Cache =>
+      es3Cache.copy(clients = decryptFields(es3Cache.clients))
+    })
+
+  private def encryptFields(clients: Seq[Enrolment]): Seq[Enrolment] =
+    clients.map(enrolment =>
+      enrolment.copy(
+        friendlyName = crypto.encrypt(PlainText(enrolment.friendlyName)).value,
+        identifiers = enrolment.identifiers.map(id => id.copy(value = crypto.encrypt(PlainText(id.value)).value))
+      )
+    )
+
+  private def decryptFields(clients: Seq[Enrolment]): Seq[Enrolment] =
+    clients.map(enrolment =>
+      enrolment.copy(
+        friendlyName = crypto.decrypt(Crypted(enrolment.friendlyName)).value,
+        identifiers = enrolment.identifiers.map(id => id.copy(value = crypto.decrypt(Crypted(id.value)).value))
+      )
+    )
 
 }
