@@ -17,19 +17,24 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.ImplementedBy
+import com.mongodb.client.model.IndexOptions
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.Indexes.ascending
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainText}
-import uk.gov.hmrc.mongo.cache.CacheIdType.SimpleCacheId
-import uk.gov.hmrc.mongo.cache.{DataKey, MongoCacheRepository}
-import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.LocalDateTime
 import javax.inject.{Inject, Singleton}
+import scala.concurrent.duration.SECONDS
 import scala.concurrent.{ExecutionContext, Future}
 
-case class Es3Cache(clients: Seq[Enrolment])
+case class Es3Cache(groupId: String, clients: Seq[Enrolment], createdAt: String = LocalDateTime.now().toString)
 
 object Es3Cache {
   implicit val formatEs3Cache: OFormat[Es3Cache] = Json.format[Es3Cache]
@@ -48,28 +53,55 @@ trait Es3CacheRepository {
 @Singleton
 class Es3CacheRepositoryImpl @Inject() (
   mongoComponent: MongoComponent,
-  timestampSupport: TimestampSupport,
   appConfig: AppConfig,
   crypto: Encrypter with Decrypter
 )(implicit ec: ExecutionContext)
-    extends MongoCacheRepository(
+    extends PlayMongoRepository[Es3Cache](
       mongoComponent = mongoComponent,
       collectionName = "es3-cache",
-      ttl = appConfig.es3CacheRefreshDuration,
-      cacheIdType = SimpleCacheId,
-      timestampSupport = timestampSupport
+      domainFormat = Es3Cache.formatEs3Cache,
+      indexes = Seq(
+        IndexModel(
+          ascending("groupId"),
+          new IndexOptions().name("groupIdIdx").expireAfter(appConfig.es3CacheRefreshDuration.toSeconds, SECONDS)
+        )
+      )
     ) with Es3CacheRepository with Logging {
 
-  override def save(groupId: String, clients: Seq[Enrolment]): Future[String] =
-    put(groupId)(
-      DataKey[Es3Cache](groupId),
-      Es3Cache(encryptFields(clients))
-    ).map(_.id)
+  private val COUNT_OF_CLIENTS_PER_DOCUMENT = 20000
 
-  override def fetch(groupId: String): Future[Option[Es3Cache]] =
-    get[Es3Cache](groupId)(DataKey[Es3Cache](groupId)).map(_.map { es3Cache =>
-      es3Cache.copy(clients = decryptFields(es3Cache.clients))
-    })
+  private val FIELD_GROUP_ID = "groupId"
+
+  override def save(groupId: String, clients: Seq[Enrolment]): Future[String] = {
+    val es3CacheBatches = clients
+      .grouped(COUNT_OF_CLIENTS_PER_DOCUMENT)
+      .toSeq
+      .map(batchOfClients => Es3Cache(groupId, encryptFields(batchOfClients)))
+
+    collection.insertMany(es3CacheBatches).toFuture().map { insertManyResult =>
+      logger.info(s"Saved in DB for $groupId across ${insertManyResult.getInsertedIds.size()} document(s)")
+      groupId
+    }
+  }
+
+  override def fetch(groupId: String): Future[Option[Es3Cache]] = {
+
+    def collateClients(es3Caches: Seq[Es3Cache]): Option[Es3Cache] =
+      if (es3Caches.isEmpty) {
+        Option.empty[Es3Cache]
+      } else {
+        val accumulatedEs3Cache =
+          es3Caches.foldLeft(Es3Cache(groupId, Seq.empty[Enrolment])) { (acc, es3Cache) =>
+            Es3Cache(groupId, acc.clients ++ decryptFields(es3Cache.clients))
+          }
+        Option(accumulatedEs3Cache)
+      }
+
+    collection
+      .find(equal(FIELD_GROUP_ID, groupId))
+      .toFuture()
+      .map(collateClients)
+  }
 
   private def encryptFields(clients: Seq[Enrolment]): Seq[Enrolment] =
     clients.map(enrolment =>

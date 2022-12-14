@@ -28,7 +28,7 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    es3CacheRepository.deleteEntity(groupId)
+    es3CacheRepository.collection.drop().toFuture()
   }
 
   "Fetching from DB" should {
@@ -43,7 +43,11 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
         Seq(Enrolment("HMRC-MTD-IT", "Activated", "friend of a friend", Seq(Identifier("MTDITID", "X12345678909876"))))
 
       es3CacheRepository.save(groupId, enrolments).futureValue shouldBe groupId
-      es3CacheRepository.fetch(groupId).futureValue shouldBe Some(Es3Cache(enrolments))
+
+      val es3CacheFetched = es3CacheRepository.fetch(groupId).futureValue.get
+
+      es3CacheFetched.groupId shouldBe groupId
+      es3CacheFetched.clients shouldBe enrolments
     }
   }
 

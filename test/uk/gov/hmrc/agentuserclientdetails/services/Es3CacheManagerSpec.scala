@@ -38,7 +38,7 @@ class Es3CacheManagerSpec extends BaseSpec {
         mockEs3CacheRepositoryFetch(None)
         mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(enrolments)
         mockEs3CacheRepositorySave(enrolments)
-        mockEs3CacheRepositoryFetch(Some(Es3Cache(enrolments)))
+        mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, enrolments)))
 
         es3CacheManager.getCachedClients(groupId).futureValue shouldBe Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
@@ -50,7 +50,7 @@ class Es3CacheManagerSpec extends BaseSpec {
       "return clients from the cache" in new TestScope {
         val enrolments = Seq(Enrolment("HMRC-MTD-IT", "", "", Seq(Identifier("MTDITID", "X12345678909876"))))
 
-        mockEs3CacheRepositoryFetch(Some(Es3Cache(enrolments)))
+        mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, enrolments)))
 
         es3CacheManager.getCachedClients(groupId).futureValue shouldBe Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
