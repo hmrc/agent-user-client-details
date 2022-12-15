@@ -17,26 +17,27 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.ImplementedBy
-import com.mongodb.client.model.IndexOptions
 import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.{IndexModel, IndexOptions}
 import play.api.Logging
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainText}
-import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
+import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
 
-import java.time.LocalDateTime
+import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration.SECONDS
 import scala.concurrent.{ExecutionContext, Future}
 
-case class Es3Cache(groupId: String, clients: Seq[Enrolment], createdAt: String = LocalDateTime.now().toString)
+case class Es3Cache(groupId: String, clients: Seq[Enrolment], createdAt: Instant = Instant.now())
 
 object Es3Cache {
+  implicit val dtf: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val formatEs3Cache: OFormat[Es3Cache] = Json.format[Es3Cache]
 }
 
@@ -54,7 +55,8 @@ trait Es3CacheRepository {
 class Es3CacheRepositoryImpl @Inject() (
   mongoComponent: MongoComponent,
   appConfig: AppConfig,
-  crypto: Encrypter with Decrypter
+  crypto: Encrypter with Decrypter,
+  timestampSupport: TimestampSupport
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[Es3Cache](
       mongoComponent = mongoComponent,
@@ -63,9 +65,17 @@ class Es3CacheRepositoryImpl @Inject() (
       indexes = Seq(
         IndexModel(
           ascending("groupId"),
-          new IndexOptions().name("groupIdIdx").expireAfter(appConfig.es3CacheRefreshDuration.toSeconds, SECONDS)
+          IndexOptions().name("idxGroupId")
+        ),
+        IndexModel(
+          ascending("createdAt"),
+          IndexOptions()
+            .background(false)
+            .name("idxCreatedAt")
+            .expireAfter(appConfig.es3CacheRefreshDuration.toSeconds, SECONDS)
         )
-      )
+      ),
+      replaceIndexes = true
     ) with Es3CacheRepository with Logging {
 
   private val COUNT_OF_CLIENTS_PER_DOCUMENT = 20000
@@ -73,10 +83,12 @@ class Es3CacheRepositoryImpl @Inject() (
   private val FIELD_GROUP_ID = "groupId"
 
   override def save(groupId: String, clients: Seq[Enrolment]): Future[String] = {
+    val timestamp = timestampSupport.timestamp()
+
     val es3CacheBatches = clients
       .grouped(COUNT_OF_CLIENTS_PER_DOCUMENT)
       .toSeq
-      .map(batchOfClients => Es3Cache(groupId, encryptFields(batchOfClients)))
+      .map(batchOfClients => Es3Cache(groupId, encryptFields(batchOfClients), timestamp))
 
     collection.insertMany(es3CacheBatches).toFuture().map { insertManyResult =>
       logger.info(s"Saved in DB for $groupId across ${insertManyResult.getInsertedIds.size()} document(s)")
