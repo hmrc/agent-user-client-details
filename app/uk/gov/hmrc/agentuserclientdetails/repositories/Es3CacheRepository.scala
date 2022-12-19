@@ -90,9 +90,13 @@ class Es3CacheRepositoryImpl @Inject() (
       .toSeq
       .map(batchOfClients => Es3Cache(groupId, encryptFields(batchOfClients), timestamp))
 
-    collection.insertMany(es3CacheBatches).toFuture().map { insertManyResult =>
-      logger.info(s"Saved in DB for $groupId across ${insertManyResult.getInsertedIds.size()} document(s)")
-      groupId
+    collection.deleteMany(equal(FIELD_GROUP_ID, groupId)).toFuture() flatMap { deleteResult =>
+      logger.info(s"Deleted ${deleteResult.getDeletedCount} existing documents for $groupId")
+
+      collection.insertMany(es3CacheBatches).toFuture().map { insertManyResult =>
+        logger.info(s"Saved in DB for $groupId across ${insertManyResult.getInsertedIds.size()} document(s)")
+        groupId
+      }
     }
   }
 

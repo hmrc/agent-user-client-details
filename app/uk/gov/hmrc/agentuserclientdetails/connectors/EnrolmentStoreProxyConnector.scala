@@ -115,7 +115,6 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
             .map { response =>
               response.status match {
                 case Status.NO_CONTENT =>
-                  logger.warn(s"No assigned users for $enrolmentKey")
                   Seq.empty
                 case Status.OK =>
                   `type` match {

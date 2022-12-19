@@ -53,10 +53,7 @@ class AssignedUsersServiceImpl @Inject() (espConnector: EnrolmentStoreProxyConne
             if (countAssignedUsers == 0) {
               Future successful Seq.empty
             } else {
-              val enrolmentKeys =
-                assignedClient.identifiers.map(id => EnrolmentKey.enrolmentKey(assignedClient.serviceName, id.value))
-
-              fetchUsersIdsAssignedToClient(enrolmentKeys).map(usersIdsAssignedToClient =>
+              fetchUsersIdsAssignedToClient(assignedClient.clientEnrolmentKey).map(usersIdsAssignedToClient =>
                 usersIdsAssignedToClient.map(userId => assignedClient.copy(assignedTo = userId))
               )
             }
@@ -68,10 +65,8 @@ class AssignedUsersServiceImpl @Inject() (espConnector: EnrolmentStoreProxyConne
   }
 
   private def fetchUsersIdsAssignedToClient(
-    enrolmentKeys: Seq[String]
+    enrolmentKey: String
   )(implicit hc: HeaderCarrier): Future[Seq[String]] =
-    Future
-      .sequence(enrolmentKeys.map(key => espConnector.getUsersAssignedToEnrolment(key, "delegated")))
-      .map(_.flatten)
+    espConnector.getUsersAssignedToEnrolment(enrolmentKey, "delegated")
 
 }

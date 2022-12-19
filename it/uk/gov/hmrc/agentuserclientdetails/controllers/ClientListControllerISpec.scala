@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
-import org.scalamock.handlers.CallHandler3
+import org.scalamock.handlers.{CallHandler3, CallHandler4}
 import play.api.Configuration
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
@@ -69,7 +69,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
   val badGroupId = "XINV-ALID-GROU-PIDX"
   val client1: Client = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
   val client2: Client = Client("HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", "Frank Wright")
-  val client3: Client = Client("HMRC-CGT-PD~CgtRef~XMCGTP123456789", "George Candy")
+  val client3: Client = Client("HMRC-CGT-PD~CGTPDRef~XMCGTP123456789", "George Candy")
   val client4: Client = Client("HMRC-MTD-VAT~VRN~101747642", "Ross Barker")
   val clientsWithFriendlyNames: Seq[Client] = Seq(client1, client2, client3, client4)
   val clientsWithoutAnyFriendlyNames = clientsWithFriendlyNames.map(_.copy(friendlyName = ""))
@@ -134,6 +134,15 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.failed(errorResponse))
+
+    def mockEspGetUsersAssignedToEnrolment(
+      enrolmentKey: String,
+      userIds: Seq[String]
+    ): CallHandler4[String, String, HeaderCarrier, ExecutionContext, Future[Seq[String]]] =
+      (esp
+        .getUsersAssignedToEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(enrolmentKey, "delegated", *, *)
+        .returning(Future successful userIds)
   }
 
   "GET /arn/:arn/client-list" should {
@@ -329,17 +338,15 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
 
   "GET /arn/:arn/clients-assigned-users" when {
 
-    "ESP connector returns nothing for group delegated enrolments" should {
+    "ES3 Cache returns empty" should {
       "return 404" in new TestScope {
         mockAuthResponseWithoutException(buildAuthorisedResponse)
         (esp
           .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
           .expects(testArn, *, *)
           .returning(Future.successful(Some(testGroupId)))
-        (esp
-          .getGroupDelegatedEnrolments(_: String)(_: HeaderCarrier, _: ExecutionContext))
-          .expects(*, *, *)
-          .returning(Future successful None)
+
+        mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(Seq.empty)
 
         val request = FakeRequest("GET", "")
         val result = controller.getClientsWithAssignedUsers(testArn)(request)
@@ -347,7 +354,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       }
     }
 
-    "ESP connector returns some group delegated enrolments" when {
+    "ES3 Cache returns some clients" when {
 
       "UGS does not return any matching user details" should {
         "return 200 with empty list of clients" in new TestScope {
@@ -357,17 +364,11 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
             .expects(testArn, *, *)
             .returning(Future.successful(Some(testGroupId)))
 
-          val groupDelegatedEnrolments =
-            GroupDelegatedEnrolments(Seq(AssignedClient("aService", Seq(Identifier("idKey", "idVal")), None, "me")))
+          mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
 
-          (esp
-            .getGroupDelegatedEnrolments(_: String)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(*, *, *)
-            .returning(
-              Future successful Some(
-                groupDelegatedEnrolments
-              )
-            )
+          clientsWithFriendlyNames.foreach { client =>
+            mockEspGetUsersAssignedToEnrolment(client.enrolmentKey, Seq("userid"))
+          }
 
           (ugs
             .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
@@ -390,16 +391,16 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
             .returning(Future.successful(Some(testGroupId)))
 
           val groupDelegatedEnrolments =
-            GroupDelegatedEnrolments(Seq(AssignedClient("aService", Seq(Identifier("idKey", "idVal")), None, "me")))
-
-          (esp
-            .getGroupDelegatedEnrolments(_: String)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(*, *, *)
-            .returning(
-              Future successful Some(
-                groupDelegatedEnrolments
-              )
+            GroupDelegatedEnrolments(
+              Seq(AssignedClient("HMRC-MTD-VAT~VRN~101747641", None, "me"))
             )
+
+          val clients: Seq[Client] = Seq(Client("HMRC-MTD-VAT~VRN~101747641", "me"))
+          mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clients)
+
+          clients.foreach { client =>
+            mockEspGetUsersAssignedToEnrolment(client.enrolmentKey, Seq("me"))
+          }
 
           (ugs
             .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
