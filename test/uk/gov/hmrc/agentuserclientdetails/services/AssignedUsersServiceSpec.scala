@@ -59,26 +59,24 @@ class AssignedUsersServiceSpec extends BaseSpec {
 
         val groupDelegatedEnrolments: GroupDelegatedEnrolments = GroupDelegatedEnrolments(
           Seq(
-            AssignedClient("HMRC-MTD-VAT", Seq(Identifier("VRN", "101747641")), None, "0"),
+            AssignedClient("HMRC-MTD-VAT~VRN~101747641", None, "0"),
             AssignedClient(
-              "HMRC-PPT-ORG",
-              Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")),
+              "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345",
               None,
               "000000123321123"
             ),
-            AssignedClient("HMRC-CGT-PD", Seq(Identifier("CgtRef", "XMCGTP123456789")), None, "2")
+            AssignedClient("HMRC-CGT-PD~CgtRef~XMCGTP123456789", None, "2")
           )
         )
 
         assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments).futureValue shouldBe List(
           AssignedClient(
-            "HMRC-PPT-ORG",
-            List(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")),
+            "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345",
             None,
             "000000123321123"
           ),
-          AssignedClient("HMRC-CGT-PD", List(Identifier("CgtRef", "XMCGTP123456789")), None, "abcA01"),
-          AssignedClient("HMRC-CGT-PD", List(Identifier("CgtRef", "XMCGTP123456789")), None, "abcA02")
+          AssignedClient("HMRC-CGT-PD~CgtRef~XMCGTP123456789", None, "abcA01"),
+          AssignedClient("HMRC-CGT-PD~CgtRef~XMCGTP123456789", None, "abcA02")
         )
       }
     }

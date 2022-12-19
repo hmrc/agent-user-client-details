@@ -149,18 +149,48 @@ class ClientListController @Inject() (
   def getClientsWithAssignedUsers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
-        espConnector.getGroupDelegatedEnrolments(groupId) flatMap {
-          case None =>
+        calculateClientsWithAssignedUsers(groupId) flatMap {
+          case Nil =>
             Future successful NotFound
-          case Some(groupDelegatedEnrolments) =>
+          case assignedClients =>
             for {
-              assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments)
-              userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
+              userIdsFromUgs <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
               assignedClientsWithUgsFilteredUsers =
                 assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo))
             } yield Ok(Json.toJson(GroupDelegatedEnrolments(assignedClientsWithUgsFilteredUsers)))
         }
+
       }
+    }
+  }
+
+  private def calculateClientsWithAssignedUsers(
+    groupId: String
+  )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] = {
+
+    def processInSeries[A, B](
+      itemsToProcess: Iterable[A]
+    )(processor: A => Future[B])(implicit ec: ExecutionContext): Future[List[B]] =
+      itemsToProcess.foldLeft(Future(List.empty[B])) { (accFutures, nextItem) =>
+        accFutures.flatMap { accList =>
+          val nextFuture = processor(nextItem)
+          nextFuture.map(nextResult => accList :+ nextResult)
+        }
+      }
+
+    def fetchAssignedUsersOfClient(client: Client): Future[Seq[AssignedClient]] =
+      espConnector.getUsersAssignedToEnrolment(client.enrolmentKey, "delegated") map { usersIdsAssignedToClient =>
+        usersIdsAssignedToClient.map(userId =>
+          AssignedClient(
+            clientEnrolmentKey = client.enrolmentKey,
+            friendlyName = None,
+            assignedTo = userId
+          )
+        )
+      }
+
+    es3CacheManager.getCachedClients(groupId) flatMap { clients =>
+      processInSeries(clients)(fetchAssignedUsersOfClient).map(_.flatten)
     }
   }
 
