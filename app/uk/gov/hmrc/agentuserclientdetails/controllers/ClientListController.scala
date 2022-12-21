@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem, PaginatedClientsBuilder}
 import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, Es3CacheManager, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
@@ -91,29 +91,9 @@ class ClientListController @Inject() (
             val taxServiceFilteredClients = filter.fold(clientsMatchingSearch) { term =>
               if (term == "TRUST") clientsMatchingSearch.filter(_.enrolmentKey.contains("HMRC-TERS"))
               else clientsMatchingSearch.filter(_.enrolmentKey.contains(term))
-
             }
-            val pageStart = (page - 1) * pageSize
-            val pageEnd = pageStart + pageSize
-            val currentPageContent =
-              taxServiceFilteredClients.slice(pageStart, Math.min(pageEnd, taxServiceFilteredClients.length - 1))
-            val numberOfPages = Math.ceil(taxServiceFilteredClients.length.toDouble / pageSize.toDouble).toInt
-            Ok(
-              Json.toJson(
-                PaginatedList[Client](
-                  pageContent = currentPageContent,
-                  paginationMetaData = PaginationMetaData(
-                    firstPage = page == 1,
-                    lastPage = numberOfPages == page,
-                    totalSize = taxServiceFilteredClients.length,
-                    pageSize = pageSize,
-                    totalPages = numberOfPages,
-                    currentPageNumber = page,
-                    currentPageSize = currentPageContent.length
-                  )
-                )
-              )
-            )
+
+            Ok(Json.toJson(PaginatedClientsBuilder.build(page, pageSize, taxServiceFilteredClients)))
           }
       }
     }
