@@ -507,13 +507,15 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
 
   }
 
-  "GET tax summary info on /arn/:arn/clients/tax-group-info" should {
+  "GET tax service client count on /arn/:arn/tax-service-client-count" should {
 
     "respond with 200 status if es3 cache manager returns data" in new TestScope {
       private val countVatClients = 10
       private val countCgtClients = 5
       private val countPptClients = 15
       private val countMtditClients = 11
+      private val countTaxableTrustClients = 3
+      private val countNonTaxableTrustClients = 2
 
       // given
       val vatEnrolments =
@@ -527,7 +529,15 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         (1 to countMtditClients).map(_ =>
           Enrolment("HMRC-MTD-IT", "", "", Seq(Identifier("MTDITID", "GUKL52542245108")))
         )
-      val enrolments = vatEnrolments ++ cgtEnrolments ++ pptEnrolments ++ mtdEnrolments
+      val ttEnrolments = (1 to countTaxableTrustClients).map(_ =>
+        Enrolment("HMRC-TERS-ORG", "", "", Seq(Identifier("Utr", "1234567890")))
+      )
+      val nttEnrolments = (1 to countNonTaxableTrustClients).map(_ =>
+        Enrolment("HMRC-TERSNT-ORG", "", "", Seq(Identifier("Urn", "XXTRUST10010010")))
+      )
+
+      val enrolments: Seq[Enrolment] =
+        vatEnrolments ++ cgtEnrolments ++ pptEnrolments ++ mtdEnrolments ++ ttEnrolments ++ nttEnrolments
 
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       (esp
@@ -540,15 +550,17 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       val request = FakeRequest("GET", "")
 
       // when
-      val result = controller.getTaxGroupInfo(testArn)(request)
+      val result = controller.getTaxServiceClientCount(testArn)(request)
 
       // then
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Map[String, Int]] shouldBe Map(
-        "HMRC-MTD-VAT" -> countVatClients,
-        "HMRC-CGT-PD"  -> countCgtClients,
-        "HMRC-PPT-ORG" -> countPptClients,
-        "HMRC-MTD-IT"  -> countMtditClients
+        "HMRC-MTD-VAT"    -> countVatClients,
+        "HMRC-CGT-PD"     -> countCgtClients,
+        "HMRC-PPT-ORG"    -> countPptClients,
+        "HMRC-MTD-IT"     -> countMtditClients,
+        "HMRC-TERS-ORG"   -> countTaxableTrustClients, // trusts not combined until in agent-permissions BE
+        "HMRC-TERSNT-ORG" -> countNonTaxableTrustClients
       )
     }
   }
