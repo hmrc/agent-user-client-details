@@ -16,57 +16,53 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import akka.stream.Materializer
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.{AssignedClient, EnrolmentKey, GroupDelegatedEnrolments}
+import uk.gov.hmrc.agentmtdidentifiers.model.{AssignedClient, Client}
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.util.Throttler
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
 
 @ImplementedBy(classOf[AssignedUsersServiceImpl])
 trait AssignedUsersService {
 
-  def calculateClientsWithAssignedUsers(groupDelegatedEnrolments: GroupDelegatedEnrolments)(implicit
+  def calculateClientsWithAssignedUsers(groupId: String)(implicit
     hc: HeaderCarrier
   ): Future[Seq[AssignedClient]]
 }
 
 @Singleton
-class AssignedUsersServiceImpl @Inject() (espConnector: EnrolmentStoreProxyConnector)(implicit ec: ExecutionContext)
+class AssignedUsersServiceImpl @Inject() (
+  es3CacheManager: Es3CacheManager,
+  espConnector: EnrolmentStoreProxyConnector,
+  appConfig: AppConfig
+)(implicit ec: ExecutionContext, materializer: Materializer)
     extends AssignedUsersService with Logging {
 
+  logger.info(s"ES0 requests set to throttle at ${appConfig.es0MaxRequestsPerSecond} per second")
+
   override def calculateClientsWithAssignedUsers(
-    groupDelegatedEnrolments: GroupDelegatedEnrolments
-  )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] = {
+    groupId: String
+  )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] =
+    for {
+      clients         <- es3CacheManager.getCachedClients(groupId)
+      assignedClients <- Throttler.process(clients, appConfig.es0MaxRequestsPerSecond)(fetchAssignedUsersOfClient)
+    } yield assignedClients
 
-    def checkAssignedToIsSomeCountOrAnId(assignedClient: AssignedClient): Try[Short] = Try(
-      assignedClient.assignedTo.toShort
-    )
-
-    Future
-      .sequence(groupDelegatedEnrolments.clients.map { assignedClient =>
-        checkAssignedToIsSomeCountOrAnId(assignedClient) match {
-          case Success(countAssignedUsers) =>
-            if (countAssignedUsers == 0) {
-              Future successful Seq.empty
-            } else {
-              fetchUsersIdsAssignedToClient(assignedClient.clientEnrolmentKey).map(usersIdsAssignedToClient =>
-                usersIdsAssignedToClient.map(userId => assignedClient.copy(assignedTo = userId))
-              )
-            }
-          case Failure(_) =>
-            Future successful Seq(assignedClient)
-        }
-      })
-      .map(_.flatten)
-  }
-
-  private def fetchUsersIdsAssignedToClient(
-    enrolmentKey: String
-  )(implicit hc: HeaderCarrier): Future[Seq[String]] =
-    espConnector.getUsersAssignedToEnrolment(enrolmentKey, "delegated")
+  private def fetchAssignedUsersOfClient(client: Client)(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] =
+    espConnector.getUsersAssignedToEnrolment(client.enrolmentKey, "delegated") map { usersIdsAssignedToClient =>
+      usersIdsAssignedToClient.map(userId =>
+        AssignedClient(
+          clientEnrolmentKey = client.enrolmentKey,
+          friendlyName = None,
+          assignedTo = userId
+        )
+      )
+    }
 
 }

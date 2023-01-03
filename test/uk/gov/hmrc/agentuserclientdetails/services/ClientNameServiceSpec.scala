@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails
+package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
-import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService
 import uk.gov.hmrc.agentuserclientdetails.support.{FakeCache, FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector}
 import uk.gov.hmrc.http.HeaderCarrier
 

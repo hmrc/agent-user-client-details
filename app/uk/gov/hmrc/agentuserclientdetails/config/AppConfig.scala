@@ -87,6 +87,8 @@ trait AppConfig {
   val userGroupsSearchUrl: String
 
   val es3MaxRecordsFetchCount: Int
+
+  val es0MaxRequestsPerSecond: Int
 }
 
 @Singleton
@@ -174,4 +176,6 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
 
   lazy val userGroupsSearchUrl: String = servicesConfig.baseUrl("users-groups-search")
   override lazy val es3MaxRecordsFetchCount: Int = servicesConfig.getInt("es3.max-records-fetch-count")
+
+  override lazy val es0MaxRequestsPerSecond: Int = servicesConfig.getInt("es0.max-requests-per-second")
 }

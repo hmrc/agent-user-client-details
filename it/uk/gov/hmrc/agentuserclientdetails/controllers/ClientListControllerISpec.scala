@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
+import akka.stream.Materializer
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import org.scalamock.handlers.{CallHandler3, CallHandler4}
@@ -48,6 +49,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
   lazy val config = app.injector.instanceOf[Config]
   lazy val configuration = app.injector.instanceOf[Configuration]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
+  implicit lazy val materializer = app.injector.instanceOf[Materializer]
 
   lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
@@ -55,7 +57,6 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
   implicit lazy val mockAuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
-  lazy val assignedUsersService = app.injector.instanceOf[AssignedUsersService]
   lazy val jobMonitoringRepository = new JobMonitoringRepository(mongoComponent, config)
   lazy val jobMonitoringService = new JobMonitoringServiceImpl(jobMonitoringRepository, appConfig)
   lazy val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
@@ -94,6 +95,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
     val ugs = mock[UsersGroupsSearchConnector]
     val esp = mock[EnrolmentStoreProxyConnector]
     val es3CacheManager = mock[Es3CacheManager]
+    val assignedUsersService = new AssignedUsersServiceImpl(es3CacheManager, esp, appConfig)
     val clientNameService = new ClientNameService(
       citizenDetailsConnector,
       desConnector,

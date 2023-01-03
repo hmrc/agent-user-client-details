@@ -16,10 +16,15 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import org.scalamock.handlers.CallHandler4
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import org.scalamock.handlers.{CallHandler3, CallHandler4}
+import org.scalatest.concurrent.PatienceConfiguration.Timeout
+import org.scalatest.time.{Seconds, Span}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,57 +33,63 @@ class AssignedUsersServiceSpec extends BaseSpec {
 
   implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val materializer: Materializer = Materializer(ActorSystem("AssignedUsersServiceSpec"))
 
-  trait TestScope {
-    val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
+  "Calculate assigned users" should {
 
-    val assignedUsersService: AssignedUsersService = new AssignedUsersServiceImpl(mockEnrolmentStoreProxyConnector)
+    "return non-empty list of clients" in new TestScope {
 
-    def mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(
-      userIds: Seq[String]
-    ): CallHandler4[String, String, HeaderCarrier, ExecutionContext, Future[Seq[String]]] =
-      (mockEnrolmentStoreProxyConnector
-        .getUsersAssignedToEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(*, *, *, *)
-        .returning(Future successful userIds)
-  }
+      mockEs3CacheManagerGetCachedClients(
+        Seq(
+          Client(vatEnrolment, ""),
+          Client(pptenrolment, ""),
+          Client(cgtEnrolment, "")
+        )
+      )
 
-  "Calculate assigned users" when {
+      mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(vatEnrolment, Seq("abcA01", "abcA02"))
+      mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(pptenrolment, Seq("abcA03"))
+      mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(cgtEnrolment, Seq("abcA01"))
 
-    "input clients list is empty" should {
-      "return empty list of clients" in new TestScope {
-        assignedUsersService
-          .calculateClientsWithAssignedUsers(GroupDelegatedEnrolments(Seq.empty))
-          .futureValue shouldBe Seq.empty
+      whenReady(assignedUsersService.calculateClientsWithAssignedUsers(groupId), Timeout(Span(10, Seconds))) {
+        _ should contain theSameElementsAs List(
+          AssignedClient(vatEnrolment, None, "abcA01"),
+          AssignedClient(vatEnrolment, None, "abcA02"),
+          AssignedClient(pptenrolment, None, "abcA03"),
+          AssignedClient(cgtEnrolment, None, "abcA01")
+        )
       }
     }
 
-    "input clients list is not empty" should {
-      "return non-empty list of clients" in new TestScope {
-        mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(Seq("abcA01", "abcA02"))
+    trait TestScope {
+      val groupId = "2K6H-N1C1-7M7V-O4A3"
 
-        val groupDelegatedEnrolments: GroupDelegatedEnrolments = GroupDelegatedEnrolments(
-          Seq(
-            AssignedClient("HMRC-MTD-VAT~VRN~101747641", None, "0"),
-            AssignedClient(
-              "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345",
-              None,
-              "000000123321123"
-            ),
-            AssignedClient("HMRC-CGT-PD~CgtRef~XMCGTP123456789", None, "2")
-          )
-        )
+      val vatEnrolment = "HMRC-MTD-VAT~VRN~101747641"
+      val pptenrolment = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
+      val cgtEnrolment = "HMRC-CGT-PD~CgtRef~XMCGTP123456789"
 
-        assignedUsersService.calculateClientsWithAssignedUsers(groupDelegatedEnrolments).futureValue shouldBe List(
-          AssignedClient(
-            "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345",
-            None,
-            "000000123321123"
-          ),
-          AssignedClient("HMRC-CGT-PD~CgtRef~XMCGTP123456789", None, "abcA01"),
-          AssignedClient("HMRC-CGT-PD~CgtRef~XMCGTP123456789", None, "abcA02")
-        )
-      }
+      val mockEs3CacheManager: Es3CacheManager = mock[Es3CacheManager]
+      val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
+
+      val assignedUsersService: AssignedUsersService =
+        new AssignedUsersServiceImpl(mockEs3CacheManager, mockEnrolmentStoreProxyConnector, new TestAppConfig())
+
+      def mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(
+        enrolment: String,
+        userIds: Seq[String]
+      ): CallHandler4[String, String, HeaderCarrier, ExecutionContext, Future[Seq[String]]] =
+        (mockEnrolmentStoreProxyConnector
+          .getUsersAssignedToEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+          .expects(enrolment, *, *, *)
+          .returning(Future successful userIds)
+
+      def mockEs3CacheManagerGetCachedClients(
+        clients: Seq[Client]
+      ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] =
+        (mockEs3CacheManager
+          .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+          .expects(groupId, *, *)
+          .returning(Future successful clients)
     }
 
   }
