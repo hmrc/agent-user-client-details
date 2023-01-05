@@ -59,15 +59,16 @@ class ClientListController @Inject() (
       }
     }
 
-  def getTaxGroupInfo(arn: Arn): Action[AnyContent] =
+  // returns client counts for all tax services to be used by agent-permissions backend
+  def getTaxServiceClientCount(arn: Arn): Action[AnyContent] =
     Action.async { implicit request =>
       withAuthorisedAgent(allowStandardUser = true) { _ =>
         withGroupIdFor(arn) { groupId =>
           es3CacheManager
             .getCachedClients(groupId)
             .map(_.map(client => EnrolmentKey.deconstruct(client.enrolmentKey)))
-            .map(tuples => tuples.groupBy(_._1))
-            .map(_.map(entry => entry._1 -> entry._2.length))
+            .map(tuples => tuples.groupBy(_._1)) // groups by service id
+            .map(_.map(entry => entry._1 -> entry._2.length)) // service id -> number of clients
             .map(m => Ok(Json.toJson(m)))
         }
       }
