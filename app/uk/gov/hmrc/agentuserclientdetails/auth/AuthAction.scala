@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.auth
 
-import play.api.mvc.Request
+import play.api.mvc.{Request, Result}
 import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
@@ -68,6 +68,13 @@ class AuthAction @Inject() (
               Future.successful(None)
           }
       } transformWith failureHandler
+  }
+
+  def simpleAuth(body: => Future[Result])(implicit request: Request[_], ec: ExecutionContext) = {
+    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+    authorised() {
+      body
+    }
   }
 
   private def getArnAndAgentUser(

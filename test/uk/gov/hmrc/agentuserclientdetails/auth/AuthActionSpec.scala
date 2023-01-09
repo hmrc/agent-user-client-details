@@ -17,13 +17,17 @@
 package uk.gov.hmrc.agentuserclientdetails.auth
 
 import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.Results.NoContent
 import play.api.test.FakeRequest
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.authorise.Predicate
+import uk.gov.hmrc.auth.core.retrieve.Retrieval
+import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 class AuthActionSpec extends BaseSpec with AuthorisationSupport {
 
@@ -94,6 +98,22 @@ class AuthActionSpec extends BaseSpec with AuthorisationSupport {
         mockAuthResponseWithException(new RuntimeException("boo boo"))
 
         authAction.getAuthorisedAgent().futureValue shouldBe None
+      }
+    }
+  }
+
+  "simpleAuth" should {
+    "execute code when authorised" in new TestScope {
+      mockSimpleAuthResponseWithoutException()
+
+      authAction.simpleAuth(Future.successful(NoContent)).futureValue shouldBe NoContent
+    }
+
+    "throw exception when authorisation fails" in new TestScope {
+      mockSimpleAuthResponseWithException(new RuntimeException("boo boo"))
+
+      intercept[RuntimeException] {
+        authAction.simpleAuth(Future.successful(NoContent)).futureValue
       }
     }
   }

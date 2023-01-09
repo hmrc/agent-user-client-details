@@ -145,6 +145,14 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .getUsersAssignedToEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(enrolmentKey, "delegated", *, *)
         .returning(Future successful userIds)
+
+    def mockEs3CacheManagerCacheRefreshForGroupIdWithoutException(
+      result: Option[Unit]
+    ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Option[Unit]]] =
+      (es3CacheManager
+        .cacheRefresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(*, *, *)
+        .returning(Future successful result)
   }
 
   "GET /arn/:arn/client-list" should {
@@ -591,6 +599,51 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         pageContent = clients.take(15),
         paginationMetaData = PaginationMetaData(false, true, 20, 2, 15, 1, 15)
       )
+    }
+  }
+
+  "GET /cache-refresh" should {
+    "return 204 No Content if a cache exists" in new TestScope {
+
+      mockSimpleAuthResponse()
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+
+      mockEs3CacheManagerCacheRefreshForGroupIdWithoutException(Some(()))
+
+      val request = FakeRequest("PUT", "")
+      val result = controller.cacheRefresh(testArn)(request)
+      result.futureValue.header.status shouldBe 204
+    }
+
+    "return 404 Not Found if a cache doesn't exist" in new TestScope {
+
+      mockSimpleAuthResponse()
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+
+      mockEs3CacheManagerCacheRefreshForGroupIdWithoutException(None)
+
+      val request = FakeRequest("PUT", "")
+      val result = controller.cacheRefresh(testArn)(request)
+      result.futureValue.header.status shouldBe 404
+    }
+
+    "return 500 when esp throws an error" in new TestScope {
+
+      mockSimpleAuthResponse()
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.failed(UpstreamErrorResponse("bad", 503)))
+
+      val request = FakeRequest("PUT", "")
+      val result = controller.cacheRefresh(testArn)(request)
+      result.futureValue.header.status shouldBe 500
     }
   }
 }

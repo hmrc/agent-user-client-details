@@ -17,10 +17,10 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.scalamock.scalatest.MockFactory
+import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, Retrieval, ~}
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -56,5 +56,11 @@ trait AuthorisationMockSupport extends MockFactory {
       .authorise(_: Predicate, _: Retrieval[GrantAccess])(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
       .returning(Future successful response)
+
+  def mockSimpleAuthResponse()(implicit authConnector: AuthConnector): Unit =
+    (authConnector
+      .authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))
+      .expects(*, *, *, *)
+      .returning(Future successful ())
 
 }
