@@ -109,7 +109,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
 
     `type` match {
       case "principal" | "delegated" | "all" =>
-        monitor(s"ConsumedAPI-ES-getUsersAssignedToEnrolment-$enrolmentKey-GET") {
+        monitor(s"ConsumedAPI-ES-getUsersAssignedToEnrolment-GET") {
           http
             .GET[HttpResponse](url.toString)
             .map { response =>
@@ -145,7 +145,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
 
-    monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-${enrolmentKeyPrefix.replace("~", "_")}-GET") {
+    monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-GET") {
       agentCacheProvider
         .es1Cache(arn.value) {
           http.GET[HttpResponse](url.toString)
@@ -153,12 +153,12 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
         .map { response =>
           response.status match {
             case Status.NO_CONTENT =>
-              logger.warn(s"UNKNOWN_ARN $arn")
+              logger.warn(s"Unable to get PrincipalGroupId for ${arn.value}")
               None
             case Status.OK =>
               val groupIds = (response.json \ "principalGroupIds").as[Seq[String]]
               if (groupIds.isEmpty) {
-                logger.warn(s"UNKNOWN_ARN $arn")
+                logger.warn(s"Unable to get PrincipalGroupId for ${arn.value}")
                 None
               } else {
                 if (groupIds.lengthCompare(1) > 0)
@@ -220,7 +220,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
         s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}"
       )
 
-    monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-$groupId-GET") {
+    monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-GET") {
       http.GET[HttpResponse](url.toString).map { response =>
         response.status match {
           case Status.OK =>
@@ -302,7 +302,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[GroupDelegatedEnrolments]] = {
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated")
-    monitor(s"ConsumedAPI-ES-getGroupDelegatedEnrolments-$groupId-GET") {
+    monitor(s"ConsumedAPI-ES-getGroupDelegatedEnrolments-GET") {
       http.GET[HttpResponse](url.toString).map { response =>
         response.status match {
           case Status.OK => Some(response.json.as[GroupDelegatedEnrolments])
