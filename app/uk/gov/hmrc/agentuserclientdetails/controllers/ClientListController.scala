@@ -153,6 +153,17 @@ class ClientListController @Inject() (
     }
   }
 
+  def cacheRefresh(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    authAction.simpleAuth {
+      withGroupIdFor(arn) { groupId =>
+        es3CacheManager.cacheRefresh(groupId).map {
+          case Some(_) => NoContent
+          case None    => NotFound
+        }
+      }
+    }
+  }
+
   protected def getClientsFn(
     arn: Arn,
     groupId: String,

@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import org.scalamock.handlers.{CallHandler1, CallHandler2, CallHandler3}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Client, Enrolment, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.config.AppConfigImpl
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.{Es3Cache, Es3CacheRepository}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -59,13 +58,37 @@ class Es3CacheManagerSpec extends BaseSpec {
     }
   }
 
+  "cacheRefresh" should {
+    "rebuild the cache if a cache exists" in new TestScope {
+
+      val existingCachedEnrolments =
+        Seq(Enrolment("HMRC-MTD-IT", "", "", Seq(Identifier("MTDITID", "X12345678909876"))))
+
+      val es3Response = Seq(Enrolment("HMRC-MTD-VAT", "", "", Seq(Identifier("VRN", "123456789"))))
+
+      mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, existingCachedEnrolments)))
+      mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(es3Response)
+      mockEs3CacheRepositorySave(es3Response)
+      mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, es3Response)))
+
+      es3CacheManager.cacheRefresh(groupId).futureValue shouldBe Some(())
+
+      es3CacheManager.getCachedClients(groupId).futureValue shouldBe List(Client("HMRC-MTD-VAT~VRN~123456789", ""))
+    }
+
+    "not rebuild the cache if one doesn't exist" in new TestScope {
+
+      mockEs3CacheRepositoryFetch(None)
+      es3CacheManager.cacheRefresh(groupId).futureValue shouldBe None
+    }
+  }
+
   trait TestScope {
     val mockServicesConfig: ServicesConfig = mock[ServicesConfig]
     val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
     val mockEs3CacheRepository: Es3CacheRepository = mock[Es3CacheRepository]
-    val appconfig = new AppConfigImpl(mockServicesConfig)
 
-    val es3CacheManager = new Es3CacheManagerImpl(mockEnrolmentStoreProxyConnector, mockEs3CacheRepository, appconfig)
+    val es3CacheManager = new Es3CacheManagerImpl(mockEnrolmentStoreProxyConnector, mockEs3CacheRepository)
 
     val groupId = "0R4C-G0G1-4M9Y-T7P0"
 

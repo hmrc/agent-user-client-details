@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Client
-import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.{Es3Cache, Es3CacheRepository}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -35,13 +34,16 @@ trait Es3CacheManager {
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]]
 
+  def cacheRefresh(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Unit]]
+
 }
 
 @Singleton
 class Es3CacheManagerImpl @Inject() (
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
-  es3CacheRepository: Es3CacheRepository,
-  appConfig: AppConfig
+  es3CacheRepository: Es3CacheRepository
 ) extends Es3CacheManager with Logging {
 
   override def getCachedClients(
@@ -66,8 +68,14 @@ class Es3CacheManagerImpl @Inject() (
       case Some(es3Cache) =>
         enrolmentsToClients(es3Cache)
     }
-
   }
+
+  override def cacheRefresh(
+    groupId: String
+  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Unit]] =
+    es3CacheRepository
+      .fetch(groupId)
+      .map(_.map(_ => fetchEs3ClientsAndPersist(groupId)))
 
   private def fetchEs3ClientsAndPersist(groupId: String)(implicit
     hc: HeaderCarrier,

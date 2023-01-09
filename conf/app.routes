@@ -23,3 +23,5 @@ POST       /arn/:arn/friendly-name                   uk.gov.hmrc.agentuserclient
 PUT        /arn/:arn/update-friendly-name            uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController.updateOneFriendlyName(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 POST       /user-enrolment-assignments               uk.gov.hmrc.agentuserclientdetails.controllers.AssignmentController.assignEnrolments
+
+GET        /arn/:arn/cache-refresh                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientListController.cacheRefresh(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
