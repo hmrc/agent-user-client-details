@@ -45,6 +45,7 @@ trait AppConfig {
 
   val enableThrottling: Boolean
   val clientNameFetchThrottlingRate: String
+  val es0ThrottlingRate: String
   val es19ThrottlingRate: String
   val assignmentsThrottlingRate: String
 
@@ -87,8 +88,6 @@ trait AppConfig {
   val userGroupsSearchUrl: String
 
   val es3MaxRecordsFetchCount: Int
-
-  val es0MaxRequestsPerSecond: Int
 }
 
 @Singleton
@@ -116,6 +115,7 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
 
   lazy val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
   lazy val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
+  lazy val es0ThrottlingRate: String = servicesConfig.getString("throttling-rate.es0")
   lazy val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
   lazy val assignmentsThrottlingRate: String = servicesConfig.getString("throttling-rate.assignments")
 
@@ -176,6 +176,4 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
 
   lazy val userGroupsSearchUrl: String = servicesConfig.baseUrl("users-groups-search")
   override lazy val es3MaxRecordsFetchCount: Int = servicesConfig.getInt("es3.max-records-fetch-count")
-
-  override lazy val es0MaxRequestsPerSecond: Int = servicesConfig.getInt("es0.max-requests-per-second")
 }

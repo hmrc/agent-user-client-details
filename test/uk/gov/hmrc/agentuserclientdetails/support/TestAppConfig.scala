@@ -32,6 +32,7 @@ class TestAppConfig extends AppConfig {
   val ifAuthTokenAPI1495: String = ""
   val enableThrottling: Boolean = false
   val clientNameFetchThrottlingRate: String = "1 / second"
+  override val es0ThrottlingRate: String = "20 / second"
   val es19ThrottlingRate: String = "20 / second"
   val assignmentsThrottlingRate: String = "20 / second"
   val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int = 0
@@ -61,5 +62,4 @@ class TestAppConfig extends AppConfig {
   val serviceJobIntervalSeconds: Int = 60
   val serviceJobInitialDelaySeconds: Int = 60
   override val es3MaxRecordsFetchCount: Int = 1000
-  override val es0MaxRequestsPerSecond: Int = 1000
 }

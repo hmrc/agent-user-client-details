@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import akka.actor.ActorSystem
-import akka.stream.Materializer
 import org.scalamock.handlers.{CallHandler3, CallHandler4}
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.{Seconds, Span}
@@ -25,6 +24,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
+import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,7 +33,7 @@ class AssignedUsersServiceSpec extends BaseSpec {
 
   implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
-  implicit val materializer: Materializer = Materializer(ActorSystem("AssignedUsersServiceSpec"))
+  implicit val actorSystem: ActorSystem = ActorSystem("AssignedUsersServiceSpec")
 
   "Calculate assigned users" should {
 
@@ -70,9 +70,16 @@ class AssignedUsersServiceSpec extends BaseSpec {
 
       val mockEs3CacheManager: Es3CacheManager = mock[Es3CacheManager]
       val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
+      val mockServiceInstances: ServiceInstances =
+        null // very hard to mock this class due to exceptions when the constructor gets called
 
       val assignedUsersService: AssignedUsersService =
-        new AssignedUsersServiceImpl(mockEs3CacheManager, mockEnrolmentStoreProxyConnector, new TestAppConfig())
+        new AssignedUsersServiceImpl(
+          mockEs3CacheManager,
+          mockEnrolmentStoreProxyConnector,
+          mockServiceInstances,
+          new TestAppConfig()
+        )
 
       def mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(
         enrolment: String,
