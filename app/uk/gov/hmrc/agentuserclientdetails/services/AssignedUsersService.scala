@@ -16,14 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import akka.actor.ActorSystem
 import com.google.inject.ImplementedBy
-import org.joda.time.DateTime
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.{AssignedClient, Client}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances, ThrottledWorkItemProcessor}
+import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
@@ -43,21 +41,18 @@ class AssignedUsersServiceImpl @Inject() (
   espConnector: EnrolmentStoreProxyConnector,
   serviceInstances: ServiceInstances,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext, actorSystem: ActorSystem)
+)(implicit ec: ExecutionContext)
     extends AssignedUsersService with Logging {
 
   logger.info(s"ES0 requests set to throttle at ${appConfig.es0ThrottlingRate}")
 
-  lazy val es0Throttler: ThrottledWorkItemProcessor =
-    new ThrottledWorkItemProcessor(
-      "es0-fetch-assigned-users",
-      actorSystem,
-      rateLimit = Some(Rate.parse(appConfig.es0ThrottlingRate))
-    ) {
-      def instanceCount: Int = Option(serviceInstances).fold(1)(
-        _.instanceCount
-      ) // must handle serviceInstances == null case (can happen in testing)
-    }
+  private val maxCountPerSecond = {
+    val instanceCount = Option(serviceInstances).fold(1)(
+      _.instanceCount
+    ) // must handle serviceInstances == null case (can happen in testing)
+
+    1000 / (instanceCount * Rate.parse(appConfig.es0ThrottlingRate).intervalMillis)
+  }
 
   override def calculateClientsWithAssignedUsers(
     groupId: String
@@ -70,11 +65,12 @@ class AssignedUsersServiceImpl @Inject() (
   private def accumulateAssignedClients(
     clients: Seq[Client]
   )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] = {
-    val clientBatches = clients.grouped(20)
+    val clientBatches = clients.grouped(maxCountPerSecond.toInt)
 
     clientBatches.foldLeft(Future successful Seq.empty[AssignedClient]) { (previousFuture, clientBatch) =>
       for {
         accumulated     <- previousFuture
+        _               <- Future successful Thread.sleep(1000)
         assignedClients <- fetchAssignedUsersOfClientBatch(clientBatch)
       } yield accumulated ++ assignedClients
     }
@@ -84,13 +80,7 @@ class AssignedUsersServiceImpl @Inject() (
     clients: Seq[Client]
   )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] =
     Future
-      .traverse(clients) { client =>
-        if (appConfig.enableThrottling) {
-          es0Throttler.throttledStartingFrom(DateTime.now())(
-            fetchAssignedUsersOfClient(client)
-          )
-        } else fetchAssignedUsersOfClient(client)
-      }
+      .traverse(clients)(fetchAssignedUsersOfClient)
       .map(_.flatten)
 
   private def fetchAssignedUsersOfClient(client: Client)(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] =
