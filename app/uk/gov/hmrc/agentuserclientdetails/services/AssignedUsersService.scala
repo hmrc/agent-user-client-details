@@ -21,7 +21,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.{AssignedClient, Client}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.clusterworkthrottling.{Rate, ServiceInstances}
+import uk.gov.hmrc.clusterworkthrottling.Rate
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.{Inject, Singleton}
@@ -39,20 +39,13 @@ trait AssignedUsersService {
 class AssignedUsersServiceImpl @Inject() (
   es3CacheManager: Es3CacheManager,
   espConnector: EnrolmentStoreProxyConnector,
-  serviceInstances: ServiceInstances,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
     extends AssignedUsersService with Logging {
 
-  logger.info(s"ES0 requests set to throttle at ${appConfig.es0ThrottlingRate}")
+  private val maxCountPerSecond = (1000 / Rate.parse(appConfig.es0ThrottlingRate).intervalMillis).toInt
 
-  private val maxCountPerSecond = {
-    val instanceCount = Option(serviceInstances).fold(1)(
-      _.instanceCount
-    ) // must handle serviceInstances == null case (can happen in testing)
-
-    1000 / (instanceCount * Rate.parse(appConfig.es0ThrottlingRate).intervalMillis)
-  }
+  logger.info(s"ES0 requests set to throttle at $maxCountPerSecond per second")
 
   override def calculateClientsWithAssignedUsers(
     groupId: String
@@ -65,7 +58,7 @@ class AssignedUsersServiceImpl @Inject() (
   private def accumulateAssignedClients(
     clients: Seq[Client]
   )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] = {
-    val clientBatches = clients.grouped(maxCountPerSecond.toInt)
+    val clientBatches = clients.grouped(maxCountPerSecond)
 
     clientBatches.foldLeft(Future successful Seq.empty[AssignedClient]) { (previousFuture, clientBatch) =>
       for {
