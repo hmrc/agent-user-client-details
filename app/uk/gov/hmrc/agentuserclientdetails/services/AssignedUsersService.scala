@@ -63,7 +63,6 @@ class AssignedUsersServiceImpl @Inject() (
     clientBatches.foldLeft(Future successful Seq.empty[AssignedClient]) { (previousFuture, clientBatch) =>
       for {
         accumulated     <- previousFuture
-        _               <- Future successful Thread.sleep(1000)
         assignedClients <- fetchAssignedUsersOfClientBatch(clientBatch)
       } yield accumulated ++ assignedClients
     }
