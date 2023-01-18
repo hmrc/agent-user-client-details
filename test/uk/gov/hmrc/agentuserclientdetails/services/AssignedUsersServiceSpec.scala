@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
-import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -70,14 +69,11 @@ class AssignedUsersServiceSpec extends BaseSpec {
 
       val mockEs3CacheManager: Es3CacheManager = mock[Es3CacheManager]
       val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
-      val mockServiceInstances: ServiceInstances =
-        null // very hard to mock this class due to exceptions when the constructor gets called
 
       val assignedUsersService: AssignedUsersService =
         new AssignedUsersServiceImpl(
           mockEs3CacheManager,
           mockEnrolmentStoreProxyConnector,
-          mockServiceInstances,
           new TestAppConfig()
         )
 
