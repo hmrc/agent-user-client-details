@@ -10,7 +10,7 @@ lazy val microservice = Project(appName, file("."))
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
   .settings(
     PlayKeys.playDefaultPort         := 9449,
-    PlayKeys.devSettings             += "play.server.http.idleTimeout" -> "18000 seconds",
+    PlayKeys.devSettings             += "play.server.http.idleTimeout" -> "3600 seconds",
     routesImport                     ++= Seq("uk.gov.hmrc.agentuserclientdetails.binders.Binders._"),
     majorVersion                     := 0,
     scalaVersion                     := "2.12.15",
@@ -26,7 +26,6 @@ lazy val microservice = Project(appName, file("."))
     )
     // ***************
   )
-  .settings(publishingSettings: _*)
   .configs(IntegrationTest)
   .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
