@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.util
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.{Seconds, Span}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
@@ -40,7 +41,9 @@ class ThrottlerSpec extends BaseSpec {
       val startedAt = Instant.now()
 
       whenReady(
-        Throttler.process(itemsToThrottle = inputInts, maxItemsPerSecond = 50)((n: Int) => Future successful Seq(n)),
+        Throttler
+          .process(itemsToThrottle = inputInts, maxItemsPerSecond = 50)((n: Int) => Future successful Seq(n))
+          .runWith(Sink.seq),
         Timeout(Span(5, Seconds))
       ) { _ =>
         val endedAt = Instant.now()

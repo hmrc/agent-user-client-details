@@ -16,17 +16,18 @@
 
 package uk.gov.hmrc.agentuserclientdetails.util
 
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import akka.stream.{Materializer, ThrottleMode}
+import akka.NotUsed
+import akka.stream.ThrottleMode
+import akka.stream.scaladsl.{Flow, Source}
 
+import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
 
 object Throttler {
 
   def process[A, B](itemsToThrottle: Seq[A], maxItemsPerSecond: Int)(
     operation: A => Future[Seq[B]]
-  )(implicit ec: ExecutionContext, materializer: Materializer): Future[Seq[B]] = {
+  ): Source[Seq[B], NotUsed] = {
 
     val throttledFLow = Flow[A].throttle(
       elements = maxItemsPerSecond,
@@ -38,11 +39,8 @@ object Throttler {
     Source
       .fromIterator(() => itemsToThrottle.iterator)
       .via(throttledFLow)
-      .runWith(
-        Sink.foldAsync(Seq.empty[B]) { (accumulatedOutputItems, inputItem) =>
-          operation(inputItem).map(_ ++ accumulatedOutputItems)
-        }
-      )
+      .map(operation)
+      .mapAsync(parallelism = 1)(eventualSeq => eventualSeq)
   }
 
 }
