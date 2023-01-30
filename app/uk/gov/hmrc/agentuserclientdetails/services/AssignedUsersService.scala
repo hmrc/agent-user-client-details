@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import akka.stream.Materializer
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.{AssignedClient, Client}
@@ -34,7 +35,7 @@ trait AssignedUsersService {
 
   def calculateClientsWithAssignedUsers(groupId: String)(implicit
     hc: HeaderCarrier
-  ): Future[Seq[AssignedClient]]
+  ): Future[Source[Seq[AssignedClient], NotUsed]]
 }
 
 @Singleton
@@ -42,7 +43,7 @@ class AssignedUsersServiceImpl @Inject() (
   es3CacheManager: Es3CacheManager,
   espConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext, materializer: Materializer)
+)(implicit ec: ExecutionContext)
     extends AssignedUsersService with Logging {
 
   private lazy val maxCountPerSecond: Int = (1000 / Rate.parse(appConfig.es0ThrottlingRate).intervalMillis).toInt
@@ -51,11 +52,10 @@ class AssignedUsersServiceImpl @Inject() (
 
   override def calculateClientsWithAssignedUsers(
     groupId: String
-  )(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] =
-    for {
-      allClients      <- es3CacheManager.getCachedClients(groupId)
-      assignedClients <- Throttler.process(allClients, maxCountPerSecond)(fetchAssignedUsersOfClient)
-    } yield assignedClients
+  )(implicit hc: HeaderCarrier): Future[Source[Seq[AssignedClient], NotUsed]] =
+    es3CacheManager.getCachedClients(groupId).map { clients =>
+      Throttler.process(clients, maxCountPerSecond)(fetchAssignedUsersOfClient)
+    }
 
   private def fetchAssignedUsersOfClient(client: Client)(implicit hc: HeaderCarrier): Future[Seq[AssignedClient]] =
     espConnector.getUsersAssignedToEnrolment(client.enrolmentKey, "delegated") map { usersIdsAssignedToClient =>

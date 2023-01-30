@@ -24,9 +24,10 @@ import org.scalamock.handlers.{CallHandler3, CallHandler4}
 import play.api.Configuration
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
+import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{contentAsJson, contentAsString, defaultAwaitTimeout}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
@@ -348,84 +349,50 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
     }
   }
 
-  "GET /arn/:arn/clients-assigned-users" when {
+  "GET /arn/:arn/clients-assigned-users" should {
 
-    "ES3 Cache returns empty" should {
-      "return 404" in new TestScope {
-        mockAuthResponseWithoutException(buildAuthorisedResponse)
-        (esp
-          .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-          .expects(testArn, *, *)
-          .returning(Future.successful(Some(testGroupId)))
+    def assembleAssignedClientsFromResponse(buffer: String): Seq[AssignedClient] =
+      buffer
+        .split("\\[")
+        .filter(_.nonEmpty)
+        .map(part => Json.parse("[" + part).as[Seq[AssignedClient]])
+        .toSeq
+        .flatten
 
-        mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(Seq.empty)
+    "correctly return users assigned to clients" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
 
-        val request = FakeRequest("GET", "")
-        val result = controller.getClientsWithAssignedUsers(testArn)(request)
-        result.futureValue.header.status shouldBe 404
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+
+      (ugs
+        .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testGroupId, *, *)
+        .returning(
+          Future successful Seq(
+            UserDetails(userId = Option("userid1")),
+            UserDetails(userId = Option("userid2")),
+            UserDetails(userId = Option("userid3"))
+          )
+        )
+
+      mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
+
+      clientsWithFriendlyNames.foreach { client =>
+        mockEspGetUsersAssignedToEnrolment(client.enrolmentKey, Seq("userid2"))
       }
+
+      val request = FakeRequest("GET", "")
+      val result = controller.getClientsWithAssignedUsers(testArn)(request)
+
+      result.futureValue.header.status shouldBe 200
+      result.futureValue.body.contentType shouldBe Some("application/json")
+      assembleAssignedClientsFromResponse(contentAsString(result)) shouldBe clientsWithFriendlyNames
+        .map(client => AssignedClient(client.enrolmentKey, None, "userid2"))
     }
 
-    "ES3 Cache returns some clients" when {
-
-      "UGS does not return any matching user details" should {
-        "return 200 with empty list of clients" in new TestScope {
-          mockAuthResponseWithoutException(buildAuthorisedResponse)
-          (esp
-            .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(testArn, *, *)
-            .returning(Future.successful(Some(testGroupId)))
-
-          mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-
-          clientsWithFriendlyNames.foreach { client =>
-            mockEspGetUsersAssignedToEnrolment(client.enrolmentKey, Seq("userid"))
-          }
-
-          (ugs
-            .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(testGroupId, *, *)
-            .returning(Future successful Seq.empty)
-
-          val request = FakeRequest("GET", "")
-          val result = controller.getClientsWithAssignedUsers(testArn)(request)
-          result.futureValue.header.status shouldBe 200
-          contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe GroupDelegatedEnrolments(Seq.empty)
-        }
-      }
-
-      "UGS returns matching user details" should {
-        "return 200 with non-empty list of clients" in new TestScope {
-          mockAuthResponseWithoutException(buildAuthorisedResponse)
-          (esp
-            .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(testArn, *, *)
-            .returning(Future.successful(Some(testGroupId)))
-
-          val groupDelegatedEnrolments =
-            GroupDelegatedEnrolments(
-              Seq(AssignedClient("HMRC-MTD-VAT~VRN~101747641", None, "me"))
-            )
-
-          val clients: Seq[Client] = Seq(Client("HMRC-MTD-VAT~VRN~101747641", "me"))
-          mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(clients)
-
-          clients.foreach { client =>
-            mockEspGetUsersAssignedToEnrolment(client.enrolmentKey, Seq("me"))
-          }
-
-          (ugs
-            .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
-            .expects(testGroupId, *, *)
-            .returning(Future successful Seq(UserDetails(userId = Some("me"))))
-
-          val request = FakeRequest("GET", "")
-          val result = controller.getClientsWithAssignedUsers(testArn)(request)
-          result.futureValue.header.status shouldBe 200
-          contentAsJson(result).as[GroupDelegatedEnrolments] shouldBe groupDelegatedEnrolments
-        }
-      }
-    }
   }
 
   "POST /groupid/:groupid/refresh-names" should {

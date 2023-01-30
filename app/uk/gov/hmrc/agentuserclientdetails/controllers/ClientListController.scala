@@ -130,16 +130,12 @@ class ClientListController @Inject() (
   def getClientsWithAssignedUsers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
-        assignedUsersService.calculateClientsWithAssignedUsers(groupId) flatMap {
-          case Nil =>
-            Future successful NotFound
-          case assignedClients =>
-            for {
-              userIdsFromUgs <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
-              assignedClientsWithUgsFilteredUsers =
-                assignedClients.filter(client => userIdsFromUgs.contains(client.assignedTo))
-            } yield Ok(Json.toJson(GroupDelegatedEnrolments(assignedClientsWithUgsFilteredUsers)))
-        }
+        for {
+          userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
+          assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupId)
+          assignedClientsWithUgsFilteredUsers <-
+            Future successful assignedClients.map(_.filter(client => userIdsFromUgs.contains(client.assignedTo)))
+        } yield Ok.chunked(assignedClientsWithUgsFilteredUsers.map(Json.toJson(_)))
 
       }
     }

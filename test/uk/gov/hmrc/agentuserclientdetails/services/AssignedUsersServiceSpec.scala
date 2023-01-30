@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import akka.actor.ActorSystem
+import akka.stream.testkit.scaladsl.TestSink
 import org.scalamock.handlers.{CallHandler3, CallHandler4}
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.{Seconds, Span}
@@ -51,12 +52,14 @@ class AssignedUsersServiceSpec extends BaseSpec {
       mockEnrolmentStoreProxyConnectorGetUsersAssignedToEnrolment(cgtEnrolment, Seq("abcA01"))
 
       whenReady(assignedUsersService.calculateClientsWithAssignedUsers(groupId), Timeout(Span(10, Seconds))) {
-        _ should contain theSameElementsAs List(
-          AssignedClient(vatEnrolment, None, "abcA01"),
-          AssignedClient(vatEnrolment, None, "abcA02"),
-          AssignedClient(pptenrolment, None, "abcA03"),
-          AssignedClient(cgtEnrolment, None, "abcA01")
-        )
+        _.runWith(TestSink[Seq[AssignedClient]])
+          .request(3)
+          .expectNext(
+            List(AssignedClient(vatEnrolment, None, "abcA01"), AssignedClient(vatEnrolment, None, "abcA02")),
+            List(AssignedClient(pptenrolment, None, "abcA03")),
+            List(AssignedClient(cgtEnrolment, None, "abcA01"))
+          )
+          .expectComplete()
       }
     }
 
