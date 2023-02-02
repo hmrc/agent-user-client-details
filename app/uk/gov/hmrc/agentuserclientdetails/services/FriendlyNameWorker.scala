@@ -50,17 +50,6 @@ class FriendlyNameWorker @Inject() (
 )(implicit ec: ExecutionContext)
     extends Logging {
 
-  lazy val clientNameThrottler: ThrottledWorkItemProcessor =
-    new ThrottledWorkItemProcessor(
-      "client-name-fetching",
-      actorSystem,
-      rateLimit = Some(Rate.parse(appConfig.clientNameFetchThrottlingRate))
-    ) {
-      def instanceCount: Int = Option(serviceInstances).fold(1)(
-        _.instanceCount
-      ) // must handle serviceInstances == null case (can happen in testing)
-    }
-
   lazy val es19Throttler: ThrottledWorkItemProcessor =
     new ThrottledWorkItemProcessor(
       "es19-update-friendly-name",
@@ -128,25 +117,33 @@ class FriendlyNameWorker @Inject() (
         throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.client.friendlyName).transformWith {
           case Success(_) =>
             logger.info(s"Previously fetched friendly name for $enrolmentKey updated via ES19 successfully.")
-            workItemService.complete(workItem.id, Succeeded).map(_ => ())
+            workItemService
+              .complete(workItem.id, Succeeded, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+              .map(_ => ())
           case Failure(_) =>
             logger.info(
               s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19. This will be retried."
             )
-            workItemService.complete(workItem.id, Failed).map(_ => ())
+            workItemService
+              .complete(workItem.id, Failed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+              .map(_ => ())
         }
       case wi if wi.item.client.friendlyName.isEmpty =>
         // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
-        throttledFetchFriendlyName(enrolmentKey).transformWith {
+        fetchFriendlyName(enrolmentKey).transformWith {
           case Success(None) =>
             // A successful call returning None means the lookup succeeded but there is no name available.
             // There is no point in retrying; we set the status as permanently failed.
             logger.info(s"No friendly name is available for $enrolmentKey: marking enrolment as permanently failed.")
-            workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
+            workItemService
+              .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+              .map(_ => ())
           case Success(Some(friendlyName)) =>
             throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
               case Success(_) =>
-                workItemService.complete(workItem.id, Succeeded).map(_ => ())
+                workItemService
+                  .complete(workItem.id, Succeeded, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+                  .map(_ => ())
               case Failure(_) =>
                 for {
                   // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
@@ -156,7 +153,9 @@ class FriendlyNameWorker @Inject() (
                          ToDo
                        )
                   // mark the old work item as duplicate
-                  _ <- workItemService.complete(workItem.id, Duplicate)
+                  _ <-
+                    workItemService
+                      .complete(workItem.id, Duplicate, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
                   _ = logger.info(
                         s"Friendly name for $enrolmentKey retrieved but could not be updated via ES19: scheduling retry"
                       )
@@ -167,18 +166,24 @@ class FriendlyNameWorker @Inject() (
               logger.info(
                 s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. Giving up."
               )
-              workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
+              workItemService
+                .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+                .map(_ => ())
             } else {
               logger.info(
                 s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. This will be retried."
               )
-              workItemService.complete(workItem.id, Failed).map(_ => ())
+              workItemService
+                .complete(workItem.id, Failed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+                .map(_ => ())
             }
           case Failure(e) => // non-retryable failure
             logger.info(
               s"Fetch of friendly name permanently failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}."
             )
-            workItemService.complete(workItem.id, PermanentlyFailed).map(_ => ())
+            workItemService
+              .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+              .map(_ => ())
         }
     }
   }
@@ -192,15 +197,11 @@ class FriendlyNameWorker @Inject() (
     case e                          => e.getMessage
   }
 
-  private[services] def throttledFetchFriendlyName(
+  private[services] def fetchFriendlyName(
     enrolmentKey: String
   )(implicit hc: HeaderCarrier): Future[Option[String]] = {
-    def f(): Future[Option[String]] = {
-      val (service, clientId) = EnrolmentKey.deconstruct(enrolmentKey)
-      clientNameService.getClientNameByService(clientId, service)
-    }
-    if (appConfig.enableThrottling) clientNameThrottler.throttledStartingFrom(DateTime.now())(f())
-    else f()
+    val (service, clientId) = EnrolmentKey.deconstruct(enrolmentKey)
+    clientNameService.getClientNameByService(clientId, service)
   }
 
   private[services] def throttledUpdateFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(

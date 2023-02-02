@@ -105,8 +105,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     "retrieve the friendly name and store it via ES19 and mark the item as succeeded when everything is successful" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
@@ -124,16 +124,16 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, argThat((_: String).nonEmpty), *, *)
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, Succeeded, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, Succeeded, *, *)
         .once()
     }
 
     "mark the work item as permanently failed if the call to DES/IF is successful but no name is available" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
@@ -151,16 +151,16 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, *, *, *)
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, PermanentlyFailed, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, PermanentlyFailed, *, *)
         .once()
     }
 
     "mark the work item as permanently failed if the call to DES/IF fails with a non-retryable failure" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
@@ -178,16 +178,16 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, *, *, *)
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, PermanentlyFailed, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, PermanentlyFailed, *, *)
         .once()
     }
 
     "mark the work item as failed if the call to DES/IF fails with a retryable failure" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
@@ -205,16 +205,16 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, *, *, *)
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, Failed, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, Failed, *, *)
         .once()
     }
 
     "mark the work item as failed (retryable) if the call to DES/IF fails with an unknown exception (that is not an upstream HTTP error status)" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
@@ -232,16 +232,16 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, *, *, *)
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, Failed, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, Failed, *, *)
         .once()
     }
 
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
@@ -260,16 +260,16 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, *, *, *)
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, PermanentlyFailed, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, PermanentlyFailed, *, *)
         .once()
     }
 
     "when the ES19 storage call fails mark the old item as duplicate and create a new item with the friendly name already populated" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       (stubWis
         .pushNew(_: Seq[FriendlyNameWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
@@ -287,8 +287,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
       fnWorker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, Duplicate, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, Duplicate, *, *)
         .once()
       (stubWis
         .pushNew(_: Seq[FriendlyNameWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
@@ -299,8 +299,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     "when encountering a work item with an already populated friendly name, should store it via ES19 without querying the name again" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .when(*, *, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
@@ -322,8 +322,8 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(testGroupId, *, "Friendly+Name+%26+Cousin%27s+company", *, *)
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
-        .verify(workItem.id, Succeeded, *)
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, Succeeded, *, *)
         .once()
     }
   }

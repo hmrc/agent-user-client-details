@@ -20,6 +20,8 @@ import com.google.inject.ImplementedBy
 import org.mongodb.scala.bson.{BsonValue, ObjectId}
 import org.mongodb.scala.model.{Accumulators, Aggregates, Filters}
 import org.mongodb.scala.result.DeleteResult
+import play.api.Logging
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
@@ -51,8 +53,8 @@ trait FriendlyNameWorkItemService {
     ec: ExecutionContext
   ): Future[Unit]
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus)(implicit
-    ec: ExecutionContext
+  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus, context: Map[String, String] = Map.empty)(
+    implicit ec: ExecutionContext
   ): Future[Boolean]
 
   def removeAll()(implicit ec: ExecutionContext): Future[DeleteResult]
@@ -65,7 +67,7 @@ trait FriendlyNameWorkItemService {
 }
 
 class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkItemRepository, appConfig: AppConfig)
-    extends FriendlyNameWorkItemService {
+    extends FriendlyNameWorkItemService with Logging {
 
   /** Query by groupId and optionally by status (leave status as None to include all statuses)
     */
@@ -114,10 +116,15 @@ class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkI
       workItemRepo.pushNewBatch(items, receivedAt, _ => initialState).map(_ => ())
     else Future.successful(())
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus)(implicit
-    ec: ExecutionContext
+  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus, context: Map[String, String] = Map.empty)(
+    implicit ec: ExecutionContext
   ): Future[Boolean] =
-    workItemRepo.complete(id, newStatus)
+    workItemRepo.complete(id, newStatus).map { wasThisSuccessful =>
+      if (!wasThisSuccessful) {
+        logger.warn(s"Could not set in WIR ${newStatus.name} for ${Json.toJson(context)}")
+      }
+      wasThisSuccessful
+    }
 
   def removeAll()(implicit ec: ExecutionContext): Future[DeleteResult] =
     workItemRepo.collection.deleteMany(Filters.empty()).toFuture()
