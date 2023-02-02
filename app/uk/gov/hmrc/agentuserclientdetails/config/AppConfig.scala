@@ -44,7 +44,6 @@ trait AppConfig {
   val ifAuthTokenAPI1495: String
 
   val enableThrottling: Boolean
-  val clientNameFetchThrottlingRate: String
   val es0ThrottlingRate: String
   val es19ThrottlingRate: String
   val assignmentsThrottlingRate: String
@@ -114,7 +113,6 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
   lazy val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
 
   lazy val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
-  lazy val clientNameFetchThrottlingRate: String = servicesConfig.getString("throttling-rate.client-name-fetch")
   lazy val es0ThrottlingRate: String = servicesConfig.getString("throttling-rate.es0")
   lazy val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
   lazy val assignmentsThrottlingRate: String = servicesConfig.getString("throttling-rate.assignments")
