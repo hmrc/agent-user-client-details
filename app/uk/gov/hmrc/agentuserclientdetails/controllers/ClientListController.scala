@@ -318,7 +318,10 @@ class ClientListController @Inject() (
                                    email = agencyEmail,
                                    emailLanguagePreference =
                                      if (List("cy", "en").contains(lang)) Some(lang)
-                                     else Some("en")
+                                     else Some("en"),
+                                   sessionId =
+                                     if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
+                                     else None // only required for local testing against stubs
                                  )
                                )
                                .map(Some(_))

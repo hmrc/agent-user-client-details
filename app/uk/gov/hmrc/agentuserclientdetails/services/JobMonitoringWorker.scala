@@ -22,7 +22,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameJobData, FriendlyNameWorkItem, JobData}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
@@ -34,6 +34,7 @@ class JobMonitoringWorker @Inject() (
   jobMonitoringService: JobMonitoringService,
   friendlyNameWorkItemService: FriendlyNameWorkItemService,
   emailConnector: EmailConnector,
+  es3CacheManager: Es3CacheManager,
   mat: Materializer
 )(implicit ec: ExecutionContext)
     extends Logging {
@@ -85,8 +86,12 @@ class JobMonitoringWorker @Inject() (
             jobMonitoringService.markAsNotFinished(workItem.id).map(_ => ())
           case true =>
             logger.info(s"Job monitor: Job ${workItem.id} has finished.")
+
+            implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = job.sessionId.map(SessionId))
+
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)
+              _ <- es3CacheManager.cacheRefresh(job.groupId)
               _ <- if (job.sendEmailOnCompletion) {
                      failuresFor(job).flatMap { failures =>
                        val emailTemplateName =
