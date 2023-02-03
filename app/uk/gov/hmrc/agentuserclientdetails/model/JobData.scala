@@ -44,7 +44,8 @@ case class FriendlyNameJobData(
   email: Option[String],
   emailLanguagePreference: Option[String], // "en" or "cy"
   jobType: String =
-    FriendlyNameJobData.jobType // do not change this. Must include it explicitly or the mongo codec will not generate correctly.
+    FriendlyNameJobData.jobType, // do not change this. Must include it explicitly or the mongo codec will not generate correctly.
+  sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
 ) extends JobData
 
 object FriendlyNameJobData {
