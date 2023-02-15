@@ -544,7 +544,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
 
   "GET paginated clients on /arn/:arn/clients" should {
 
-    "respond with 200 status if epsConnector returns data" in new TestScope {
+    "returns 200 Ok with tax reference search matching all" in new TestScope {
       // given
       val clients = (1 to 20).map(i => Client("HMRC-MTD-VAT~VRN~101747642", s"Ross Barker $i"))
 
@@ -560,13 +560,72 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       val request = FakeRequest("GET", "")
 
       // when
-      val result = controller.getPaginatedClients(testArn, 1, 15)(request)
+      val result = controller.getPaginatedClients(testArn, 1, 15, search = Option("10174"))(request)
 
       // then
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[PaginatedList[Client]] shouldBe PaginatedList(
         pageContent = clients.take(15),
         paginationMetaData = PaginationMetaData(false, true, 20, 2, 15, 1, 15)
+      )
+    }
+
+    "return 200 Ok when only a few match by enrolment key tax reference" in new TestScope {
+      // given
+      val clients = (1 to 20).map(i => Client(s"HMRC-MTD-VAT~VRN~${i}174764", s"Ross Barker $i"))
+
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (es3CacheManager
+        .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testGroupId, *, *)
+        .returning(Future.successful(clients))
+      val request = FakeRequest("GET", "")
+
+      private val searchTerm = "1174" // <- should match clients 1 and 11
+      // when
+      val result = controller.getPaginatedClients(testArn, 1, 15, search = Option(searchTerm))(request)
+
+      // then
+      result.futureValue.header.status shouldBe 200
+      contentAsJson(result).as[PaginatedList[Client]] shouldBe PaginatedList(
+        pageContent = Seq(clients(0), clients(10)),
+        paginationMetaData = PaginationMetaData(true, true, 2, 1, 15, 1, 2)
+      )
+    }
+
+    "return 200 Ok when only a few match the name" in new TestScope {
+      // given
+      val clients = Seq(
+        Client(s"HMRC-MTD-VAT~VRN~456", "Steve smith"),
+        Client(s"HMRC-MTD-VAT~VRN~123", "bob builder"),
+        Client(s"HMRC-MTD-VAT~VRN~789", "bob smith"),
+        Client(s"HMRC-MTD-VAT~VRN~1020", "John builder")
+      )
+
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
+      (es3CacheManager
+        .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testGroupId, *, *)
+        .returning(Future.successful(clients))
+      val request = FakeRequest("GET", "")
+
+      private val searchTerm = "bob" // <- should match clients 1 and 11
+      // when
+      val result = controller.getPaginatedClients(testArn, 1, 15, search = Option(searchTerm))(request)
+
+      // then
+      result.futureValue.header.status shouldBe 200
+      contentAsJson(result).as[PaginatedList[Client]] shouldBe PaginatedList(
+        pageContent = Seq(clients(1), clients(2)),
+        paginationMetaData = PaginationMetaData(true, true, 2, 1, 15, 1, 2)
       )
     }
   }

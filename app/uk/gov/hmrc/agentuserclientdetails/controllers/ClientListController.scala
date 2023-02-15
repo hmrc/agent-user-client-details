@@ -87,7 +87,11 @@ class ClientListController @Inject() (
           .getCachedClients(groupId)
           .map { clients =>
             val clientsMatchingSearch = search.fold(clients) { searchTerm =>
-              clients.filter(c => c.friendlyName.toLowerCase.contains(searchTerm.toLowerCase))
+              clients.filter { c =>
+                val lowerSearchTerm = searchTerm.toLowerCase
+                c.friendlyName.toLowerCase.contains(lowerSearchTerm) ||
+                c.enrolmentKey.split("~")(2).toLowerCase.contains(lowerSearchTerm)
+              }
             }
             val taxServiceFilteredClients = filter.fold(clientsMatchingSearch) { term =>
               if (term == "TRUST") clientsMatchingSearch.filter(_.enrolmentKey.contains("HMRC-TERS"))
