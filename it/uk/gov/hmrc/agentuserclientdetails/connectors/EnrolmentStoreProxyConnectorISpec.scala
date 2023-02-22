@@ -260,6 +260,29 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
 
       esp.getGroupDelegatedEnrolments(groupId).futureValue shouldBe Some(GroupDelegatedEnrolments(Seq.empty))
     }
+
+    "(ES2) collate paginated results correctly" in new TestScope {
+      val userId = "myUser"
+      val pageSize = appConfig.es3MaxRecordsFetchCount
+      val totalNrEnrolments = (pageSize * 2.5).toInt // use two and a half pages of results for the sake of the test
+      val enrolments = Seq.tabulate(totalNrEnrolments)(i =>
+        Enrolment("HMRC-MTD-VAT", "Activated", s"Client$i", Seq(Identifier("VRN", "%09d".format(i))))
+      )
+      def urlForPage(page: Int): String =
+        s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&start-record=${(page - 1) * pageSize + 1}&max-records=$pageSize"
+      def resultsForPage(page: Int): PaginatedEnrolments = PaginatedEnrolments(
+        (page - 1) * pageSize + 1,
+        totalNrEnrolments,
+        enrolments.slice((page - 1) * pageSize, page * pageSize)
+      )
+
+      mockHttpGet(urlForPage(1), HttpResponse(OK, Json.toJson(resultsForPage(1)).toString))(httpClient) // page 1
+      mockHttpGet(urlForPage(2), HttpResponse(OK, Json.toJson(resultsForPage(2)).toString))(httpClient) // page 2
+      mockHttpGet(urlForPage(3), HttpResponse(OK, Json.toJson(resultsForPage(3)).toString))(httpClient) // page 3
+      mockHttpGet(urlForPage(4), HttpResponse(NO_CONTENT, ""))(httpClient) // page 4 (empty)
+
+      esp.getEnrolmentsAssignedToUser(userId).futureValue.toSet shouldBe enrolments.toSet
+    }
   }
 
   def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =

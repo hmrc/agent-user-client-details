@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpReads.is2xx
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpException, HttpResponse, NotFoundException, UpstreamErrorResponse}
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -42,6 +42,16 @@ case class ES19Request(friendlyName: String)
 
 object ES19Request {
   implicit val format: Format[ES19Request] = Json.format[ES19Request]
+}
+
+case class PaginatedEnrolments(
+  startRecord: Int,
+  totalRecords: Int,
+  enrolments: Seq[Enrolment]
+)
+
+object PaginatedEnrolments {
+  implicit val format: OFormat[PaginatedEnrolments] = Json.format[PaginatedEnrolments]
 }
 
 @ImplementedBy(classOf[EnrolmentStoreProxyConnectorImpl])
@@ -55,6 +65,11 @@ trait EnrolmentStoreProxyConnector {
 
   // ES1 - principal
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
+
+  // ES2 - Query Enrolments assigned to a user
+  def getEnrolmentsAssignedToUser(
+    userId: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[Enrolment]]
 
   // ES3 - Query Enrolments allocated to a Group
   def getEnrolmentsForGroupId(
@@ -172,14 +187,43 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     }
   }
 
-  case class GroupEnrolmentsResponse(
-    startRecord: Int,
-    totalRecords: Int,
-    enrolments: Seq[Enrolment]
-  )
+  // ES2 - Query Enrolments assigned to a user
+  def getEnrolmentsAssignedToUser(
+    userId: String
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[Enrolment]] = {
 
-  object GroupEnrolmentsResponse {
-    implicit val format: OFormat[GroupEnrolmentsResponse] = Json.format[GroupEnrolmentsResponse]
+    def fetchPage(page: Int /* Note: first page is 1, not 0 */ ): Future[Option[PaginatedEnrolments]] = {
+      val startRecord = 1 + ((page - 1) * appConfig.es3MaxRecordsFetchCount)
+      val url = new URL(
+        espBaseUrl,
+        s"/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}" // Note: we want delegated only
+      )
+      monitor(s"ConsumedAPI-ES-getEnrolmentsAssignedToUser-GET") {
+        http.GET[HttpResponse](url.toString).map { response =>
+          response.status match {
+            case Status.OK         => response.json.asOpt[PaginatedEnrolments]
+            case Status.NO_CONTENT => Option.empty[PaginatedEnrolments]
+            case Status.NOT_FOUND =>
+              throw new NotFoundException(s"ES2 call for $userId returned status 404")
+            case other =>
+              logger.error(s"Unexpected status on ES2 request: $other, ${response.body}")
+              throw new HttpException(s"ES2 call for $userId returned status $other", other)
+          }
+        }
+      }
+    }
+
+    val enrolments: mutable.ArrayBuffer[Enrolment] = mutable.ArrayBuffer.empty
+
+    Source
+      .fromIterator(() => Iterator.from(1).map(page => fetchPage(page)))
+      .mapAsync(parallelism = 1)(identity)
+      .takeWhile(_.fold(false)(_.totalRecords > 0))
+      .runForeach(_.foreach { paginatedEnrolments =>
+        enrolments ++= paginatedEnrolments.enrolments
+          .filter(enrolment => supportedServiceKeys.contains(enrolment.service))
+      })
+      .flatMap(_ => Future.successful(enrolments))
   }
 
   // ES3 - Query Enrolments allocated to a Group
@@ -213,7 +257,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   private def fetchGroupDelegatedEnrolments(groupId: String, startRecord: Int)(implicit
     hc: HeaderCarrier,
     executionContext: ExecutionContext
-  ): Future[Option[GroupEnrolmentsResponse]] = {
+  ): Future[Option[PaginatedEnrolments]] = {
     val url =
       new URL(
         espBaseUrl,
@@ -224,12 +268,12 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
       http.GET[HttpResponse](url.toString).map { response =>
         response.status match {
           case Status.OK =>
-            response.json.asOpt[GroupEnrolmentsResponse]
+            response.json.asOpt[PaginatedEnrolments]
           case Status.NO_CONTENT =>
-            Option.empty[GroupEnrolmentsResponse]
+            Option.empty[PaginatedEnrolments]
           case other =>
             logger.error(s"Unexpected status on ES3 request: $other, ${response.body}")
-            Option.empty[GroupEnrolmentsResponse]
+            Option.empty[PaginatedEnrolments]
         }
       }
     }

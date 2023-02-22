@@ -18,11 +18,13 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import play.api.libs.json.JsValue
 import play.api.mvc._
-import uk.gov.hmrc.agentmtdidentifiers.model.{UserEnrolment, UserEnrolmentAssignments}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey, UserEnrolment, UserEnrolmentAssignments}
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Unassign}
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemService
+import uk.gov.hmrc.http.NotFoundException
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -34,6 +36,7 @@ import scala.concurrent.ExecutionContext
 class AssignmentController @Inject() (
   cc: ControllerComponents,
   workItemService: AssignmentsWorkItemService,
+  enrolmentStore: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
 )(implicit authAction: AuthAction, ec: ExecutionContext)
     extends BackendController(cc) with AuthorisedAgentSupport {
@@ -57,4 +60,45 @@ class AssignmentController @Inject() (
       }
     }
   }
+
+  /** Check that a given agent user has an expected list of assigned enrolments, and if not, generate work items so that
+    * the user's assigned enrolment will match those provided. Note: This is meant to be called occasionally to
+    * synchronise a given user with agent-permissions, with the expectation that most of the time there will be no
+    * changes to do. It must be used with care and certainly should not be the routine way to manage assignments, as it
+    * is a powerful and possibly expensive operation.
+    */
+  def ensureAssignments(arn: Arn, userId: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    lazy val mSessionId: Option[String] =
+      if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
+      else None // only required for local testing against stubs
+
+    // TODO In order to avoid additional EACD calls we are not validating the ARN nor checking whether the userId
+    // is really associated with the ARN. But should we?
+    withAuthorisedAgent() { _ =>
+      withJsonBody[Set[String]] { desiredEnrolmentKeys =>
+        for {
+          currentEnrolments <- enrolmentStore.getEnrolmentsAssignedToUser(userId)
+          currentEnrolmentKeys = currentEnrolments.map(enr => EnrolmentKey.enrolmentKeys(enr).head).toSet
+          toAdd = desiredEnrolmentKeys.diff(currentEnrolmentKeys)
+          toRemove = currentEnrolmentKeys.diff(desiredEnrolmentKeys)
+          isAlreadyInSync = toAdd.isEmpty && toRemove.isEmpty
+          _ = if (isAlreadyInSync) println(s"Assignment sync: userId $userId of $arn is already in sync")
+              else
+                println(
+                  s"Syncing assigned enrolments for userId $userId of $arn. To assign: $toAdd, to unassign: $toRemove"
+                )
+          assignWorkItems = toAdd.map { enrolmentKey =>
+                              AssignmentWorkItem(Assign, userId, enrolmentKey, arn.value, mSessionId)
+                            }
+          unassignWorkItems = toRemove.map { enrolmentKey =>
+                                AssignmentWorkItem(Unassign, userId, enrolmentKey, arn.value, mSessionId)
+                              }
+          _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, Instant.now(), ToDo)
+        } yield if (isAlreadyInSync) Ok else Accepted
+      }.recover { case _: NotFoundException =>
+        NotFound
+      }
+    }
+  }
+
 }
