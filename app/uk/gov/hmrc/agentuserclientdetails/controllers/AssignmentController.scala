@@ -82,9 +82,9 @@ class AssignmentController @Inject() (
           toAdd = desiredEnrolmentKeys.diff(currentEnrolmentKeys)
           toRemove = currentEnrolmentKeys.diff(desiredEnrolmentKeys)
           isAlreadyInSync = toAdd.isEmpty && toRemove.isEmpty
-          _ = if (isAlreadyInSync) println(s"Assignment sync: userId $userId of $arn is already in sync")
+          _ = if (isAlreadyInSync) logger.info(s"Assignment sync: userId $userId of $arn is already in sync")
               else
-                println(
+                logger.info(
                   s"Syncing assigned enrolments for userId $userId of $arn. To assign: $toAdd, to unassign: $toRemove"
                 )
           assignWorkItems = toAdd.map { enrolmentKey =>
