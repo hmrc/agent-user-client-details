@@ -198,7 +198,7 @@ class ClientListController @Inject() (
             logger.info(
               s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
             )
-          _ <- workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), Instant.now(), ToDo)
+          _ <- if (toBeAdded.isEmpty) Future.successful(()) else workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), Instant.now(), ToDo)
           _ <- createFriendlyNameMonitoringJob(arn, groupId, clientsWantingName, sendEmail, lang.getOrElse("en"))
           // ^ Note: we must put _all_ the clients that lack a name in the list of the monitoring job, not just those that we are _adding_ to the work repo now,
           // because there could be some work items created by a previous call that we still need to check for completion.
