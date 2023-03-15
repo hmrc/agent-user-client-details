@@ -90,14 +90,13 @@ class Es3CacheRepositoryImpl @Inject() (
       .toSeq
       .map(batchOfClients => Es3Cache(groupId, encryptFields(batchOfClients), timestamp))
 
-    collection.deleteMany(equal(FIELD_GROUP_ID, groupId)).toFuture() flatMap { deleteResult =>
-      logger.info(s"Deleted ${deleteResult.getDeletedCount} existing documents for $groupId")
-
-      collection.insertMany(es3CacheBatches).toFuture().map { insertManyResult =>
-        logger.info(s"Saved in DB for $groupId across ${insertManyResult.getInsertedIds.size()} document(s)")
-        groupId
-      }
-    }
+    for {
+      deleteResult <- collection.deleteMany(equal(FIELD_GROUP_ID, groupId)).toFuture()
+      _ = logger.info(s"Deleted ${deleteResult.getDeletedCount} existing documents for $groupId")
+      savedCount <- if (es3CacheBatches.isEmpty) Future.successful(0)
+                    else collection.insertMany(es3CacheBatches).toFuture().map(_.getInsertedIds.size())
+      _ = logger.info(s"Inserted $savedCount documents for $groupId")
+    } yield groupId
   }
 
   override def fetch(groupId: String): Future[Option[Es3Cache]] = {
