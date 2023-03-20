@@ -55,19 +55,15 @@ class Es3CacheManagerImpl @Inject() (
         .map(Client.fromEnrolment)
         .map(client => client.copy(friendlyName = URLDecoder.decode(client.friendlyName, "UTF-8")))
 
-    es3CacheRepository.fetch(groupId).flatMap {
-      case None =>
-        fetchEs3ClientsAndPersist(groupId) flatMap { _ =>
-          es3CacheRepository.fetch(groupId)
-        }
-      case Some(es3Cache) =>
-        Future.successful(Option(es3Cache))
-    } map {
-      case None =>
-        Seq.empty[Client]
-      case Some(es3Cache) =>
-        enrolmentsToClients(es3Cache)
-    }
+    es3CacheRepository
+      .fetch(groupId)
+      .flatMap {
+        case None =>
+          fetchEs3ClientsAndPersist(groupId)
+        case Some(es3Cache) =>
+          Future.successful(es3Cache)
+      }
+      .map(enrolmentsToClients)
   }
 
   override def cacheRefresh(
@@ -80,10 +76,11 @@ class Es3CacheManagerImpl @Inject() (
   private def fetchEs3ClientsAndPersist(groupId: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[Unit] =
+  ): Future[Es3Cache] =
     for {
-      startedAt     <- Future successful System.currentTimeMillis()
+      startedAt     <- Future.successful(System.currentTimeMillis())
       es3Enrolments <- enrolmentStoreProxyConnector.getEnrolmentsForGroupId(groupId)
-      _             <- es3CacheRepository.save(groupId, es3Enrolments)
-    } yield logger.info(s"Refreshed ES3 cache for $groupId in ${System.currentTimeMillis() - startedAt} millis")
+      es3Cache      <- es3CacheRepository.save(groupId, es3Enrolments)
+      _ = logger.info(s"Refreshed ES3 cache for $groupId in ${System.currentTimeMillis() - startedAt} millis")
+    } yield es3Cache
 }

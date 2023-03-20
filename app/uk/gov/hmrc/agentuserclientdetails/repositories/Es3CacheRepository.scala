@@ -39,12 +39,21 @@ case class Es3Cache(groupId: String, clients: Seq[Enrolment], createdAt: Instant
 object Es3Cache {
   implicit val dtf: Format[Instant] = MongoJavatimeFormats.instantFormat
   implicit val formatEs3Cache: OFormat[Es3Cache] = Json.format[Es3Cache]
+  def merge(es3Caches: Seq[Es3Cache]): Option[Es3Cache] =
+    es3Caches.headOption.map { head =>
+      require(es3Caches.map(_.groupId).distinct.size == 1)
+      Es3Cache(head.groupId, es3Caches.map(_.clients).reduce(_ ++ _))
+    }
+  def split(es3Cache: Es3Cache, groupSize: Int): Seq[Es3Cache] =
+    es3Cache.clients.grouped(groupSize).toSeq.map { group =>
+      es3Cache.copy(clients = group)
+    }
 }
 
 @ImplementedBy(classOf[Es3CacheRepositoryImpl])
 trait Es3CacheRepository {
 
-  def save(groupId: String, clients: Seq[Enrolment]): Future[String]
+  def save(groupId: String, clients: Seq[Enrolment]): Future[Es3Cache]
 
   def fetch(groupId: String): Future[Option[Es3Cache]]
 }
@@ -82,55 +91,47 @@ class Es3CacheRepositoryImpl @Inject() (
 
   private val FIELD_GROUP_ID = "groupId"
 
-  override def save(groupId: String, clients: Seq[Enrolment]): Future[String] = {
+  override def save(groupId: String, clients: Seq[Enrolment]): Future[Es3Cache] = {
     val timestamp = timestampSupport.timestamp()
 
-    val es3CacheBatches = clients
-      .grouped(COUNT_OF_CLIENTS_PER_DOCUMENT)
-      .toSeq
-      .map(batchOfClients => Es3Cache(groupId, encryptFields(batchOfClients), timestamp))
+    val es3Cache = Es3Cache(groupId, clients, timestamp)
+
+    val documents = Es3Cache.split(es3Cache, COUNT_OF_CLIENTS_PER_DOCUMENT)
 
     for {
       deleteResult <- collection.deleteMany(equal(FIELD_GROUP_ID, groupId)).toFuture()
       _ = logger.info(s"Deleted ${deleteResult.getDeletedCount} existing documents for $groupId")
-      savedCount <- if (es3CacheBatches.isEmpty) Future.successful(0)
-                    else collection.insertMany(es3CacheBatches).toFuture().map(_.getInsertedIds.size())
+      savedCount <- if (documents.isEmpty) Future.successful(0)
+                    else collection.insertMany(documents.map(encrypt)).toFuture().map(_.getInsertedIds.size())
       _ = logger.info(s"Inserted $savedCount documents for $groupId")
-    } yield groupId
+    } yield es3Cache
   }
 
-  override def fetch(groupId: String): Future[Option[Es3Cache]] = {
-
-    def collateClients(es3Caches: Seq[Es3Cache]): Option[Es3Cache] =
-      if (es3Caches.isEmpty) {
-        Option.empty[Es3Cache]
-      } else {
-        val accumulatedEs3Cache =
-          es3Caches.foldLeft(Es3Cache(groupId, Seq.empty[Enrolment])) { (acc, es3Cache) =>
-            Es3Cache(groupId, acc.clients ++ decryptFields(es3Cache.clients))
-          }
-        Option(accumulatedEs3Cache)
-      }
-
+  override def fetch(groupId: String): Future[Option[Es3Cache]] =
     collection
       .find(equal(FIELD_GROUP_ID, groupId))
+      .map(decrypt)
       .toFuture()
-      .map(collateClients)
-  }
+      .map(Es3Cache.merge)
 
-  private def encryptFields(clients: Seq[Enrolment]): Seq[Enrolment] =
-    clients.map(enrolment =>
-      enrolment.copy(
-        friendlyName = crypto.encrypt(PlainText(enrolment.friendlyName)).value,
-        identifiers = enrolment.identifiers.map(id => id.copy(value = crypto.encrypt(PlainText(id.value)).value))
+  private def encrypt(es3Cache: Es3Cache): Es3Cache =
+    es3Cache.copy(clients =
+      es3Cache.clients.map(enrolment =>
+        enrolment.copy(
+          friendlyName = crypto.encrypt(PlainText(enrolment.friendlyName)).value,
+          identifiers = enrolment.identifiers.map(id => id.copy(value = crypto.encrypt(PlainText(id.value)).value))
+        )
       )
     )
 
-  private def decryptFields(clients: Seq[Enrolment]): Seq[Enrolment] =
-    clients.map(enrolment =>
-      enrolment.copy(
-        friendlyName = crypto.decrypt(Crypted(enrolment.friendlyName)).value,
-        identifiers = enrolment.identifiers.map(id => id.copy(value = crypto.decrypt(Crypted(id.value)).value))
+  private def decrypt(encryptedEs3Cache: Es3Cache): Es3Cache =
+    encryptedEs3Cache.copy(clients =
+      encryptedEs3Cache.clients.map(encryptedEnrolment =>
+        encryptedEnrolment.copy(
+          friendlyName = crypto.decrypt(Crypted(encryptedEnrolment.friendlyName)).value,
+          identifiers =
+            encryptedEnrolment.identifiers.map(id => id.copy(value = crypto.decrypt(Crypted(id.value)).value))
+        )
       )
     )
 
