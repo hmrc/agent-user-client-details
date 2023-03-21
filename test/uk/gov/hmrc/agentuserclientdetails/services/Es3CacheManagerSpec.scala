@@ -37,7 +37,6 @@ class Es3CacheManagerSpec extends BaseSpec {
         mockEs3CacheRepositoryFetch(None)
         mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(enrolments)
         mockEs3CacheRepositorySave(enrolments)
-        mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, enrolments)))
 
         es3CacheManager.getCachedClients(groupId).futureValue shouldBe Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
@@ -101,11 +100,11 @@ class Es3CacheManagerSpec extends BaseSpec {
         .expects(groupId)
         .returning(Future successful maybeEs3Cache)
 
-    def mockEs3CacheRepositorySave(enrolments: Seq[Enrolment]): CallHandler2[String, Seq[Enrolment], Future[String]] =
+    def mockEs3CacheRepositorySave(enrolments: Seq[Enrolment]): CallHandler2[String, Seq[Enrolment], Future[Es3Cache]] =
       (mockEs3CacheRepository
         .save(_: String, _: Seq[Enrolment]))
         .expects(groupId, enrolments)
-        .returning(Future successful groupId)
+        .returning(Future.successful(Es3Cache(groupId, enrolments)))
 
     def mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(
       enrolments: Seq[Enrolment]
