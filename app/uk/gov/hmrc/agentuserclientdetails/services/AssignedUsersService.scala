@@ -53,7 +53,7 @@ class AssignedUsersServiceImpl @Inject() (
   override def calculateClientsWithAssignedUsers(
     groupId: String
   )(implicit hc: HeaderCarrier): Future[Source[Seq[AssignedClient], NotUsed]] =
-    es3CacheManager.getCachedClients(groupId).map { clients =>
+    es3CacheManager.getClients(groupId).map { clients =>
       Throttler.process(clients, maxCountPerSecond)(fetchAssignedUsersOfClient)
     }
 

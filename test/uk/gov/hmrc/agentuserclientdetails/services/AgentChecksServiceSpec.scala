@@ -445,7 +445,7 @@ class AgentChecksServiceSpec extends BaseSpec {
     clients: Seq[Client]
   )(mockEs3CacheManager: Es3CacheManager) =
     (mockEs3CacheManager
-      .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(groupId, *, *)
       .returning(Future.successful(clients))
 

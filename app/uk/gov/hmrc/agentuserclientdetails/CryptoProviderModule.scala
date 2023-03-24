@@ -30,7 +30,7 @@ class CryptoProviderModule extends Module {
 
   def cryptoInstance(configuration: Configuration): Encrypter with Decrypter =
     if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
-      SymmetricCryptoFactory.aesGcmCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
+      SymmetricCryptoFactory.aesCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
     else
       NoCrypto
 }

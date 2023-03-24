@@ -93,7 +93,7 @@ class AssignedUsersServiceSpec extends BaseSpec {
         clients: Seq[Client]
       ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] =
         (mockEs3CacheManager
-          .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+          .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
           .expects(groupId, *, *)
           .returning(Future successful clients)
     }

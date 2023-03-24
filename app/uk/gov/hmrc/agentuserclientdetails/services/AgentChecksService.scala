@@ -57,7 +57,6 @@ class AgentChecksService @Inject() (
                             }
         } yield maybeAgentSize
     }
-
   def userCheck(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Int] =
     for {
       maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
@@ -115,7 +114,7 @@ class AgentChecksService @Inject() (
                          Future.successful(None)
                        case Some(groupId) =>
                          es3CacheManager
-                           .getCachedClients(groupId)
+                           .getClients(groupId)
                            .map(clients => Option(clients.size))
                      }
     } yield clientCount
@@ -130,5 +129,4 @@ class AgentChecksService @Inject() (
       agentSize
     }
   }
-
 }

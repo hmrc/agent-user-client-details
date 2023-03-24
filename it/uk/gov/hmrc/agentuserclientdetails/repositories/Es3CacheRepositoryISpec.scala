@@ -33,7 +33,7 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
 
   "Fetching from DB" should {
     "return nothing when data does not exist" in {
-      es3CacheRepository.fetch(groupId).futureValue shouldBe None
+      es3CacheRepository.get(groupId).futureValue shouldBe None
     }
   }
 
@@ -42,12 +42,12 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
       val enrolments =
         Seq(Enrolment("HMRC-MTD-IT", "Activated", "friend of a friend", Seq(Identifier("MTDITID", "X12345678909876"))))
 
-      es3CacheRepository.save(groupId, enrolments).futureValue.groupId shouldBe groupId
+      es3CacheRepository.put(groupId, enrolments).futureValue.groupId shouldBe groupId
 
-      val es3CacheFetched = es3CacheRepository.fetch(groupId).futureValue.get
+      val es3CacheFetched = es3CacheRepository.get(groupId).futureValue.get
 
       es3CacheFetched.groupId shouldBe groupId
-      es3CacheFetched.clients shouldBe enrolments
+      es3CacheFetched.clients.map(_.decryptedValue) shouldBe enrolments
     }
   }
 

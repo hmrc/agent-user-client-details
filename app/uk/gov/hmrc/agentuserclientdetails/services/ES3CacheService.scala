@@ -18,9 +18,10 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.Client
+import uk.gov.hmrc.agentmtdidentifiers.model.{Client, Enrolment}
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.repositories.{Es3Cache, Es3CacheRepository}
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.Es3Cache
+import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepository
 import uk.gov.hmrc.http.HeaderCarrier
 
 import java.net.URLDecoder
@@ -30,11 +31,11 @@ import scala.concurrent.{ExecutionContext, Future}
 @ImplementedBy(classOf[Es3CacheManagerImpl])
 trait Es3CacheManager {
 
-  def getCachedClients(
+  def getClients(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]]
 
-  def cacheRefresh(
+  def refresh(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Unit]]
 
@@ -46,31 +47,31 @@ class Es3CacheManagerImpl @Inject() (
   es3CacheRepository: Es3CacheRepository
 ) extends Es3CacheManager with Logging {
 
-  override def getCachedClients(
+  override def getClients(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Client]] = {
 
-    def enrolmentsToClients(es3Cache: Es3Cache) =
-      es3Cache.clients
-        .map(Client.fromEnrolment)
-        .map(client => client.copy(friendlyName = URLDecoder.decode(client.friendlyName, "UTF-8")))
+    def enrolmentToClient(enrolment: Enrolment) = {
+      val client = Client.fromEnrolment(enrolment)
+      client.copy(friendlyName = URLDecoder.decode(client.friendlyName, "UTF-8"))
+    }
 
     es3CacheRepository
-      .fetch(groupId)
+      .get(groupId)
       .flatMap {
         case None =>
           fetchEs3ClientsAndPersist(groupId)
         case Some(es3Cache) =>
           Future.successful(es3Cache)
       }
-      .map(enrolmentsToClients)
+      .map(_.clients.map(enr => enrolmentToClient(enr.decryptedValue)))
   }
 
-  override def cacheRefresh(
+  override def refresh(
     groupId: String
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Unit]] =
     es3CacheRepository
-      .fetch(groupId)
+      .get(groupId)
       .map(_.map(_ => fetchEs3ClientsAndPersist(groupId)))
 
   private def fetchEs3ClientsAndPersist(groupId: String)(implicit
@@ -80,7 +81,7 @@ class Es3CacheManagerImpl @Inject() (
     for {
       startedAt     <- Future.successful(System.currentTimeMillis())
       es3Enrolments <- enrolmentStoreProxyConnector.getEnrolmentsForGroupId(groupId)
-      es3Cache      <- es3CacheRepository.save(groupId, es3Enrolments)
+      es3Cache      <- es3CacheRepository.put(groupId, es3Enrolments)
       _ = logger.info(s"Refreshed ES3 cache for $groupId in ${System.currentTimeMillis() - startedAt} millis")
     } yield es3Cache
 }

@@ -91,7 +91,7 @@ class JobMonitoringWorker @Inject() (
 
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)
-              _ <- es3CacheManager.cacheRefresh(job.groupId)
+              _ <- es3CacheManager.refresh(job.groupId)
               _ <- if (job.sendEmailOnCompletion) {
                      failuresFor(job).flatMap { failures =>
                        val emailTemplateName =

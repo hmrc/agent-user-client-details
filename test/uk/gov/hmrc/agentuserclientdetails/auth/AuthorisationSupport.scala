@@ -101,7 +101,7 @@ trait AuthorisationSupport extends MockFactory {
     (authConnector
       .authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
-      .returning(Future successful ())
+      .returning(Future.successful(()))
 
   def mockSimpleAuthResponseWithException(exceptionToReturn: Exception)(implicit authConnector: AuthConnector): Unit =
     (authConnector

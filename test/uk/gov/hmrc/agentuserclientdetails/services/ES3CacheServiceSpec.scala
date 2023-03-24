@@ -20,7 +20,8 @@ import org.scalamock.handlers.{CallHandler1, CallHandler2, CallHandler3}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Client, Enrolment, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.repositories.{Es3Cache, Es3CacheRepository}
+import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepository
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.{Es3Cache, SensitiveEnrolment}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
@@ -38,7 +39,7 @@ class Es3CacheManagerSpec extends BaseSpec {
         mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(enrolments)
         mockEs3CacheRepositorySave(enrolments)
 
-        es3CacheManager.getCachedClients(groupId).futureValue shouldBe Seq(
+        es3CacheManager.getClients(groupId).futureValue shouldBe Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
         )
       }
@@ -48,9 +49,9 @@ class Es3CacheManagerSpec extends BaseSpec {
       "return clients from the cache" in new TestScope {
         val enrolments = Seq(Enrolment("HMRC-MTD-IT", "", "", Seq(Identifier("MTDITID", "X12345678909876"))))
 
-        mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, enrolments)))
+        mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, enrolments.map(SensitiveEnrolment(_)))))
 
-        es3CacheManager.getCachedClients(groupId).futureValue shouldBe Seq(
+        es3CacheManager.getClients(groupId).futureValue shouldBe Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
         )
       }
@@ -65,20 +66,20 @@ class Es3CacheManagerSpec extends BaseSpec {
 
       val es3Response = Seq(Enrolment("HMRC-MTD-VAT", "", "", Seq(Identifier("VRN", "123456789"))))
 
-      mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, existingCachedEnrolments)))
+      mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, existingCachedEnrolments.map(SensitiveEnrolment(_)))))
       mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(es3Response)
       mockEs3CacheRepositorySave(es3Response)
-      mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, es3Response)))
+      mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, es3Response.map(SensitiveEnrolment(_)))))
 
-      es3CacheManager.cacheRefresh(groupId).futureValue shouldBe Some(())
+      es3CacheManager.refresh(groupId).futureValue shouldBe Some(())
 
-      es3CacheManager.getCachedClients(groupId).futureValue shouldBe List(Client("HMRC-MTD-VAT~VRN~123456789", ""))
+      es3CacheManager.getClients(groupId).futureValue shouldBe List(Client("HMRC-MTD-VAT~VRN~123456789", ""))
     }
 
     "not rebuild the cache if one doesn't exist" in new TestScope {
 
       mockEs3CacheRepositoryFetch(None)
-      es3CacheManager.cacheRefresh(groupId).futureValue shouldBe None
+      es3CacheManager.refresh(groupId).futureValue shouldBe None
     }
   }
 
@@ -96,15 +97,15 @@ class Es3CacheManagerSpec extends BaseSpec {
 
     def mockEs3CacheRepositoryFetch(maybeEs3Cache: Option[Es3Cache]): CallHandler1[String, Future[Option[Es3Cache]]] =
       (mockEs3CacheRepository
-        .fetch(_: String))
+        .get(_: String))
         .expects(groupId)
         .returning(Future successful maybeEs3Cache)
 
     def mockEs3CacheRepositorySave(enrolments: Seq[Enrolment]): CallHandler2[String, Seq[Enrolment], Future[Es3Cache]] =
       (mockEs3CacheRepository
-        .save(_: String, _: Seq[Enrolment]))
+        .put(_: String, _: Seq[Enrolment]))
         .expects(groupId, enrolments)
-        .returning(Future.successful(Es3Cache(groupId, enrolments)))
+        .returning(Future.successful(Es3Cache(groupId, enrolments.map(SensitiveEnrolment(_)))))
 
     def mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(
       enrolments: Seq[Enrolment]
