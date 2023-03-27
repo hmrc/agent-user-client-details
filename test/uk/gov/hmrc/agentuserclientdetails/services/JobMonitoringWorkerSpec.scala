@@ -103,7 +103,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
 
       val es3CacheManager = stub[Es3CacheManager]
       (es3CacheManager
-        .cacheRefresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -145,7 +145,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
 
       val es3CacheManager = stub[Es3CacheManager]
       (es3CacheManager
-        .cacheRefresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -185,7 +185,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
 
       val es3CacheManager = stub[Es3CacheManager]
       (es3CacheManager
-        .cacheRefresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -230,7 +230,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
 
       val es3CacheManager = stub[Es3CacheManager]
       (es3CacheManager
-        .cacheRefresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -280,7 +280,7 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
 
       val es3CacheManager = stub[Es3CacheManager]
       (es3CacheManager
-        .cacheRefresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 

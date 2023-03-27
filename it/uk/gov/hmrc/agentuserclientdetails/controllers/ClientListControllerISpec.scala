@@ -129,14 +129,14 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
     def mockEs3CacheManagerGetCachedClientsForGroupIdWithoutException(
       clients: Seq[Client]
     ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] = (es3CacheManager
-      .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.successful(clients))
 
     def mockEs3CacheManagerGetCachedClientsForGroupIdWithException(
       errorResponse: UpstreamErrorResponse
     ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] = (es3CacheManager
-      .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.failed(errorResponse))
 
@@ -153,7 +153,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       result: Option[Unit]
     ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Option[Unit]]] =
       (es3CacheManager
-        .cacheRefresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future successful result)
   }
@@ -554,7 +554,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
       (es3CacheManager
-        .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testGroupId, *, *)
         .returning(Future.successful(clients))
       val request = FakeRequest("GET", "")
@@ -580,7 +580,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
       (es3CacheManager
-        .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testGroupId, *, *)
         .returning(Future.successful(clients))
       val request = FakeRequest("GET", "")
@@ -612,7 +612,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
       (es3CacheManager
-        .getCachedClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testGroupId, *, *)
         .returning(Future.successful(clients))
       val request = FakeRequest("GET", "")

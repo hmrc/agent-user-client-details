@@ -65,7 +65,7 @@ class ClientListController @Inject() (
       withAuthorisedAgent(allowStandardUser = true) { _ =>
         withGroupIdFor(arn) { groupId =>
           es3CacheManager
-            .getCachedClients(groupId)
+            .getClients(groupId)
             .map(_.map(client => EnrolmentKey.deconstruct(client.enrolmentKey)))
             .map(tuples => tuples.groupBy(_._1)) // groups by service id
             .map(_.map(entry => entry._1 -> entry._2.length)) // service id -> number of clients
@@ -84,7 +84,7 @@ class ClientListController @Inject() (
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheManager
-          .getCachedClients(groupId)
+          .getClients(groupId)
           .map { clients =>
             val clientsMatchingSearch = search.fold(clients) { searchTerm =>
               clients.filter { c =>
@@ -156,7 +156,7 @@ class ClientListController @Inject() (
   def cacheRefresh(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     authAction.simpleAuth {
       withGroupIdFor(arn) { groupId =>
-        es3CacheManager.cacheRefresh(groupId).map {
+        es3CacheManager.refresh(groupId).map {
           case Some(_) => NoContent
           case None    => NotFound
         }
@@ -177,7 +177,7 @@ class ClientListController @Inject() (
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
 
-    es3CacheManager.getCachedClients(groupId).transformWith {
+    es3CacheManager.getClients(groupId).transformWith {
       // if friendly names are populated for all enrolments, return 200
       case Success(clients) if clients.forall(_.friendlyName.nonEmpty) =>
         logger.info(s"${clients.length} enrolments found for groupId $groupId. No friendly name lookups needed.")
@@ -226,7 +226,7 @@ class ClientListController @Inject() (
       FriendlyNameWorkItem(groupId, client, mSessionId)
     }
 
-    es3CacheManager.getCachedClients(groupId).transformWith {
+    es3CacheManager.getClients(groupId).transformWith {
       case Success(clients) =>
         for {
           _ <- workItemService.removeByGroupId(groupId)
