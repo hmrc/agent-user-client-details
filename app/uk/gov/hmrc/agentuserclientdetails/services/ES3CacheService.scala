@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.{Client, Enrolment}
+import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.Es3Cache
 import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepository
@@ -28,8 +29,8 @@ import java.net.URLDecoder
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[Es3CacheManagerImpl])
-trait Es3CacheManager {
+@ImplementedBy(classOf[ES3CacheServiceImpl])
+trait ES3CacheService {
 
   def getClients(
     groupId: String
@@ -42,10 +43,10 @@ trait Es3CacheManager {
 }
 
 @Singleton
-class Es3CacheManagerImpl @Inject() (
+class ES3CacheServiceImpl @Inject() (
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
   es3CacheRepository: Es3CacheRepository
-) extends Es3CacheManager with Logging {
+) extends ES3CacheService with Logging {
 
   override def getClients(
     groupId: String

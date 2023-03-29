@@ -21,7 +21,8 @@ import akka.stream.testkit.scaladsl.TestSink
 import org.scalamock.handlers.{CallHandler3, CallHandler4}
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.{Seconds, Span}
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentmtdidentifiers.model.AssignedClient
+import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
@@ -39,7 +40,7 @@ class AssignedUsersServiceSpec extends BaseSpec {
 
     "return non-empty list of clients" in new TestScope {
 
-      mockEs3CacheManagerGetCachedClients(
+      mockES3CacheServiceGetCachedClients(
         Seq(
           Client(vatEnrolment, ""),
           Client(pptenrolment, ""),
@@ -70,12 +71,12 @@ class AssignedUsersServiceSpec extends BaseSpec {
       val pptenrolment = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
       val cgtEnrolment = "HMRC-CGT-PD~CgtRef~XMCGTP123456789"
 
-      val mockEs3CacheManager: Es3CacheManager = mock[Es3CacheManager]
+      val mockES3CacheService: ES3CacheService = mock[ES3CacheService]
       val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
 
       val assignedUsersService: AssignedUsersService =
         new AssignedUsersServiceImpl(
-          mockEs3CacheManager,
+          mockES3CacheService,
           mockEnrolmentStoreProxyConnector,
           new TestAppConfig()
         )
@@ -89,10 +90,10 @@ class AssignedUsersServiceSpec extends BaseSpec {
           .expects(enrolment, *, *, *)
           .returning(Future successful userIds)
 
-      def mockEs3CacheManagerGetCachedClients(
+      def mockES3CacheServiceGetCachedClients(
         clients: Seq[Client]
       ): CallHandler3[String, HeaderCarrier, ExecutionContext, Future[Seq[Client]]] =
-        (mockEs3CacheManager
+        (mockES3CacheService
           .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
           .expects(groupId, *, *)
           .returning(Future successful clients)

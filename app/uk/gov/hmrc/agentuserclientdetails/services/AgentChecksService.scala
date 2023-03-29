@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, UserDetails}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository}
@@ -34,7 +35,7 @@ class AgentChecksService @Inject() (
   appConfig: AppConfig,
   agentSizeRepository: AgentSizeRepository,
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
-  es3CacheManager: Es3CacheManager,
+  es3CacheService: ES3CacheService,
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
   workItemService: FriendlyNameWorkItemService,
   assignmentsWorkItemService: AssignmentsWorkItemService
@@ -113,7 +114,7 @@ class AgentChecksService @Inject() (
                        case None =>
                          Future.successful(None)
                        case Some(groupId) =>
-                         es3CacheManager
+                         es3CacheService
                            .getClients(groupId)
                            .map(clients => Option(clients.size))
                      }

@@ -21,7 +21,8 @@ import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{ControllerComponents, Request, Result}
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
-import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn, UserDetails}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agents.accessgroups.{AgentUser, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgent}
 import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSize

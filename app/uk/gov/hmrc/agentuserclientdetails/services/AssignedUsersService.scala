@@ -20,7 +20,8 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.{AssignedClient, Client}
+import uk.gov.hmrc.agentmtdidentifiers.model.AssignedClient
+import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.util.Throttler
@@ -40,7 +41,7 @@ trait AssignedUsersService {
 
 @Singleton
 class AssignedUsersServiceImpl @Inject() (
-  es3CacheManager: Es3CacheManager,
+  es3CacheService: ES3CacheService,
   espConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
@@ -53,7 +54,7 @@ class AssignedUsersServiceImpl @Inject() (
   override def calculateClientsWithAssignedUsers(
     groupId: String
   )(implicit hc: HeaderCarrier): Future[Source[Seq[AssignedClient], NotUsed]] =
-    es3CacheManager.getClients(groupId).map { clients =>
+    es3CacheService.getClients(groupId).map { clients =>
       Throttler.process(clients, maxCountPerSecond)(fetchAssignedUsersOfClient)
     }
 

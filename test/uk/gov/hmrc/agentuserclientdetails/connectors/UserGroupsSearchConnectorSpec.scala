@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import play.api.http.Status.{BAD_GATEWAY, NOT_FOUND, OK}
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.UserDetails
+import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
