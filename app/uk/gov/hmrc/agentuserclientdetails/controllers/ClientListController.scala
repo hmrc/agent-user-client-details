@@ -24,9 +24,9 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey}
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem, PaginatedClientsBuilder}
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignedUsersService, ES3CacheService, FriendlyNameWorkItemService, JobMonitoringService}
+import uk.gov.hmrc.agentuserclientdetails.services.{ES3CacheService, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
@@ -43,8 +43,6 @@ class ClientListController @Inject() (
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
   es3CacheService: ES3CacheService,
-  usersGroupsSearchConnector: UsersGroupsSearchConnector,
-  assignedUsersService: AssignedUsersService,
   jobMonitoringService: JobMonitoringService,
   desConnector: DesConnector,
   appConfig: AppConfig
@@ -129,20 +127,6 @@ class ClientListController @Inject() (
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       getOutstandingWorkItemsForGroupIdFn(groupId)
-    }
-  }
-
-  def getClientsWithAssignedUsers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent() { _ =>
-      withGroupIdFor(arn) { groupId =>
-        for {
-          userIdsFromUgs  <- usersGroupsSearchConnector.getGroupUsers(groupId).map(_.flatMap(_.userId))
-          assignedClients <- assignedUsersService.calculateClientsWithAssignedUsers(groupId)
-          assignedClientsWithUgsFilteredUsers <-
-            Future successful assignedClients.map(_.filter(client => userIdsFromUgs.contains(client.assignedTo)))
-        } yield Ok.chunked(assignedClientsWithUgsFilteredUsers.map(Json.toJson(_)))
-
-      }
     }
   }
 
