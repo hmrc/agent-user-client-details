@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import org.bson.types.ObjectId
-import uk.gov.hmrc.agentmtdidentifiers.model.Client
+import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem

@@ -34,7 +34,7 @@ class JobMonitoringWorker @Inject() (
   jobMonitoringService: JobMonitoringService,
   friendlyNameWorkItemService: FriendlyNameWorkItemService,
   emailConnector: EmailConnector,
-  es3CacheManager: Es3CacheManager,
+  es3CacheService: ES3CacheService,
   mat: Materializer
 )(implicit ec: ExecutionContext)
     extends Logging {
@@ -91,7 +91,7 @@ class JobMonitoringWorker @Inject() (
 
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)
-              _ <- es3CacheManager.refresh(job.groupId)
+              _ <- es3CacheService.refresh(job.groupId)
               _ <- if (job.sendEmailOnCompletion) {
                      failuresFor(job).flatMap { failures =>
                        val emailTemplateName =

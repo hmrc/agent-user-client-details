@@ -20,7 +20,8 @@ import org.scalamock.handlers.CallHandler3
 import play.api.mvc.Results.{Forbidden, Ok}
 import play.api.mvc.{AnyContentAsEmpty, Request, Result}
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
 import scala.concurrent.{ExecutionContext, Future}

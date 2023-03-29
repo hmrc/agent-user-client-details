@@ -24,7 +24,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Client
+import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameJobData, FriendlyNameWorkItem, JobData}
 import uk.gov.hmrc.agentuserclientdetails.support._
@@ -101,13 +101,13 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .when(groupId, Some(Seq(PermanentlyFailed)), *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
-      val es3CacheManager = stub[Es3CacheManager]
-      (es3CacheManager
+      val es3CacheService = stub[ES3CacheService]
+      (es3CacheService
         .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheManager, materializer)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheService, materializer)
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
@@ -143,13 +143,13 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
         .when(groupId, Some(Seq(PermanentlyFailed)), *)
         .returns(Future.successful(Seq.empty)) // no permanently failed items
 
-      val es3CacheManager = stub[Es3CacheManager]
-      (es3CacheManager
+      val es3CacheService = stub[ES3CacheService]
+      (es3CacheService
         .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheManager, materializer)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheService, materializer)
       val workItemWithLanguageSetToWelsh =
         jobMonitoringWorkItem.copy(item = jobData.copy(emailLanguagePreference = Some("cy")): JobData)
       jmw.processItem(workItemWithLanguageSetToWelsh).futureValue // Welsh language preference
@@ -183,13 +183,13 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           Future.successful(Seq.empty) // No outstanding items
         )
 
-      val es3CacheManager = stub[Es3CacheManager]
-      (es3CacheManager
+      val es3CacheService = stub[ES3CacheService]
+      (es3CacheService
         .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheManager, materializer)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheService, materializer)
       val workItemWithEmailDisabled =
         jobMonitoringWorkItem.copy(item = jobData.copy(sendEmailOnCompletion = false): JobData)
 
@@ -228,13 +228,13 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           )
         )
 
-      val es3CacheManager = stub[Es3CacheManager]
-      (es3CacheManager
+      val es3CacheService = stub[ES3CacheService]
+      (es3CacheService
         .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheManager, materializer)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheService, materializer)
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
@@ -278,13 +278,13 @@ class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory
           ) // one permanently failed item
         )
 
-      val es3CacheManager = stub[Es3CacheManager]
-      (es3CacheManager
+      val es3CacheService = stub[ES3CacheService]
+      (es3CacheService
         .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
-      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheManager, materializer)
+      val jmw = new JobMonitoringWorker(jms, fnwis, email, es3CacheService, materializer)
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email

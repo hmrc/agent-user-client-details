@@ -26,7 +26,7 @@ import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.PlayRunners
 import play.api.inject.bind
-import uk.gov.hmrc.agentmtdidentifiers.model.Client
+import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameJobData, FriendlyNameWorkItem}
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository

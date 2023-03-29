@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.auth
 
 import play.api.mvc.{Request, Result}
 import play.api.{Configuration, Environment, Logging}
-import uk.gov.hmrc.agentmtdidentifiers.model.{AgentUser, Arn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentialRole, credentials, name}

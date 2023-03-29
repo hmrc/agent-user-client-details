@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import play.api.libs.json.JsValue
+import play.api.libs.json.{Format, JsValue, Json}
 import play.api.mvc._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey, UserEnrolment, UserEnrolmentAssignments}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey}
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
@@ -31,6 +31,26 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import java.time.Instant
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
+
+case class UserEnrolment(userId: String, enrolmentKey: String) {
+  override def toString: String = s"$userId:$enrolmentKey"
+}
+
+object UserEnrolment {
+  implicit val formats: Format[UserEnrolment] = Json.format
+}
+
+/** Represents the user/client combinations to assign and unassign in EACD.
+  * @param assign
+  *   combinations to assign using ES11 API
+  * @param unassign
+  *   combinations to unassign using ES12 API
+  */
+case class UserEnrolmentAssignments(assign: Set[UserEnrolment], unassign: Set[UserEnrolment], arn: Arn)
+
+object UserEnrolmentAssignments {
+  implicit val formats: Format[UserEnrolmentAssignments] = Json.format
+}
 
 @Singleton()
 class AssignmentController @Inject() (
