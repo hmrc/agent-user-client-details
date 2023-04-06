@@ -54,11 +54,11 @@ class ClientController @Inject() (
       withGroupIdFor(arn) { groupId =>
         es3CacheService
           .getClients(groupId)
-          .map(clients =>
+          .map { clients =>
             clients
               .find(_.enrolmentKey == enrolmentKey)
               .fold(NotFound("client not found"))(c => Ok(Json.toJson(c)))
-          )
+          }
       }
     }
   }
