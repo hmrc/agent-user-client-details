@@ -38,7 +38,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton()
-class ClientListController @Inject() (
+class ClientController @Inject() (
   cc: ControllerComponents,
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
@@ -48,6 +48,20 @@ class ClientListController @Inject() (
   appConfig: AppConfig
 )(implicit authAction: AuthAction, ec: ExecutionContext)
     extends BackendController(cc) with AuthorisedAgentSupport {
+
+  def getClient(arn: Arn, enrolmentKey: String): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent(allowStandardUser = true) { _ =>
+      withGroupIdFor(arn) { groupId =>
+        es3CacheService
+          .getClients(groupId)
+          .map(clients =>
+            clients
+              .find(_.enrolmentKey == enrolmentKey)
+              .fold(NotFound("client not found"))(c => Ok(Json.toJson(c)))
+          )
+      }
+    }
+  }
 
   def getClients(arn: Arn, sendEmail: Option[Boolean] = None, lang: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>

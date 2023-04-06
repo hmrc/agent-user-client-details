@@ -45,7 +45,7 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport with AuthorisationMockSupport {
+class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with AuthorisationMockSupport {
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]
@@ -104,7 +104,7 @@ class ClientListControllerISpec extends BaseIntegrationSpec with MongoSupport wi
       ifConnector,
       agentCacheProvider
     )
-    val controller = new ClientListController(
+    val controller = new ClientController(
       cc,
       wis,
       esp,
