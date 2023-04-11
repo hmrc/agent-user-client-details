@@ -19,7 +19,9 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service
+import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
 import uk.gov.hmrc.agentuserclientdetails.support.{FakeCache, FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector}
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -56,6 +58,13 @@ class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
     }
     "hit the correct endpoint for non-taxable Trust" in {
       cns.getClientNameByService("someId", Service.TrustNT.id).futureValue shouldBe Some("Trust Client")
+    }
+    "For invalid service name" in {
+      val invalidServiceId = "potatoes"
+      val caught = intercept[InvalidServiceIdException] {
+        await(cns.getClientNameByService("someId", invalidServiceId))
+      }
+      caught shouldBe InvalidServiceIdException(invalidServiceId)
     }
   }
 }
