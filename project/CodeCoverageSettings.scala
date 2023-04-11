@@ -10,7 +10,6 @@ object CodeCoverageSettings {
     ".*UserEnrolment.*",
     ".*AppConfigImpl.*",
     ".*DoNotCache.*",
-    ".*Es3Cache.*",
     ".*DesIfHeaders.*",
     ".*FriendlyNameWorker.*",
     ".*LocalCaffeineCache.*",
