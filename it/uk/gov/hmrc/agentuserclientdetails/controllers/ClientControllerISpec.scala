@@ -24,9 +24,10 @@ import org.scalamock.handlers.{CallHandler3, CallHandler4}
 import play.api.Configuration
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
+import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout, status}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
@@ -116,6 +117,11 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     val testAgencyDetails = AgencyDetails(Some("Perfect Accounts Ltd"), Some("a@b.c"))
 
+    def mockGetPrincipalForGroupIdSuccess() =
+      (esp
+        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(testArn, *, *)
+        .returning(Future.successful(Some(testGroupId)))
     def mockDesConnectorGetAgencyDetails(
       maybeAgentDetailsDesResponse: Option[AgentDetailsDesResponse]
     ): CallHandler3[Arn, HeaderCarrier, ExecutionContext, Future[Option[AgentDetailsDesResponse]]] = (desConnector
@@ -155,16 +161,39 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
         .returning(Future successful result)
   }
 
+  "GET /arn/:arn/client/:id" should {
+
+    "respond with 200 status and client when matching client found" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      mockGetPrincipalForGroupIdSuccess()
+      mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
+      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+
+      val request = FakeRequest("GET", "")
+      val result = controller.getClient(testArn, client2.enrolmentKey)(request)
+      status(result) shouldBe 200
+      val actualClient = Json.fromJson[Client](contentAsJson(result)).get
+      actualClient shouldBe client2
+
+    }
+
+    "respond with 404 status if not found" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      mockGetPrincipalForGroupIdSuccess()
+      mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
+      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+
+      val request = FakeRequest("GET", "")
+      val result = controller.getClient(testArn, "whatever")(request).futureValue
+      result.header.status shouldBe Status.NOT_FOUND
+    }
+  }
+
   "GET /arn/:arn/client-list" should {
     "respond with 200 status and a list of enrolments if all of the retrieved enrolments have friendly names" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
-
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
       val request = FakeRequest("GET", "")
@@ -177,13 +206,8 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "Allow Assistant credential role " in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponseAssistant)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
-
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
 
       val request = FakeRequest("GET", "")
@@ -214,11 +238,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "respond with 404 status if the groupId associated with the arn is unknown" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
-
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithException(UpstreamErrorResponse("", 404))
 
       val request = FakeRequest("GET", "")
@@ -228,10 +248,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "respond with 202 status if any of the retrieved enrolments don't have a friendly name" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
@@ -252,10 +269,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "if creating a job monitoring item, turn on the flag to send an email notification if specified in the request" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
@@ -272,10 +286,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "if creating a job monitoring item, set the email language to welsh if specified in the request" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
@@ -302,10 +313,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
         )
         .futureValue
 
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
       val request = FakeRequest("GET", "")
@@ -320,10 +328,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
   "GET /arn/:arn/client-list-status" should {
     "respond with 200 status if all of the retrieved enrolments have friendly names" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
       val request = FakeRequest("GET", "")
       val result = controller.getClientListStatus(testArn)(request).futureValue
@@ -333,10 +338,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "respond with 202 status if some of the retrieved enrolments have friendly names" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       val request = FakeRequest("GET", "")
       mockDesConnectorGetAgencyDetails(None)
@@ -349,10 +351,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
   "POST /groupid/:groupid/refresh-names" should {
     "delete all work items from the repo for the given groupId and recreate work items, ignoring any names already present in the enrolment store" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
       wis
         .pushNew(
@@ -468,10 +467,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
         vatEnrolments ++ cgtEnrolments ++ pptEnrolments ++ mtdEnrolments ++ ttEnrolments ++ nttEnrolments
 
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
 
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(enrolments.map(Client.fromEnrolment))
 
@@ -500,10 +496,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       val clients = (1 to 20).map(i => Client("HMRC-MTD-VAT~VRN~101747642", s"Ross Barker $i"))
 
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       (es3CacheService
         .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testGroupId, *, *)
@@ -526,10 +519,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       val clients = (1 to 20).map(i => Client(s"HMRC-MTD-VAT~VRN~${i}174764", s"Ross Barker $i"))
 
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       (es3CacheService
         .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testGroupId, *, *)
@@ -558,10 +548,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       )
 
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
       (es3CacheService
         .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testGroupId, *, *)
@@ -585,10 +572,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
     "return 204 No Content if a cache exists" in new TestScope {
 
       mockSimpleAuthResponse()
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
 
       mockES3CacheServiceCacheRefreshForGroupIdWithoutException(Some(()))
 
@@ -600,10 +584,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
     "return 404 Not Found if a cache doesn't exist" in new TestScope {
 
       mockSimpleAuthResponse()
-      (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .expects(testArn, *, *)
-        .returning(Future.successful(Some(testGroupId)))
+      mockGetPrincipalForGroupIdSuccess()
 
       mockES3CacheServiceCacheRefreshForGroupIdWithoutException(None)
 
