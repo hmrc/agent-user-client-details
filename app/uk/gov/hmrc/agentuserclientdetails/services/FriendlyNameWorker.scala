@@ -120,12 +120,21 @@ class FriendlyNameWorker @Inject() (
             workItemService
               .complete(workItem.id, Succeeded, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
               .map(_ => ())
-          case Failure(_) =>
-            logger.info(
-              s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19. This will be retried."
-            )
+          case Failure(upstreamError) =>
+            val workItemStatus = upstreamError match {
+              case e: UpstreamErrorResponse if e.statusCode == 400 =>
+                logger.warn(
+                  s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19 due to BAD_REQUEST with message: ${e.getMessage()}. No retry."
+                )
+                PermanentlyFailed
+              case _ =>
+                logger.warn(
+                  s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19. This will be retried."
+                )
+                Failed
+            }
             workItemService
-              .complete(workItem.id, Failed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+              .complete(workItem.id, workItemStatus, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
               .map(_ => ())
         }
       case wi if wi.item.client.friendlyName.isEmpty =>
