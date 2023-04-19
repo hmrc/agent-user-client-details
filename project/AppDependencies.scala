@@ -5,11 +5,10 @@ import sbt._
 
 object AppDependencies {
 
-  private val bootstrapVer: String = "7.15.0"
+  //private val bootstrapVer: String = "7.15.0"
   private val mongoVer: String = "1.1.0"
 
   val compile = Seq(
-    "uk.gov.hmrc"             %% "bootstrap-backend-play-28"         % bootstrapVer,
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-work-item-repo-play-28" % mongoVer,
     "uk.gov.hmrc"             %% "agent-mtd-identifiers"             % "1.2.0",
     "uk.gov.hmrc"             %% "cluster-work-throttling"           % "8.5.0-play-28",
@@ -21,7 +20,6 @@ object AppDependencies {
   )
 
   val test = Seq(
-    "uk.gov.hmrc"             %% "bootstrap-test-play-28"     % bootstrapVer        % "test, it",
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-test-play-28"    % "0.74.0"        % "test, it",
     "com.typesafe.akka"       %% "akka-stream-testkit"        % "2.6.20"        % "test, it",
     "org.scalamock"           %% "scalamock"                  % "5.1.0"         % "test, it",
