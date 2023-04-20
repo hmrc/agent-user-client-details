@@ -17,15 +17,17 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import org.mongodb.scala.model.IndexModel
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
-class AgentSizeRepositoryImplSpec extends BaseSpec with DefaultPlayMongoRepositorySupport[AgentSize] {
+class AgentSizeRepositoryImplSpec
+    extends AnyWordSpecLike with Matchers with DefaultPlayMongoRepositorySupport[AgentSize] {
 
   implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -72,6 +74,6 @@ class AgentSizeRepositoryImplSpec extends BaseSpec with DefaultPlayMongoReposito
 
   }
 
-  override protected def repository: PlayMongoRepository[AgentSize] = new AgentSizeRepositoryImpl(mongoComponent)
+  override protected val repository: PlayMongoRepository[AgentSize] = new AgentSizeRepositoryImpl(mongoComponent)
 
 }

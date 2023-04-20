@@ -45,7 +45,7 @@ class AssignmentControllerISpec
     extends BaseIntegrationSpec with DefaultPlayMongoRepositorySupport[WorkItem[AssignmentWorkItem]]
     with AuthorisationMockSupport {
 
-  override protected def repository: PlayMongoRepository[WorkItem[AssignmentWorkItem]] = wir
+  override protected val repository: PlayMongoRepository[WorkItem[AssignmentWorkItem]] = wir
 
   val arn: Arn = Arn("KARN0762398")
 

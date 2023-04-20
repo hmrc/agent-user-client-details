@@ -326,5 +326,36 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
         .verify(workItem.id, Succeeded, *, *)
         .once()
     }
+
+    "when encountering a work item with an already populated friendly name and ES19 returns BAD_REQUEST, mark as permanently_failed" in {
+      val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
+      (stubWis
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .when(*, *, *, *)
+        .returns(Future.successful(true))
+      val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
+      (mockEsp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .when(*, *, *, *, *)
+        .returns(Future.failed(UpstreamErrorResponse(s"Unexpected status on ES19 request: INVALID_JSON", 400, 400)))
+
+      val fnWorker =
+        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
+      val workItem =
+        mkWorkItem(
+          FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")),
+          ToDo
+        )
+      fnWorker.processItem(workItem).futureValue
+
+      (mockEsp
+        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .verify(testGroupId, *, "Friendly+Name+%26+Cousin%27s+company", *, *)
+        .once()
+      (stubWis
+        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .verify(workItem.id, PermanentlyFailed, *, *)
+        .once()
+    }
   }
 }

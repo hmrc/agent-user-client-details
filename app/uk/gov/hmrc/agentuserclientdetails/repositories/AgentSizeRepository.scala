@@ -59,6 +59,9 @@ class AgentSizeRepositoryImpl @Inject() (
       )
     ) with AgentSizeRepository with Logging {
 
+  // TODO maybe rework this repo to include a TTL instead of a refresh duration.
+  override lazy val requiresTtlIndex = false
+
   override def get(arn: Arn): Future[Option[AgentSize]] = collection.find(equal("arn", arn.value)).headOption()
 
   override def upsert(agentSize: AgentSize): Future[Option[UpsertType]] =
