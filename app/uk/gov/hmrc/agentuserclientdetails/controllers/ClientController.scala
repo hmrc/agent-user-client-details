@@ -268,6 +268,15 @@ class ClientController @Inject() (
     }
   }
 
+  def getAgencyDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent() { _ =>
+      desConnector.getAgencyDetails(arn).map(_.flatMap(_.agencyDetails)).map {
+        case Some(agencyDetails) => Ok(Json.toJson(agencyDetails))
+        case None                => NotFound
+      }
+    }
+  }
+
   /*
   Perform set difference based on enrolment keys.
    */

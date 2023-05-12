@@ -606,4 +606,31 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       result.futureValue.header.status shouldBe 500
     }
   }
+
+  "GET /arn/:arn/agency-details" should {
+
+    "return 200 with agency details if found" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      val agencyDetails = AgencyDetails(Some("Agency Name"), Some("agency@email.com"))
+      (desConnector
+        .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .when(testArn, *, *)
+        .returns(Future.successful(Some(AgentDetailsDesResponse(Some(agencyDetails)))))
+
+      val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
+      result.futureValue.header.status shouldBe 200
+      contentAsJson(result).as[AgencyDetails] shouldBe agencyDetails
+    }
+
+    "return 404 when agency details not found" in new TestScope {
+      mockAuthResponseWithoutException(buildAuthorisedResponse)
+      (desConnector
+        .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .when(testArn, *, *)
+        .returns(Future.successful(None))
+
+      val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
+      result.futureValue.header.status shouldBe 404
+    }
+  }
 }
