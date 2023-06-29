@@ -23,6 +23,7 @@ import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logger, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
 import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, CgtSubscription, PptSubscription, VatCustomerDetails}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpResponse
@@ -117,9 +118,9 @@ class AgentCacheProvider @Inject() (val environment: Environment, configuration:
     if (cacheEnabled) new LocalCaffeineCache[Option[String]]("BusinessNameFromDES", cacheSize, cacheExpires)
     else new DoNotCache[Option[String]]
 
-  val tradingNameCache: Cache[Option[String]] =
-    if (cacheEnabled) new LocalCaffeineCache[Option[String]]("TradingNameFromDES", cacheSize, cacheExpires)
-    else new DoNotCache[Option[String]]
+  val tradingDetailsCache: Cache[Option[TradingDetails]] =
+    if (cacheEnabled) new LocalCaffeineCache[Option[TradingDetails]]("TradingDetailsFromDES", cacheSize, cacheExpires)
+    else new DoNotCache[Option[TradingDetails]]
 
   val vatCustomerDetailsCache: Cache[Option[VatCustomerDetails]] =
     if (cacheEnabled)

@@ -26,6 +26,7 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.auth.core.AuthConnector
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -119,7 +120,8 @@ class DesConnectorISpec extends BaseIntegrationSpec {
         httpClient
       )
       val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
-      desConnector.getTradingNameForMtdItId(testMtdItId).futureValue should matchPattern { case Some("Surname DADTN") =>
+      desConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue should matchPattern {
+        case Some(TradingDetails(Nino("ZR987654C"), Some("Surname DADTN"))) =>
       }
     }
     "getVatCustomerDetails (organisation)" in {

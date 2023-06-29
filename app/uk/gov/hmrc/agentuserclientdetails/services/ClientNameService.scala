@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Vrn}
-import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector, TradingDetails}
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
@@ -44,7 +44,20 @@ class ClientNameService @Inject() (
     ec: ExecutionContext
   ): Future[Option[String]] =
     service match {
-      case HMRCMTDIT     => getItsaTradingName(MtdItId(clientId))
+      case HMRCMTDIT =>
+        getItsaTradingDetails(MtdItId(clientId))
+          .flatMap { td =>
+            val tradingName: Option[String] = td.flatMap(_.tradingName)
+            val nino: Option[Nino] = td.map(_.nino)
+            if (
+              tradingName.isEmpty
+                | tradingName.contains("")
+            ) nino match {
+              case Some(nino) => getCitizenName(nino)
+              case None       => Future.successful(None)
+            }
+            else Future.successful(tradingName)
+          }
       case "HMRC-PT"     => getCitizenName(Nino(clientId))
       case HMRCMTDVAT    => getVatName(Vrn(clientId))
       case HMRCTERSORG   => getTrustName(clientId)
@@ -54,8 +67,10 @@ class ClientNameService @Inject() (
       case _             => Future.failed(ClientNameService.InvalidServiceIdException(service))
     }
 
-  def getItsaTradingName(mtdItId: MtdItId)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    desConnector.getTradingNameForMtdItId(mtdItId)
+  def getItsaTradingDetails(
+    mtdItId: MtdItId
+  )(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
+    desConnector.getTradingDetailsForMtdItId(mtdItId)
 
   def getCitizenName(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     citizenDetailsConnector.getCitizenDetails(nino).map(_.flatMap(_.name))

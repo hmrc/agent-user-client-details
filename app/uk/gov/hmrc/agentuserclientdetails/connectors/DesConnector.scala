@@ -28,11 +28,14 @@ import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, CgtSubscription, VatCustomerDetails}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
+
+case class TradingDetails(nino: Nino, tradingName: Option[String])
 
 @ImplementedBy(classOf[DesConnectorImpl])
 trait DesConnector {
@@ -40,9 +43,9 @@ trait DesConnector {
     cgtRef: CgtRef
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]]
 
-  def getTradingNameForMtdItId(
+  def getTradingDetailsForMtdItId(
     mtdbsa: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]]
 
   def getVatCustomerDetails(
     vrn: Vrn
@@ -81,16 +84,21 @@ class DesConnectorImpl @Inject() (
     }
   }
 
-  def getTradingNameForMtdItId(
+  def getTradingDetailsForMtdItId(
     mtdbsa: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] = {
     val url =
       s"$baseUrl/registration/business-details/mtdbsa/${UriEncoding.encodePathSegment(mtdbsa.value, "UTF-8")}"
-    agentCacheProvider.tradingNameCache(mtdbsa.value) {
+    agentCacheProvider.tradingDetailsCache(mtdbsa.value) {
       getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
         response.status match {
           case status if is2xx(status) =>
-            (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
+            Some(
+              TradingDetails(
+                (response.json \ "nino").as[Nino],
+                (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
+              )
+            )
           case NOT_FOUND => None
           case other =>
             throw UpstreamErrorResponse(

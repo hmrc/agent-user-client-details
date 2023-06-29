@@ -41,6 +41,12 @@ class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
     "hit the correct endpoint for income tax" in {
       cns.getClientNameByService("someId", Service.MtdIt.id).futureValue shouldBe Some("IT Client")
     }
+    "check the client details if des returns None for trading name" in {
+      cns.getClientNameByService("GK873907D", Service.MtdIt.id).futureValue shouldBe Some("Tom Client")
+    }
+    "check the client details if des returns an empty string for trading name" in {
+      cns.getClientNameByService("GK873908D", Service.MtdIt.id).futureValue shouldBe Some("Tom Client")
+    }
     "hit the correct endpoint for income record viewer" in {
       cns.getClientNameByService("GK873907D", "HMRC-PT").futureValue shouldBe Some("Tom Client")
     }
