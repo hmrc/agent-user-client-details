@@ -79,9 +79,14 @@ class ClientController @Inject() (
         withGroupIdFor(arn) { groupId =>
           es3CacheService
             .getClients(groupId)
-            .map(_.map(client => EnrolmentKey.deconstruct(client.enrolmentKey)))
-            .map(tuples => tuples.groupBy(_._1)) // groups by service id
-            .map(_.map(entry => entry._1 -> entry._2.length)) // service id -> number of clients
+            .map(clients =>
+              clients
+                .map(client => EnrolmentKey.serviceOf(client.enrolmentKey))
+                .groupBy((serviceId: String) => serviceId) // groups by service id
+                .map { case (serviceId, occurrences) =>
+                  serviceId -> occurrences.length
+                } // service id -> number of clients
+            )
             .map(m => Ok(Json.toJson(m)))
         }
       }

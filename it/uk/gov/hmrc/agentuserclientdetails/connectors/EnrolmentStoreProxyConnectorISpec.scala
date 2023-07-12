@@ -205,7 +205,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       val mockResponse: HttpResponse =
         HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2))).toString)
-      val enrolmentKey = EnrolmentKey.enrolmentKeys(enrolment1).head
+      val enrolmentKey = EnrolmentKey.fromEnrolment(enrolment1)
       mockHttpPut(
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name",
         mockResponse

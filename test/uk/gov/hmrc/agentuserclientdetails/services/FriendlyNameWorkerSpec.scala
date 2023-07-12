@@ -68,7 +68,7 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
       FakeIfConnector,
       agentCacheProvider
     ) {
-      override def getClientNameByService(clientId: String, service: String)(implicit
+      override def getClientName(enrolmentKey: String)(implicit
         hc: HeaderCarrier,
         ec: ExecutionContext
       ): Future[Option[String]] =

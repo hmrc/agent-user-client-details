@@ -137,7 +137,7 @@ class AssignmentControllerISpec
         .getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(userId, *, *)
         .returns(Future.successful(enrolments))
-      val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.enrolmentKeys(_).head)))
+      val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.fromEnrolment)))
       val ac = new AssignmentController(cc, wis, stubEsp, appConfig)
       val result = ac.ensureAssignments(arn, "myUser")(request)
       status(result) shouldBe 200
@@ -161,7 +161,7 @@ class AssignmentControllerISpec
         .when(userId, *, *)
         .returns(Future.successful(storedEnrolments))
       val request =
-        FakeRequest("POST", "").withBody(Json.toJson(wantedEnrolments.map(EnrolmentKey.enrolmentKeys(_).head)))
+        FakeRequest("POST", "").withBody(Json.toJson(wantedEnrolments.map(EnrolmentKey.fromEnrolment)))
       val ac = new AssignmentController(cc, wis, stubEsp, appConfig)
       val result = ac.ensureAssignments(arn, "myUser")(request)
       status(result) shouldBe 202
@@ -184,7 +184,7 @@ class AssignmentControllerISpec
         .getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(userId, *, *)
         .returns(Future.failed(new NotFoundException("")))
-      val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.enrolmentKeys(_).head)))
+      val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.fromEnrolment)))
       val ac = new AssignmentController(cc, wis, stubEsp, appConfig)
       val result = ac.ensureAssignments(arn, "unknownUser")(request)
       status(result) shouldBe 404
