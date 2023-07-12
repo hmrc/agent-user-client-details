@@ -22,7 +22,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import org.joda.time.DateTime
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
@@ -139,7 +138,7 @@ class FriendlyNameWorker @Inject() (
         }
       case wi if wi.item.client.friendlyName.isEmpty =>
         // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
-        fetchFriendlyName(enrolmentKey).transformWith {
+        clientNameService.getClientName(enrolmentKey).transformWith {
           case Success(None) =>
             // A successful call returning None means the lookup succeeded but there is no name available.
             // There is no point in retrying; we set the status as permanently failed.
@@ -204,13 +203,6 @@ class FriendlyNameWorker @Inject() (
   private def logFriendlyMessage(e: Throwable): String = e match {
     case uer: UpstreamErrorResponse => s"Upstream status ${uer.statusCode}: ${uer.message}"
     case e                          => e.getMessage
-  }
-
-  private[services] def fetchFriendlyName(
-    enrolmentKey: String
-  )(implicit hc: HeaderCarrier): Future[Option[String]] = {
-    val (service, clientId) = EnrolmentKey.deconstruct(enrolmentKey)
-    clientNameService.getClientNameByService(clientId, service)
   }
 
   private[services] def throttledUpdateFriendlyName(groupId: String, enrolmentKey: String, friendlyName: String)(

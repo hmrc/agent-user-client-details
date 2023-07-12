@@ -443,12 +443,16 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       private val countMtditClients = 11
       private val countTaxableTrustClients = 3
       private val countNonTaxableTrustClients = 2
+      private val countCbcEnrolments = 2
+      private val countCbcNonUkEnrolments = 1
 
       // given
       val vatEnrolments =
         (1 to countVatClients).map(_ => Enrolment("HMRC-MTD-VAT", "", "", Seq(Identifier("VRN", "101747641"))))
       val cgtEnrolments =
-        (1 to countCgtClients).map(_ => Enrolment("HMRC-CGT-PD", "", "", Seq(Identifier("CgtRef", "XMCGTP123456789"))))
+        (1 to countCgtClients).map(_ =>
+          Enrolment("HMRC-CGT-PD", "", "", Seq(Identifier("CGTPDRef", "XMCGTP123456789")))
+        )
       val pptEnrolments = (1 to countPptClients).map(_ =>
         Enrolment("HMRC-PPT-ORG", "", "", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
       )
@@ -457,14 +461,20 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
           Enrolment("HMRC-MTD-IT", "", "", Seq(Identifier("MTDITID", "GUKL52542245108")))
         )
       val ttEnrolments = (1 to countTaxableTrustClients).map(_ =>
-        Enrolment("HMRC-TERS-ORG", "", "", Seq(Identifier("Utr", "1234567890")))
+        Enrolment("HMRC-TERS-ORG", "", "", Seq(Identifier("SAUTR", "1234567890")))
       )
       val nttEnrolments = (1 to countNonTaxableTrustClients).map(_ =>
-        Enrolment("HMRC-TERSNT-ORG", "", "", Seq(Identifier("Urn", "XXTRUST10010010")))
+        Enrolment("HMRC-TERSNT-ORG", "", "", Seq(Identifier("URN", "XXTRUST10010010")))
+      )
+      val cbcEnrolments = (1 to countCbcEnrolments).map(i =>
+        Enrolment("HMRC-CBC-ORG", "", "", Seq(Identifier("cbcId", f"XACBC00000$i%05d")))
+      )
+      val cbcNonUkEnrolments = (1 to countCbcNonUkEnrolments).map(i =>
+        Enrolment("HMRC-CBC-NONUK-ORG", "", "", Seq(Identifier("cbcId", f"XACBC90000$i%05d")))
       )
 
       val enrolments: Seq[Enrolment] =
-        vatEnrolments ++ cgtEnrolments ++ pptEnrolments ++ mtdEnrolments ++ ttEnrolments ++ nttEnrolments
+        vatEnrolments ++ cgtEnrolments ++ pptEnrolments ++ mtdEnrolments ++ ttEnrolments ++ nttEnrolments ++ cbcEnrolments ++ cbcNonUkEnrolments
 
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
@@ -479,12 +489,14 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       // then
       result.futureValue.header.status shouldBe 200
       contentAsJson(result).as[Map[String, Int]] shouldBe Map(
-        "HMRC-MTD-VAT"    -> countVatClients,
-        "HMRC-CGT-PD"     -> countCgtClients,
-        "HMRC-PPT-ORG"    -> countPptClients,
-        "HMRC-MTD-IT"     -> countMtditClients,
-        "HMRC-TERS-ORG"   -> countTaxableTrustClients, // trusts not combined until in agent-permissions BE
-        "HMRC-TERSNT-ORG" -> countNonTaxableTrustClients
+        "HMRC-MTD-VAT"       -> countVatClients,
+        "HMRC-CGT-PD"        -> countCgtClients,
+        "HMRC-PPT-ORG"       -> countPptClients,
+        "HMRC-MTD-IT"        -> countMtditClients,
+        "HMRC-TERS-ORG"      -> countTaxableTrustClients, // trusts not combined until in agent-permissions BE
+        "HMRC-TERSNT-ORG"    -> countNonTaxableTrustClients,
+        "HMRC-CBC-ORG"       -> countCbcEnrolments,
+        "HMRC-CBC-NONUK-ORG" -> countCbcNonUkEnrolments
       )
     }
   }

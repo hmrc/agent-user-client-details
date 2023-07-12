@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
-import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, PptRef, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, EnrolmentKey, MtdItId, PptRef, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector, TradingDetails}
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.domain.Nino
@@ -39,10 +39,13 @@ class ClientNameService @Inject() (
   private def trustCache = agentCacheProvider.trustResponseCache
   private def cgtCache = agentCacheProvider.cgtSubscriptionCache
 
-  def getClientNameByService(clientId: String, service: String)(implicit
+  def getClientName(enrolmentKey: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[Option[String]] =
+  ): Future[Option[String]] = {
+    val service = EnrolmentKey.serviceOf(enrolmentKey)
+    val identifiers = EnrolmentKey.identifiersOf(enrolmentKey)
+    val clientId = identifiers.head.value
     service match {
       case HMRCMTDIT =>
         getItsaTradingDetails(MtdItId(clientId))
@@ -66,6 +69,7 @@ class ClientNameService @Inject() (
       case HMRCPPTORG    => getPptCustomerName(PptRef(clientId))
       case _             => Future.failed(ClientNameService.InvalidServiceIdException(service))
     }
+  }
 
   def getItsaTradingDetails(
     mtdItId: MtdItId

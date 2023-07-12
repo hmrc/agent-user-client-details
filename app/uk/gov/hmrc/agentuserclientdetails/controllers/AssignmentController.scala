@@ -98,7 +98,7 @@ class AssignmentController @Inject() (
       withJsonBody[Set[String]] { desiredEnrolmentKeys =>
         for {
           currentEnrolments <- enrolmentStore.getEnrolmentsAssignedToUser(userId)
-          currentEnrolmentKeys = currentEnrolments.map(enr => EnrolmentKey.enrolmentKeys(enr).head).toSet
+          currentEnrolmentKeys = currentEnrolments.map(enr => EnrolmentKey.fromEnrolment(enr)).toSet
           toAdd = desiredEnrolmentKeys.diff(currentEnrolmentKeys)
           toRemove = currentEnrolmentKeys.diff(desiredEnrolmentKeys)
           isAlreadyInSync = toAdd.isEmpty && toRemove.isEmpty
