@@ -1,7 +1,16 @@
 
 # agent-user-client-details
 
-This microservice is used for creating and maintaining Agent Access Groups. It supports the frontend microservice agent-permissions-frontend along with agent-permissions. It's primary function is to orchestrate changes in EACD after an Access Group has been created or modified. 
+This microservice is used for creating and maintaining Agent Access Groups. It supports the frontend microservice agent-permissions-frontend along with agent-permissions.
+
+It's primary function is to orchestrate changes in EACD after an Access Group has been created or modified.
+
+It also contains the following to support the display of a client list within ASA:
+- ES3 cache used for retrieving a full client list (ASA supported services*)
+- Friendly name fetch to backfill missing friendly names (async process)
+
+*Note: Personal Income Record is not currently supported for access groups, although it is listed in agent-mtd-identifiers 
+
 
 ## Endpoints
 
