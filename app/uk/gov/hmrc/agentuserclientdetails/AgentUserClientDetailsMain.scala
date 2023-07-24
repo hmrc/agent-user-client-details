@@ -17,12 +17,14 @@
 package uk.gov.hmrc.agentuserclientdetails
 
 import akka.actor.ActorSystem
+import org.mongodb.scala.model.Filters
 
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.{AssignmentsWorkItemService, AssignmentsWorker, FriendlyNameWorkItemService, FriendlyNameWorker, JobMonitoringService, JobMonitoringWorker}
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 
@@ -40,6 +42,7 @@ class AgentUserClientDetailsMain @Inject() (
   jobMonitoringWorker: JobMonitoringWorker,
   jobMonitoringService: JobMonitoringService,
   serviceInstances: ServiceInstances,
+  namesWorkItemRepo: FriendlyNameWorkItemRepository,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
     extends Logging {
@@ -49,6 +52,26 @@ class AgentUserClientDetailsMain @Inject() (
       actorSystem.terminate()
     }
   )
+
+  /* --- One time job code (APB-7290) -- */
+  private val filter = Filters.and(
+    Filters.regex("item.client.enrolmentKey", "^HMRC-MTD-IT"),
+    Filters.eq("status", "permanently-failed")
+  )
+  (for {
+    count <- namesWorkItemRepo.collection.countDocuments(filter)
+    _ =
+      logger.warn(
+        s"*** One-time job *** $count work items for HMRC-MTD-IT are permanently failed and will be deleted so they can be retried (APB-7290)."
+      )
+    _          <- namesWorkItemRepo.collection.deleteMany(filter)
+    finalCount <- namesWorkItemRepo.collection.countDocuments(filter)
+    _ = if (finalCount == 0)
+          logger.warn("*** One-time job *** All items deleted.")
+        else
+          logger.warn(s"*** One-time job *** There are still $finalCount items needing to be deleted.")
+  } yield ()).toFuture
+  /* --- End -- */
 
   actorSystem.scheduler.schedule(
     initialDelay = appConfig.friendlyNameJobRestartRepoQueueInitialDelaySeconds.seconds,
