@@ -34,7 +34,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
 
   val httpClient: HttpClient = stub[HttpClient]
 
-  lazy val mockAuthConnector = mock[AuthConnector]
+  lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   override def moduleOverrides: AbstractModule = new AbstractModule {
     override def configure(): Unit = {
@@ -43,10 +43,19 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
     }
   }
 
-  val enrolment1 = Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-  val enrolment2 =
+  val mtdVatEnrolment: Enrolment =
+    Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
+  val pptEnrolment: Enrolment =
     Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
-  val enrolment3 = Enrolment("HMCE-VATDEC-ORG", "Activated", "George Candy", Seq(Identifier("VATRegNo", "101747641")))
+  val legacyVatEnrolment: Enrolment =
+    Enrolment("HMCE-VATDEC-ORG", "Activated", "George Candy", Seq(Identifier("VATRegNo", "101747641")))
+  val pirEnrolment: Enrolment = Enrolment("HMRC-NI", "Activated", "George Cando", Seq(Identifier("NINO", "QC373791C")))
+  val cbcEnrolment: Enrolment = Enrolment(
+    "HMRC-CBC-ORG",
+    "Activated",
+    "Fran Toms",
+    Seq(Identifier("UTR", "0123456789"), Identifier("cbcId", "XACBC0000012345"))
+  )
 
   trait TestScope {
     lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -178,7 +187,8 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
       )(httpClient)
       esp.getPrincipalGroupIdFor(Arn(arn)).futureValue shouldBe None
     }
-    "complete ES3 call successfully, discounting legacy enrolments" in new TestScope {
+
+    "complete ES3 call successfully, discounting unsupported enrolments" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       def mockResponse(startRecord: Int, totalRecords: Int, enrolments: Seq[Enrolment]): HttpResponse =
         HttpResponse(
@@ -193,24 +203,31 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
         )
       mockHttpGet(
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=1&max-records=${appConfig.es3MaxRecordsFetchCount}",
-        mockResponse(1, 3, Seq(enrolment1, enrolment2, enrolment3))
+        mockResponse(1, 5, Seq(mtdVatEnrolment, pptEnrolment, legacyVatEnrolment, cbcEnrolment, pirEnrolment))
       )(httpClient)
       mockHttpGet(
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=${1 + appConfig.es3MaxRecordsFetchCount}&max-records=${appConfig.es3MaxRecordsFetchCount}",
         mockResponse(1 + appConfig.es3MaxRecordsFetchCount, 0, Seq.empty)
       )(httpClient)
-      esp.getEnrolmentsForGroupId(testGroupId).futureValue.toSet shouldBe Set(enrolment1, enrolment2)
+      esp.getEnrolmentsForGroupId(testGroupId).futureValue.toSet shouldBe Set(
+        mtdVatEnrolment,
+        pptEnrolment,
+        cbcEnrolment
+      )
     }
+
     "complete ES19 call successfully" in new TestScope {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       val mockResponse: HttpResponse =
-        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(enrolment1, enrolment2))).toString)
-      val enrolmentKey = EnrolmentKey.fromEnrolment(enrolment1)
+        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(mtdVatEnrolment, pptEnrolment))).toString)
+      val enrolmentKey: String = EnrolmentKey.fromEnrolment(mtdVatEnrolment)
       mockHttpPut(
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name",
         mockResponse
       )(httpClient)
-      esp.updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name").futureValue shouldBe (())
+      esp
+        .updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name")
+        .futureValue shouldBe Future.unit.futureValue
     }
     "complete ES11 call successfully" in new TestScope {
       val testUserId = "ABCEDEFGI1234568"
@@ -220,7 +237,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$testUserId/enrolments/$testEnrolmentKey",
         mockResponse
       )(httpClient)
-      esp.assignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe (())
+      esp.assignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe Future.unit.futureValue
     }
     "complete ES12 call successfully" in new TestScope {
       val testUserId = "ABCEDEFGI1234568"
@@ -230,7 +247,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
         s"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$testUserId/enrolments/$testEnrolmentKey",
         mockResponse
       )(httpClient)
-      esp.unassignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe (())
+      esp.unassignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe Future.unit.futureValue
     }
 
     s"handle ES21 call returning non-$OK" in new TestScope {
@@ -261,11 +278,12 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
       esp.getGroupDelegatedEnrolments(groupId).futureValue shouldBe Some(GroupDelegatedEnrolments(Seq.empty))
     }
 
-    "(ES2) collate paginated results correctly" in new TestScope {
+    "ES2 collate paginated results correctly" in new TestScope {
       val userId = "myUser"
-      val pageSize = appConfig.es3MaxRecordsFetchCount
-      val totalNrEnrolments = (pageSize * 2.5).toInt // use two and a half pages of results for the sake of the test
-      val enrolments = Seq.tabulate(totalNrEnrolments)(i =>
+      val pageSize: Int = appConfig.es3MaxRecordsFetchCount
+      val totalNrEnrolments: Int =
+        (pageSize * 2.5).toInt // use two and a half pages of results for the sake of the test
+      val enrolments: Seq[Enrolment] = Seq.tabulate(totalNrEnrolments)(i =>
         Enrolment("HMRC-MTD-VAT", "Activated", s"Client$i", Seq(Identifier("VRN", "%09d".format(i))))
       )
       def urlForPage(page: Int): String =

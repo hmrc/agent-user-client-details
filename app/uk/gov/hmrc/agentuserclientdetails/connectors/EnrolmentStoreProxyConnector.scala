@@ -25,8 +25,8 @@ import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentmtdidentifiers.model.Service.{CapitalGains, MtdIt, Ppt, Trust, TrustNT, Vat}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments}
+import uk.gov.hmrc.agentmtdidentifiers.model.Service._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments, Service}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -111,7 +111,15 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
 
-  private lazy val supportedServiceKeys = Seq(MtdIt, Vat, Trust, TrustNT, CapitalGains, Ppt).map(_.enrolmentKey)
+  // excludes PersonalIncomeRecord (unsupported)
+  private lazy val supportedServiceKeys =
+    if (appConfig.enableCbcFeature) {
+      Service.supportedServices.filterNot(service => service == PersonalIncomeRecord).map(_.enrolmentKey)
+    } else {
+      Service.supportedServices
+        .filterNot(service => Seq(PersonalIncomeRecord, Cbc, CbcNonUk).contains(service))
+        .map(_.enrolmentKey)
+    }
 
   // ES0 Query users who have an assigned enrolment
   override def getUsersAssignedToEnrolment(enrolmentKey: String, `type`: String)(implicit
