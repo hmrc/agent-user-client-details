@@ -34,7 +34,7 @@ case class FriendlyNameWorkItemRepository @Inject() (config: Config, mongoCompon
       workItemFields = WorkItemFields.default
     ) {
 
-  override def now: Instant = Instant.now
+  override def now(): Instant = Instant.now
 
   override def inProgressRetryAfter: Duration =
     config.getDuration("work-item-repository.friendly-name.retry-in-progress-after")

@@ -75,7 +75,7 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
   ): Future[Seq[WorkItem[AssignmentWorkItem]]] =
     workItemRepo.collection
       .find[WorkItem[AssignmentWorkItem]](Filters.in("status", status.map(_.name): _*))
-      .collect
+      .collect()
       .toFuture()
 
   override def queryBy(arn: Arn)(implicit
@@ -83,7 +83,7 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
   ): Future[Seq[WorkItem[AssignmentWorkItem]]] =
     workItemRepo.collection
       .find[WorkItem[AssignmentWorkItem]](Filters.equal("item.arn", arn.value))
-      .collect
+      .collect()
       .toFuture()
 
   /** Removes any items that have been marked as successful or duplicated.
@@ -103,12 +103,12 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
   def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] =
     workItemRepo.collection
       .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
-      .collect
-      .toFuture
+      .collect()
+      .toFuture()
       .map { xs: Seq[BsonValue] =>
         val elems = xs.map { x =>
           val document = x.asDocument()
-          (document.getString("_id").getValue -> document.getNumber("count").intValue())
+          document.getString("_id").getValue -> document.getNumber("count").intValue()
         }
         Map(elems: _*)
       }

@@ -3,8 +3,6 @@ import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
 
 val appName = "agent-user-client-details"
 
-val silencerVersion = "1.7.7"
-
 lazy val microservice = Project(appName, file("."))
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin) //Required to prevent https://github.com/scalatest/scalatest/issues/1427
@@ -13,18 +11,22 @@ lazy val microservice = Project(appName, file("."))
     PlayKeys.devSettings             += "play.server.http.idleTimeout" -> "3600 seconds",
     routesImport                     ++= Seq("uk.gov.hmrc.agentuserclientdetails.binders.Binders._"),
     majorVersion                     := 0,
-    scalaVersion                     := "2.12.15",
+    scalaVersion                     := "2.13.8",
     Compile / scalafmtOnCompile      := true,
     Test / scalafmtOnCompile         := true,
     libraryDependencies              ++= AppDependencies.compile ++ AppDependencies.test,
-    // ***************
-    // Use the silencer plugin to suppress warnings
-    scalacOptions += "-P:silencer:pathFilters=routes",
-    libraryDependencies ++= Seq(
-      compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
-      "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
-    )
-    // ***************
+    //fix for scoverage compile errors for scala 2.13
+    libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always),
+    scalacOptions ++= Seq(
+      //"-Werror",
+      //"-language:implicitConversions",
+      "-Xlint",
+      "-Wdead-code",
+      "-feature",
+      "-Wconf:src=target/.*:s", // silence warnings from compiled files
+      "-Wconf:src=*html:w", // silence html warnings as they are wrong
+      "-Wconf:src=*.routes:s" // silence routes warnings as they are wrong
+    ),
   )
   .configs(IntegrationTest)
   .settings(integrationTestSettings(): _*)
