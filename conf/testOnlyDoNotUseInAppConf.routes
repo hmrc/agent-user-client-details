@@ -12,4 +12,4 @@
 # Add all the application routes to the prod.routes file
 ->         /                          prod.Routes
 
-POST       /agent-user-client-details/arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.forceRefreshFriendlyNames(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+POST       /test-only/agent-user-client-details/arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.forceRefreshFriendlyNames(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)

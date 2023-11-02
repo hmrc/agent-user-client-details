@@ -89,6 +89,8 @@ trait AppConfig {
   val es3MaxRecordsFetchCount: Int
 
   val enableCbcFeature: Boolean
+
+  val enablePillar2Feature: Boolean
 }
 
 @Singleton
@@ -178,4 +180,5 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
   override lazy val es3MaxRecordsFetchCount: Int = servicesConfig.getInt("es3.max-records-fetch-count")
 
   override lazy val enableCbcFeature: Boolean = servicesConfig.getBoolean("features.enable-cbc")
+  override lazy val enablePillar2Feature: Boolean = servicesConfig.getBoolean("features.enable-pillar2")
 }

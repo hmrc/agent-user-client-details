@@ -112,14 +112,15 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
 
   // excludes PersonalIncomeRecord (unsupported)
+  val excludedServices =
+    Seq(PersonalIncomeRecord) ++
+      (if (appConfig.enableCbcFeature) Seq.empty else Seq(Cbc, CbcNonUk)) ++
+      (if (appConfig.enablePillar2Feature) Seq.empty else Seq(Pillar2))
+
   private lazy val supportedServiceKeys =
-    if (appConfig.enableCbcFeature) {
-      Service.supportedServices.filterNot(service => service == PersonalIncomeRecord).map(_.enrolmentKey)
-    } else {
-      Service.supportedServices
-        .filterNot(service => Seq(PersonalIncomeRecord, Cbc, CbcNonUk).contains(service))
-        .map(_.enrolmentKey)
-    }
+    Service.supportedServices
+      .filterNot(service => excludedServices.contains(service))
+      .map(_.enrolmentKey)
 
   // ES0 Query users who have an assigned enrolment
   override def getUsersAssignedToEnrolment(enrolmentKey: String, `type`: String)(implicit
