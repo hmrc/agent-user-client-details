@@ -76,7 +76,9 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
   val client2: Client = Client("HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", "Frank Wright")
   val client3: Client = Client("HMRC-CGT-PD~CGTPDRef~XMCGTP123456789", "George Candy")
   val client4: Client = Client("HMRC-MTD-VAT~VRN~101747642", "Ross Barker")
-  val clientsWithFriendlyNames: Seq[Client] = Seq(client1, client2, client3, client4)
+  val client5: Client = Client("HMRC-CBC-ORG~UTR~0123456789~cbcId~XACBC0123456789", "Kenny Roger") // cbc
+  val client6: Client = Client("HMRC-CBC-NONUK-ORG~cbcId~XACBC01234567892", "Micheal Jackson") // nonCbc
+  val clientsWithFriendlyNames: Seq[Client] = Seq(client1, client2, client3, client4, client5, client6)
   val clientsWithoutAnyFriendlyNames = clientsWithFriendlyNames.map(_.copy(friendlyName = ""))
   val clientsWithoutSomeFriendlyNames =
     clientsWithFriendlyNames.take(2) ++ clientsWithoutAnyFriendlyNames.drop(2)

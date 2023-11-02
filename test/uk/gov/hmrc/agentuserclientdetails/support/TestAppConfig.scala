@@ -63,4 +63,5 @@ class TestAppConfig extends AppConfig {
   val serviceJobInitialDelaySeconds: Int = 60
   override val es3MaxRecordsFetchCount: Int = 1000
   override val enableCbcFeature: Boolean = true
+  override val enablePillar2Feature: Boolean = true
 }
