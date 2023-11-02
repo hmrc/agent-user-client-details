@@ -1,6 +1,3 @@
-import play.core.PlayVersion
-import play.sbt.PlayImport._
-import sbt.Keys.libraryDependencies
 import sbt._
 
 object AppDependencies {
@@ -21,8 +18,8 @@ object AppDependencies {
 
   val test = Seq(
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-test-play-28"    % "0.74.0"        % "test, it",
-    "uk.gov.hmrc"             %% "bootstrap-test-play-28"     % bootstrapVer        % "test, it",
-    "com.typesafe.akka"       %% "akka-stream-testkit"        % "2.6.20"        % "test, it",
+    "uk.gov.hmrc"             %% "bootstrap-test-play-28"     % bootstrapVer    % "test, it",
+    "com.typesafe.akka"       %% "akka-stream-testkit"        % "2.6.21"        % "test, it",
     "org.scalamock"           %% "scalamock"                  % "5.1.0"         % "test, it",
     "com.vladsch.flexmark"    %  "flexmark-all"               % "0.36.8"        % "test, it"
   )
