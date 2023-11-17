@@ -58,7 +58,9 @@ class AssignmentsWorker @Inject() (
       ) // must handle serviceInstances == null case (can happen in testing)
     }
 
-  val running = new AtomicBoolean(false)
+  private val running = new AtomicBoolean(false)
+
+  def isRunning: Boolean = running.get()
 
   def continue: Boolean = running.get()
 

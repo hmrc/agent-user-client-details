@@ -54,7 +54,7 @@ class AgentUserClientDetailsMain @Inject() (
     initialDelay = appConfig.friendlyNameJobRestartRepoQueueInitialDelaySeconds.seconds,
     interval = appConfig.friendlyNameJobRestartRepoQueueIntervalSeconds.second
   ) {
-    friendlyNameWorker.running.get() match {
+    friendlyNameWorker.isRunning match {
       case true =>
         logger.debug("[Friendly name job] Was already running, so I did not trigger it again.")
       case false =>
@@ -67,7 +67,7 @@ class AgentUserClientDetailsMain @Inject() (
     initialDelay = appConfig.assignEnrolmentJobRestartRepoQueueInitialDelaySeconds.seconds,
     interval = appConfig.assignEnrolmentJobRestartRepoQueueIntervalSeconds.second
   ) {
-    assignmentsWorker.running.get() match {
+    assignmentsWorker.isRunning match {
       case true =>
         logger.debug("[Assign enrolment job] Was already running, so I did not trigger it again.")
       case false =>
@@ -80,7 +80,7 @@ class AgentUserClientDetailsMain @Inject() (
     initialDelay = appConfig.jobMonitoringWorkerInitialDelaySeconds.seconds,
     interval = appConfig.jobMonitoringWorkerIntervalSeconds.seconds
   ) {
-    jobMonitoringWorker.running.get() match {
+    jobMonitoringWorker.isRunning match {
       case true =>
         logger.debug("[Job monitor] Was already running, so I did not trigger it again.")
       case false =>

@@ -38,7 +38,8 @@ class JobMonitoringWorker @Inject() (
   mat: Materializer
 )(implicit ec: ExecutionContext)
     extends Logging {
-  val running = new AtomicBoolean(false)
+  private val running = new AtomicBoolean(false)
+  def isRunning: Boolean = running.get()
 
   def continue: Boolean = running.get()
 

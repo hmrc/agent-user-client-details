@@ -24,8 +24,8 @@ import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.test.PlayRunners
 import play.api.inject.bind
+import play.api.test.PlayRunners
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameJobData, FriendlyNameWorkItem}
@@ -38,6 +38,7 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.{ExecutionContext, Future}
 
 class ScheduledJobsISpec
     extends AnyWordSpec with Matchers with ScalaFutures with BeforeAndAfterEach with IntegrationPatience
@@ -180,6 +181,56 @@ class ScheduledJobsISpec
           jmr.metrics.futureValue.values.sum shouldBe 0
         }
 
+      }
+    }
+  }
+
+  "failed jobs" should {
+    // to be fair this is mostly to placate the test coverage checks
+    "be recovered so they do not hinder other jobs" in {
+      val stubAwis = stub[AssignmentsWorkItemService]
+      (stubAwis.collectStats(_: ExecutionContext)).when(*).returns(Future.failed(new RuntimeException("foo")))
+      (stubAwis.cleanup(_: Instant)(_: ExecutionContext)).when(*, *).returns(Future.failed(new RuntimeException("foo")))
+      val stubFwis = stub[FriendlyNameWorkItemService]
+      (stubFwis.collectStats(_: ExecutionContext)).when(*).returns(Future.failed(new RuntimeException("bar")))
+      (stubFwis.cleanup(_: Instant)(_: ExecutionContext)).when(*, *).returns(Future.failed(new RuntimeException("bar")))
+      running(
+        _.configure(configOverrides: _*)
+          .overrides(bind[MongoComponent].toInstance(mongoComponent))
+          .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
+          .overrides(bind[AssignmentsWorkItemService].toInstance(stubAwis))
+          .overrides(bind[FriendlyNameWorkItemService].toInstance(stubFwis))
+      ) { app =>
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        Thread.sleep(5000)
+        (stubAwis.collectStats(_: ExecutionContext)).verify(*).atLeastOnce()
+        (stubAwis.cleanup(_: Instant)(_: ExecutionContext)).verify(*, *).atLeastOnce()
+        (stubFwis.collectStats(_: ExecutionContext)).verify(*).atLeastOnce()
+        (stubFwis.cleanup(_: Instant)(_: ExecutionContext)).verify(*, *).atLeastOnce()
+      }
+    }
+  }
+
+  "jobs that are already running" should {
+    // to be fair this is mostly to placate the test coverage checks
+    "not be triggered again" in {
+      val stubAw = stub[AssignmentsWorker]
+      (stubAw.isRunning _).when().returns(true)
+      (stubAw.start _).when().returns(Future.successful(()))
+      val stubFnw = stub[FriendlyNameWorker]
+      (stubFnw.isRunning _).when().returns(true)
+      (stubFnw.start _).when().returns(Future.successful(()))
+      running(
+        _.configure(configOverrides: _*)
+          .overrides(bind[MongoComponent].toInstance(mongoComponent))
+          .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
+          .overrides(bind[AssignmentsWorker].toInstance(stubAw))
+          .overrides(bind[FriendlyNameWorker].toInstance(stubFnw))
+      ) { app =>
+        val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
+        Thread.sleep(5000)
+        (stubAw.start _).verify().never()
+        (stubFnw.start _).verify().never()
       }
     }
   }
