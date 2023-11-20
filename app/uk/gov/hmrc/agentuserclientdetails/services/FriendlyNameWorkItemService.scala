@@ -99,8 +99,8 @@ class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkI
   def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] =
     workItemRepo.collection
       .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
-      .collect
-      .toFuture
+      .collect()
+      .toFuture()
       .map { xs: Seq[BsonValue] =>
         val elems = xs.map { x =>
           val document = x.asDocument()

@@ -232,7 +232,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
         enrolments ++= paginatedEnrolments.enrolments
           .filter(enrolment => supportedServiceKeys.contains(enrolment.service))
       })
-      .flatMap(_ => Future.successful(enrolments))
+      .flatMap(_ => Future.successful(enrolments.toList))
   }
 
   // ES3 - Query Enrolments allocated to a Group
@@ -260,7 +260,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
         enrolments ++= groupEnrolmentsResponse.enrolments
           .filter(enrolment => supportedServiceKeys.contains(enrolment.service))
       })
-      .flatMap(_ => Future successful enrolments)
+      .flatMap(_ => Future successful enrolments.toList)
   }
 
   private def fetchGroupDelegatedEnrolments(groupId: String, startRecord: Int)(implicit

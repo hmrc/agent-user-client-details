@@ -57,7 +57,7 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   override def beforeEach(): Unit = {
     super.beforeEach()
-    wir.collection.drop().toFuture.futureValue
+    wir.collection.drop().toFuture().futureValue
   }
 
   def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {

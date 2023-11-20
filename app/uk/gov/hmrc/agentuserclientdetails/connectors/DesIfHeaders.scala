@@ -29,7 +29,6 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
   private val Authorization = "Authorization"
-  private val SessionId = "X-Session-ID"
 
   private lazy val desEnvironment: String = appConfig.desEnvironment
   private lazy val desAuthorizationToken: String = appConfig.desAuthToken

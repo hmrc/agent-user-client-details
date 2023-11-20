@@ -43,7 +43,7 @@ class JobMonitoringRepository @Inject() (
       workItemFields = WorkItemFields.default
     ) {
 
-  override def now: Instant = Instant.now
+  override def now(): Instant = Instant.now
 
   override def inProgressRetryAfter: Duration =
     config.getDuration("work-item-repository.job-monitoring.retry-in-progress-after")

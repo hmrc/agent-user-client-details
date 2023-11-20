@@ -58,9 +58,9 @@ class AssignmentsWorker @Inject() (
       ) // must handle serviceInstances == null case (can happen in testing)
     }
 
-  val running = new AtomicBoolean(false)
+  private val running = new AtomicBoolean(false)
 
-  def continue: Boolean = running.get()
+  def isRunning: Boolean = running.get()
 
   def cancel(): Unit = running.set(false)
 
@@ -74,7 +74,7 @@ class AssignmentsWorker @Inject() (
         running.set(true)
 
         val workItems: Source[WorkItem[AssignmentWorkItem], NotUsed] =
-          Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
+          Source.unfoldAsync(())(_ => pullWorkItemWhile(isRunning).map(_.map(() -> _)))
         val processWorkItems: Sink[WorkItem[AssignmentWorkItem], Future[Unit]] = Sink.foldAsync(()) { case ((), item) =>
           processItem(item)
         }

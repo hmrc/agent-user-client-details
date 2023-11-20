@@ -13,23 +13,19 @@ lazy val microservice = Project(appName, file("."))
     PlayKeys.devSettings             += "play.server.http.idleTimeout" -> "3600 seconds",
     routesImport                     ++= Seq("uk.gov.hmrc.agentuserclientdetails.binders.Binders._"),
     majorVersion                     := 0,
-    scalaVersion                     := "2.12.15",
+    scalaVersion                     := "2.13.10",
     Compile / scalafmtOnCompile      := true,
     Test / scalafmtOnCompile         := true,
     libraryDependencies              ++= AppDependencies.compile ++ AppDependencies.test,
-    // ***************
-    // Use the silencer plugin to suppress warnings
-    scalacOptions += "-P:silencer:pathFilters=routes",
-    libraryDependencies ++= Seq(
-      compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
-      "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
-    )
-    // ***************
   )
   .configs(IntegrationTest)
   .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(CodeCoverageSettings.settings: _*)
+  .settings(
+      //fix for scoverage compile errors for scala 2.13.10
+      libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always)
+    )
 
 Test / javaOptions += "-Dlogger.resource=logback-test.xml"
 IntegrationTest / javaOptions += "-Dlogger.resource=logback-test.xml"
