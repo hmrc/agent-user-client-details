@@ -215,10 +215,10 @@ class ScheduledJobsISpec
     // to be fair this is mostly to placate the test coverage checks
     "not be triggered again" in {
       val stubAw = stub[AssignmentsWorker]
-      (stubAw.isRunning _).when().returns(true)
+      (() => stubAw.isRunning).when().returns(true)
       (stubAw.start _).when().returns(Future.successful(()))
       val stubFnw = stub[FriendlyNameWorker]
-      (stubFnw.isRunning _).when().returns(true)
+      (() => stubFnw.isRunning).when().returns(true)
       (stubFnw.start _).when().returns(Future.successful(()))
       running(
         _.configure(configOverrides: _*)
