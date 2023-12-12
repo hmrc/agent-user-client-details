@@ -1,5 +1,3 @@
-import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
-
 
 val appName = "agent-user-client-details"
 
@@ -17,11 +15,21 @@ lazy val microservice = Project(appName, file("."))
     Compile / scalafmtOnCompile      := true,
     Test / scalafmtOnCompile         := true,
     libraryDependencies              ++= AppDependencies.compile ++ AppDependencies.test,
+    scalacOptions ++= Seq(
+      "-Xlint:-missing-interpolator,_",
+      "-Ywarn-value-discard",
+      "-Ywarn-dead-code",
+      "-deprecation",
+      "-feature",
+      "-unchecked",
+      "-language:implicitConversions",
+      "-Wconf:src=target/.*:s", // silence warnings from compiled files
+      "-Wconf:src=Routes/.*:s" // silence warnings from routes files
+    )
   )
   .configs(IntegrationTest)
-  .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
-  .settings(CodeCoverageSettings.settings: _*)
+  .settings(CodeCoverageSettings.settings *)
   .settings(
       //fix for scoverage compile errors for scala 2.13.10
       libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always)

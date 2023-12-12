@@ -22,11 +22,13 @@ import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Reads._
+import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 
@@ -39,6 +41,11 @@ trait IfConnector {
   def getPptSubscription(
     pptRef: PptRef
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]]
+
+  def getTradingDetailsForMtdItId(
+    mtdId: MtdItId
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]]
+
 }
 
 @Singleton
@@ -50,6 +57,8 @@ class IfConnectorImpl @Inject() (
   desIfHeaders: DesIfHeaders
 ) extends HttpAPIMonitor with IfConnector with HttpErrorFunctions with Logging {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+
+  private val baseUrl: String = appConfig.ifPlatformBaseUrl
 
   // IF API#1495 Agent Known Fact Check (Trusts)
   def getTrustName(
@@ -77,7 +86,7 @@ class IfConnectorImpl @Inject() (
   def getPptSubscription(
     pptRef: PptRef
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] = {
-    val url = s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
+    val url = s"$baseUrl/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
     agentCacheProvider.pptSubscriptionCache(pptRef.value) {
       getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
         response.status match {
@@ -91,11 +100,39 @@ class IfConnectorImpl @Inject() (
     }
   }
 
+  /* IF API#1171 Get Business Details (for ITSA customers) */
+  def getTradingDetailsForMtdItId(
+    mtdId: MtdItId
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] = {
+    val url =
+      s"$baseUrl/registration/business-details/mtdId/${UriEncoding.encodePathSegment(mtdId.value, "UTF-8")}"
+    agentCacheProvider.tradingDetailsCache(mtdId.value) {
+      getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
+        response.status match {
+          case status if is2xx(status) =>
+            Some(
+              TradingDetails(
+                (response.json \ "nino").as[Nino],
+                (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
+              )
+            )
+          case NOT_FOUND => None
+          case other =>
+            throw UpstreamErrorResponse(
+              s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other",
+              other,
+              other
+            )
+        }
+      }
+    }
+  }
+
   private def getWithDesIfHeaders(apiName: String, url: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[HttpResponse] =
-    monitor(s"ConsumedAPI-DES-$apiName-GET") {
+    monitor(s"ConsumedAPI-IF-$apiName-GET") {
       httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = true, Some(apiName)))(
         implicitly[HttpReads[HttpResponse]],
         hc,
@@ -107,6 +144,6 @@ class IfConnectorImpl @Inject() (
 
   private def getTrustNameUrl(trustTaxIdentifier: String): String =
     if (trustTaxIdentifier.matches(utrPattern))
-      s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/$trustTaxIdentifier"
-    else s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/$trustTaxIdentifier"
+      s"$baseUrl/trusts/agent-known-fact-check/UTR/$trustTaxIdentifier"
+    else s"$baseUrl/trusts/agent-known-fact-check/URN/$trustTaxIdentifier"
 }

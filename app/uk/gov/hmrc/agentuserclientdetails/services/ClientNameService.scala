@@ -71,15 +71,15 @@ class ClientNameService @Inject() (
     }
   }
 
-  def getItsaTradingDetails(
+  private def getItsaTradingDetails(
     mtdItId: MtdItId
   )(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
-    desConnector.getTradingDetailsForMtdItId(mtdItId)
+    ifConnector.getTradingDetailsForMtdItId(mtdItId)
 
-  def getCitizenName(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+  private def getCitizenName(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     citizenDetailsConnector.getCitizenDetails(nino).map(_.flatMap(_.name))
 
-  def getVatName(vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
+  private def getVatName(vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     desConnector
       .getVatCustomerDetails(vrn)
       .map { maybeCustomerDetails =>

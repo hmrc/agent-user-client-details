@@ -21,7 +21,6 @@ import com.google.inject.ImplementedBy
 import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.{NOT_FOUND, OK}
-import play.api.libs.json.Reads._
 import play.utils.UriEncoding
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -42,10 +41,6 @@ trait DesConnector {
   def getCgtSubscription(
     cgtRef: CgtRef
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]]
-
-  def getTradingDetailsForMtdItId(
-    mtdbsa: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]]
 
   def getVatCustomerDetails(
     vrn: Vrn
@@ -80,33 +75,6 @@ class DesConnectorImpl @Inject() (
         case NOT_FOUND => None
         case other =>
           throw UpstreamErrorResponse(s"unexpected error during 'getCgtSubscription': ${response.body}", other, other)
-      }
-    }
-  }
-
-  def getTradingDetailsForMtdItId(
-    mtdbsa: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] = {
-    val url =
-      s"$baseUrl/registration/business-details/mtdbsa/${UriEncoding.encodePathSegment(mtdbsa.value, "UTF-8")}"
-    agentCacheProvider.tradingDetailsCache(mtdbsa.value) {
-      getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            Some(
-              TradingDetails(
-                (response.json \ "nino").as[Nino],
-                (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
-              )
-            )
-          case NOT_FOUND => None
-          case other =>
-            throw UpstreamErrorResponse(
-              s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other",
-              other,
-              other
-            )
-        }
       }
     }
   }

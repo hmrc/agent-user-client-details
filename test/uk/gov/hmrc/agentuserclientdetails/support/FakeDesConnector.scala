@@ -40,14 +40,6 @@ case object FakeDesConnector extends DesConnector {
         )
       )
     )
-  def getTradingDetailsForMtdItId(
-    mtdbsa: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
-    mtdbsa match {
-      case MtdItId("GK873907D") => Future.successful(Some(TradingDetails(Nino("GK873908D"), None)))
-      case MtdItId("GK873908D") => Future.successful(Some(TradingDetails(Nino("GK873908D"), Some(""))))
-      case _                    => Future.successful(Some(TradingDetails(Nino("GK873908D"), Some("IT Client"))))
-    }
 
   def getVatCustomerDetails(
     vrn: Vrn
@@ -77,10 +69,6 @@ case class FailingDesConnector(status: Int) extends DesConnector {
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 
-  override def getTradingDetailsForMtdItId(
-    mtdbsa: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
-    Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
 case object NotFoundDesConnector extends DesConnector {
@@ -98,7 +86,4 @@ case object NotFoundDesConnector extends DesConnector {
     arn: Arn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] = Future successful None
 
-  override def getTradingDetailsForMtdItId(
-    mtdbsa: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] = Future.successful(None)
 }
