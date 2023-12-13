@@ -22,7 +22,8 @@ import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 
 class Es3CacheSpec extends AnyWordSpec with Matchers {
 
-  val clients: Seq[SensitiveEnrolment] = (1 to 15).map(i => SensitiveEnrolment("", "", SensitiveString(s"$i name"), Nil))
+  val clients: Seq[SensitiveEnrolment] =
+    (1 to 15).map(i => SensitiveEnrolment("", "", SensitiveString(s"$i name"), Nil))
 
   "split()" should {
 

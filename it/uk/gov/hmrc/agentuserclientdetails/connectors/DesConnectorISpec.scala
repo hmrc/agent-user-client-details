@@ -85,7 +85,7 @@ class DesConnectorISpec extends BaseIntegrationSpec {
     "getTradingNameForMtdItId" in {
       val testMtdItId = MtdItId("12345678")
       val httpClient = stub[HttpClient]
-      val responseJson = Json.parse(s"""{
+      val responseJson = Json.parse(s"""{"taxPayerDisplayResponse":{
                                        |  "safeId": "XV0000100093327",
                                        |  "nino": "ZR987654C",
                                        |  "propertyIncome": false,
@@ -114,6 +114,7 @@ class DesConnectorISpec extends BaseIntegrationSpec {
                                        |      "seasonal": true
                                        |    }
                                        |  ]
+                                       |  }
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(responseJson).toString)
       mockHttpGet(

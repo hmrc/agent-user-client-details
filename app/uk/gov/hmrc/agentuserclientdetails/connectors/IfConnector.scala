@@ -112,8 +112,10 @@ class IfConnectorImpl @Inject() (
           case status if is2xx(status) =>
             Some(
               TradingDetails(
-                (response.json \ "nino").as[Nino],
-                (response.json \ "businessData").toOption.map(_(0) \ "tradingName").flatMap(_.asOpt[String])
+                (response.json \ "taxPayerDisplayResponse" \ "nino").as[Nino],
+                (response.json \ "taxPayerDisplayResponse" \ "businessData").toOption
+                  .map(_(0) \ "tradingName")
+                  .flatMap(_.asOpt[String])
               )
             )
           case NOT_FOUND => None
