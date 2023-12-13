@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
 
-  implicit val hc = HeaderCarrier()
+  implicit val hc: HeaderCarrier = HeaderCarrier()
   val cns = new ClientNameService(
     FakeCitizenDetailsConnector,
     FakeDesConnector,
@@ -40,10 +40,10 @@ class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
     "hit the correct endpoint for income tax" in {
       cns.getClientName("HMRC-MTD-IT~NINO~someId").futureValue shouldBe Some("IT Client")
     }
-    "check the client details if des returns None for trading name" in {
+    "check the client details if IF returns None for trading name" in {
       cns.getClientName("HMRC-MTD-IT~NINO~GK873907D").futureValue shouldBe Some("Tom Client")
     }
-    "check the client details if des returns an empty string for trading name" in {
+    "check the client details if IF returns an empty string for trading name" in {
       cns.getClientName("HMRC-MTD-IT~NINO~GK873908D").futureValue shouldBe Some("Tom Client")
     }
     "hit the correct endpoint for income record viewer" in {

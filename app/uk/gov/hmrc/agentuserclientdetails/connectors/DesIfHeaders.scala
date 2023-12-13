@@ -33,6 +33,7 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
   private lazy val desEnvironment: String = appConfig.desEnvironment
   private lazy val desAuthorizationToken: String = appConfig.desAuthToken
   private lazy val ifEnvironment: String = appConfig.ifEnvironment
+  private lazy val ifAuthTokenAPI1171: String = appConfig.ifAuthTokenAPI1171
   private lazy val ifAuthTokenAPI1712: String = appConfig.ifAuthTokenAPI1712
   private lazy val ifAuthTokenAPI1495: String = appConfig.ifAuthTokenAPI1495
 
@@ -52,6 +53,7 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
       apiName.fold(baseHeaders) {
         case "getTrustName"              => baseHeaders :+ Authorization -> s"Bearer $ifAuthTokenAPI1495"
         case "GetPptSubscriptionDisplay" => baseHeaders :+ Authorization -> s"Bearer $ifAuthTokenAPI1712"
+        case "GetTradingNameByMtdItId"   => baseHeaders :+ Authorization -> s"Bearer $ifAuthTokenAPI1171"
         case _ =>
           logger.warn(s"Could not set $Authorization header for IF API '$apiName'")
           baseHeaders

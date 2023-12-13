@@ -28,6 +28,7 @@ class TestAppConfig extends AppConfig {
   val desAuthToken: String = ""
   val ifPlatformBaseUrl: String = ""
   val ifEnvironment: String = ""
+  val ifAuthTokenAPI1171: String = ""
   val ifAuthTokenAPI1712: String = ""
   val ifAuthTokenAPI1495: String = ""
   val enableThrottling: Boolean = false

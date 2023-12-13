@@ -40,6 +40,7 @@ trait AppConfig {
 
   val ifPlatformBaseUrl: String
   val ifEnvironment: String
+  val ifAuthTokenAPI1171: String
   val ifAuthTokenAPI1712: String
   val ifAuthTokenAPI1495: String
 
@@ -113,6 +114,7 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
 
   lazy val ifPlatformBaseUrl: String = baseUrl("if")
   lazy val ifEnvironment: String = getConf("if.environment")
+  lazy val ifAuthTokenAPI1171: String = getConf("if.authorization-token.API1171")
   lazy val ifAuthTokenAPI1712: String = getConf("if.authorization-token.API1712")
   lazy val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
 

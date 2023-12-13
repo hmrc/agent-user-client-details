@@ -116,11 +116,14 @@ class DesConnectorISpec extends BaseIntegrationSpec {
                                        |  ]
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(responseJson).toString)
-      mockHttpGet(s"${appConfig.desBaseUrl}/registration/business-details/mtdbsa/${testMtdItId.value}", mockResponse)(
+      mockHttpGet(
+        s"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}",
+        mockResponse
+      )(
         httpClient
       )
-      val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
-      desConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue should matchPattern {
+      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue should matchPattern {
         case Some(TradingDetails(Nino("ZR987654C"), Some("Surname DADTN"))) =>
       }
     }
