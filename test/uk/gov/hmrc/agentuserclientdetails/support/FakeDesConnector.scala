@@ -16,10 +16,9 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, MtdItId, Vrn}
-import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, TradingDetails}
-import uk.gov.hmrc.agentuserclientdetails.model.{AgencyDetails, AgentDetailsDesResponse, CgtSubscription, IndividualName, SubscriptionDetails, TypeOfPersonDetails, VatCustomerDetails}
-import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, Vrn}
+import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
+import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
