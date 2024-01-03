@@ -35,8 +35,8 @@ trait AppConfig {
   val enrolmentStoreProxyUrl: String
 
   val desBaseUrl: String
-  val desEnvironment: String
-  val desAuthToken: String
+  def desEnvironment: String
+  def desAuthToken: String
 
   val ifPlatformBaseUrl: String
   val ifEnvironment: String
