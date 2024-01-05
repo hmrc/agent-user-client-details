@@ -30,13 +30,13 @@ trait AppConfig {
 
   val citizenDetailsBaseUrl: String
 
-  def emailBaseUrl: String
+  val emailBaseUrl: String
 
   val enrolmentStoreProxyUrl: String
 
   val desBaseUrl: String
-  def desEnvironment: String
-  def desAuthToken: String
+  val desEnvironment: String
+  val desAuthToken: String
 
   val ifPlatformBaseUrl: String
   val ifEnvironment: String

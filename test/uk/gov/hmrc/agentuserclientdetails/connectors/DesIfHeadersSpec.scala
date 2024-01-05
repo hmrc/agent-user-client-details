@@ -68,6 +68,5 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
       (mockServicesConfig.getConfString _)
         .expects(key, *)
         .returning(configString)
-
   }
 }
