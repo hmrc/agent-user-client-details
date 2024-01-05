@@ -64,7 +64,5 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
     } else {
       baseHeaders :+ Authorization -> s"Bearer $desAuthorizationToken"
     }
-
   }
-
 }

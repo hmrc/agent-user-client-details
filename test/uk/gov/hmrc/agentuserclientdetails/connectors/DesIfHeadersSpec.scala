@@ -16,19 +16,19 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import org.scalamock.handlers.CallHandler0
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.config.{AppConfig, AppConfigImpl}
 import uk.gov.hmrc.http.{HeaderCarrier, RequestId, SessionId}
 import org.scalamock.scalatest.MockFactory
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 class DesIfHeadersSpec extends BaseSpec with MockFactory {
 
   "outboundHeaders" should {
     "contain correct headers" when {
       "sessionId and requestId found" in new TestScope {
-        mockAppConfigDesAuthToken
-        mockAppConfigDesAEnvironment
+        mockServicesConfigDesEnvironment(key = "des.environment", configString = "testEnv")
+        mockServicesConfigDesEnvironment(key = "des.authorization-token", configString = "testAuthToken")
 
         val hc: HeaderCarrier = new HeaderCarrier(
           sessionId = Option(SessionId("testSession")),
@@ -44,8 +44,8 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
       }
 
       "sessionId and requestId not found" in new TestScope {
-        mockAppConfigDesAuthToken
-        mockAppConfigDesAEnvironment
+        mockServicesConfigDesEnvironment(key = "des.environment", configString = "testEnv")
+        mockServicesConfigDesEnvironment(key = "des.authorization-token", configString = "testAuthToken")
 
         val hc: HeaderCarrier = new HeaderCarrier
         val headersMap: Map[String, String] =
@@ -60,17 +60,14 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
   }
 
   trait TestScope {
-    val appConfig: AppConfig = mock[AppConfig]
+    val mockServicesConfig: ServicesConfig = mock[ServicesConfig]
+    val appConfig: AppConfig = new AppConfigImpl(mockServicesConfig)
     val underTest: DesIfHeaders = new DesIfHeaders(appConfig)
 
-    def mockAppConfigDesAuthToken: CallHandler0[String] =
-      (appConfig.desAuthToken _)
-        .expects()
-        .returning("testAuthToken")
+    def mockServicesConfigDesEnvironment(key: String, configString: String) =
+      (mockServicesConfig.getConfString _)
+        .expects(key, *)
+        .returning(configString)
 
-    def mockAppConfigDesAEnvironment: CallHandler0[String] =
-      (appConfig.desEnvironment _)
-        .expects()
-        .returning("testEnv")
   }
 }

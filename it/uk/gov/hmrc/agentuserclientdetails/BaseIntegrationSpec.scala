@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentuserclientdetails
 
 import com.google.inject.AbstractModule
 import com.kenshoo.play.metrics.PlayModule
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -29,7 +28,7 @@ import play.api.{Application, Configuration, Environment}
 
 abstract class BaseIntegrationSpec
     extends AnyWordSpec with Matchers with ScalaFutures with IntegrationPatience with GuiceOneServerPerSuite
-    with MockFactory with BeforeAndAfterEach {
+    with BeforeAndAfterEach {
 
   protected lazy val conf: Configuration = GuiceApplicationBuilder().configuration
   protected lazy val env: Environment = GuiceApplicationBuilder().environment

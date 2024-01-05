@@ -166,7 +166,7 @@ class AssignmentControllerISpec
       val result = ac.ensureAssignments(arn, "myUser")(request)
       status(result) shouldBe 202
       wis.collectStats.futureValue.values.sum shouldBe 2 // one add, one delete
-      wir.collection.find(Filters.empty()).toFuture.futureValue.map(_.item).toSet shouldBe Set(
+      wir.collection.find(Filters.empty()).toFuture().futureValue.map(_.item).toSet shouldBe Set(
         AssignmentWorkItem(Assign, "myUser", "HMRC-MTD-IT~MTDITID~NKZJ31383072521", arn.value),
         AssignmentWorkItem(Unassign, "myUser", "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", arn.value)
       )

@@ -34,6 +34,8 @@ case class AssignmentsWorkItemRepository @Inject() (config: Config, mongoCompone
       workItemFields = WorkItemFields.default
     ) {
 
+  override lazy val requiresTtlIndex = false
+
   override def now(): Instant = Instant.now()
 
   override def inProgressRetryAfter: Duration =

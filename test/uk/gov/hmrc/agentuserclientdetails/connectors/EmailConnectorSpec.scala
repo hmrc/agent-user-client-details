@@ -74,15 +74,15 @@ class EmailConnectorSpec extends BaseSpec {
     lazy val emailConnector: EmailConnector = new EmailConnectorImpl(mockAppConfig, mockHttpClient, mockMetrics)
 
     def mockMetricsDefaultRegistry: CallHandler0[MetricRegistry] =
-      (mockMetrics.defaultRegistry _)
+      (() => mockMetrics.defaultRegistry)
         .expects()
         .returning(noopMetricRegistry)
 
     def mockAppConfigEmailBaseUrl: CallHandler0[String] =
-      (mockAppConfig.emailBaseUrl _)
+      (() => mockAppConfig.emailBaseUrl)
         .expects()
         .returning("http://someBaseUrl")
-        .noMoreThanTwice
+        .noMoreThanTwice()
 
     def mockHttpPost[I, A](url: String, response: A): Unit =
       (mockHttpClient

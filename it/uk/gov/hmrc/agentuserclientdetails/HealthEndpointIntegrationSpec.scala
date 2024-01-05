@@ -17,12 +17,13 @@
 package uk.gov.hmrc.agentuserclientdetails
 
 import com.google.inject.AbstractModule
+import org.scalamock.scalatest.MockFactory
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import uk.gov.hmrc.auth.core.AuthConnector
 
-class HealthEndpointIntegrationSpec extends BaseIntegrationSpec {
+class HealthEndpointIntegrationSpec extends BaseIntegrationSpec with MockFactory {
 
   private val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl = s"http://localhost:$port"

@@ -67,6 +67,8 @@ class Es3CacheRepositoryImpl @Inject() (
       replaceIndexes = true
     ) with Es3CacheRepository with Logging {
 
+  override lazy val requiresTtlIndex = false
+
   // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
   require(
     crypto.encrypt(PlainText("foo")) == crypto.encrypt(PlainText("foo")),
