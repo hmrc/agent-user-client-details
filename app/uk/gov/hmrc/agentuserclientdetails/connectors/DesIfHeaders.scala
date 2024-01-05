@@ -29,6 +29,8 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
   private val Authorization = "Authorization"
+  private val SessionId = "x-session-id"
+  private val RequestId = "x-request-id"
 
   private lazy val desEnvironment: String = appConfig.desEnvironment
   private lazy val desAuthorizationToken: String = appConfig.desAuthToken
@@ -43,11 +45,12 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
     hc: HeaderCarrier
   ): Seq[(String, String)] = {
 
-    val baseHeaders = Seq(
+    val baseHeaders: Seq[(String, String)] = Seq(
       Environment -> s"${if (viaIF) { ifEnvironment }
         else { desEnvironment }}",
       CorrelationId -> UUID.randomUUID().toString
-    )
+    ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(SessionId -> x.value)) ++
+      hc.requestId.fold(Seq.empty[(String, String)])(x => Seq(RequestId -> x.value))
 
     if (viaIF) {
       apiName.fold(baseHeaders) {
@@ -61,7 +64,5 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
     } else {
       baseHeaders :+ Authorization -> s"Bearer $desAuthorizationToken"
     }
-
   }
-
 }

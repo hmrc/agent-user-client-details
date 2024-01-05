@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import org.bson.types.ObjectId
+import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -33,7 +34,7 @@ import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
+class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSupport with MockFactory {
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val appConfig = app.injector.instanceOf[AppConfig]

@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
 import com.kenshoo.play.metrics.Metrics
+import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Vrn}
@@ -32,7 +33,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class DesConnectorISpec extends BaseIntegrationSpec {
+class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   lazy val appConfig = app.injector.instanceOf[AppConfig]
   lazy val cache = app.injector.instanceOf[AgentCacheProvider]

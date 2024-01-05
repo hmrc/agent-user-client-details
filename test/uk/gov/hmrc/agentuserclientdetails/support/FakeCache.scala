@@ -29,7 +29,7 @@ trait FakeCache extends MockFactory {
   val mockEnv: Environment = mock[Environment]
   implicit val mockMetrics: Metrics = mock[Metrics]
 
-  (mockMetrics.defaultRegistry _).expects().returns(new MetricRegistry()).anyNumberOfTimes()
+  (() => mockMetrics.defaultRegistry).expects().returns(new MetricRegistry()).anyNumberOfTimes()
 
   (mockConfig.getInt(_: String)).expects("agent.cache.size").returns(1).anyNumberOfTimes()
   (mockConfig.getString(_: String)).expects("agent.cache.expires").returns("1 hour")

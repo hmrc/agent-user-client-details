@@ -30,7 +30,7 @@ trait AppConfig {
 
   val citizenDetailsBaseUrl: String
 
-  def emailBaseUrl: String
+  val emailBaseUrl: String
 
   val enrolmentStoreProxyUrl: String
 

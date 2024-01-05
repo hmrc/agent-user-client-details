@@ -45,7 +45,7 @@ class FriendlyNameControllerISpec
     extends BaseIntegrationSpec with DefaultPlayMongoRepositorySupport[WorkItem[FriendlyNameWorkItem]]
     with AuthorisationMockSupport {
 
-  override protected def repository: PlayMongoRepository[WorkItem[FriendlyNameWorkItem]] = wir
+  override protected val repository: PlayMongoRepository[WorkItem[FriendlyNameWorkItem]] = wir
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]

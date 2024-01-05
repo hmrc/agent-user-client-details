@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
+import org.scalamock.scalatest.MockFactory
 import play.api.http.Status.{CREATED, NOT_FOUND, NO_CONTENT, OK}
 import play.api.libs.json.{Json, Writes}
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -28,7 +29,7 @@ import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec {
+class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
