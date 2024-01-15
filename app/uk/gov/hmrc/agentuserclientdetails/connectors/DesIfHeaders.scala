@@ -50,7 +50,7 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
         else { desEnvironment }}",
       CorrelationId -> UUID.randomUUID().toString
     ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(SessionId -> x.value)) ++
-      hc.requestId.fold(Seq.empty[(String, String)])(x => Seq(RequestId -> x.value))
+      hc.requestId.fold(Seq(RequestId -> UUID.randomUUID().toString))(x => Seq(RequestId -> x.value))
 
     if (viaIF) {
       apiName.fold(baseHeaders) {
