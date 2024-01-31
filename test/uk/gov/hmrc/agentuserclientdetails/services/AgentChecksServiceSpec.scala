@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.bson.types.ObjectId
+import play.api.Configuration
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.{Client, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
@@ -50,7 +51,8 @@ class AgentChecksServiceSpec extends BaseSpec {
 
   trait TestScope {
     val mockServicesConfig: ServicesConfig = mock[ServicesConfig]
-    val appconfig = new AppConfigImpl(mockServicesConfig)
+    val mockConfiguration: Configuration = mock[Configuration]
+    val appconfig = new AppConfigImpl(mockServicesConfig, mockConfiguration)
     val mockAgentSizeRepository: AgentSizeRepository = mock[AgentSizeRepository]
     val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
     val mockES3CacheService = mock[ES3CacheService]

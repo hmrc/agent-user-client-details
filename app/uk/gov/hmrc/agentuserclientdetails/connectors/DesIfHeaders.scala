@@ -18,19 +18,18 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames}
 
+import java.net.URL
 import java.util.UUID
 import javax.inject.{Inject, Singleton}
 
+case class HeadersConfig(hc: HeaderCarrier, explicitHeaders: Seq[(String, String)])
 @Singleton
 class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
 
   private val Environment = "Environment"
   private val CorrelationId = "CorrelationId"
-  private val Authorization = "Authorization"
-  private val SessionId = "x-session-id"
-  private val RequestId = "x-request-id"
 
   private lazy val desEnvironment: String = appConfig.desEnvironment
   private lazy val desAuthorizationToken: String = appConfig.desAuthToken
@@ -41,28 +40,46 @@ class DesIfHeaders @Inject() (appConfig: AppConfig) extends Logging {
 
   // Note that the implicit header carrier passed-in can in most cases be an empty one.
   // Only when testing locally against stubs we need to have one in order that we may include a session id.
-  def outboundHeaders(viaIF: Boolean, apiName: Option[String] = None)(implicit
+  def headersConfig(viaIF: Boolean, url: String, apiName: String)(implicit
     hc: HeaderCarrier
-  ): Seq[(String, String)] = {
+  ): HeadersConfig = {
 
-    val baseHeaders: Seq[(String, String)] = Seq(
-      Environment -> s"${if (viaIF) { ifEnvironment }
-        else { desEnvironment }}",
+    val isInternalHost = appConfig.internalHostPatterns.exists(_.pattern.matcher(new URL(url).getHost).matches())
+    val authToken = authorizationToken(viaIF, apiName)
+
+    val baseHeaders = Seq(
+      Environment -> s"${if (viaIF) {
+          ifEnvironment
+        } else {
+          desEnvironment
+        }}",
       CorrelationId -> UUID.randomUUID().toString
-    ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(SessionId -> x.value)) ++
-      hc.requestId.fold(Seq(RequestId -> UUID.randomUUID().toString))(x => Seq(RequestId -> x.value))
+    )
 
-    if (viaIF) {
-      apiName.fold(baseHeaders) {
-        case "getTrustName"              => baseHeaders :+ Authorization -> s"Bearer $ifAuthTokenAPI1495"
-        case "GetPptSubscriptionDisplay" => baseHeaders :+ Authorization -> s"Bearer $ifAuthTokenAPI1712"
-        case "GetTradingNameByMtdItId"   => baseHeaders :+ Authorization -> s"Bearer $ifAuthTokenAPI1171"
-        case _ =>
-          logger.warn(s"Could not set $Authorization header for IF API '$apiName'")
-          baseHeaders
-      }
-    } else {
-      baseHeaders :+ Authorization -> s"Bearer $desAuthorizationToken"
-    }
+    val additionalHeaders =
+      if (isInternalHost) Seq.empty
+      else
+        Seq(
+          HeaderNames.authorisation -> s"Bearer $authToken",
+          HeaderNames.xRequestId    -> hc.requestId.map(_.value).getOrElse(UUID.randomUUID().toString)
+        ) ++ hc.sessionId.fold(Seq.empty[(String, String)])(x => Seq(HeaderNames.xSessionId -> x.value))
+
+    HeadersConfig(
+      if (isInternalHost) hc.copy(authorization = Some(Authorization(s"Bearer $authToken")))
+      else hc,
+      baseHeaders ++ additionalHeaders
+    )
   }
+
+  private def authorizationToken(viaIF: Boolean, apiName: String): String =
+    if (viaIF) {
+      apiName match {
+        case "getTrustName"              => s"$ifAuthTokenAPI1495"
+        case "GetPptSubscriptionDisplay" => s"$ifAuthTokenAPI1712"
+        case "GetTradingNameByMtdItId"   => s"$ifAuthTokenAPI1171"
+        case _ =>
+          throw new RuntimeException(s"Could not set ${HeaderNames.authorisation} header for IF API '$apiName'")
+
+      }
+    } else s"$desAuthorizationToken"
 }

@@ -32,6 +32,7 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 
+import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -133,14 +134,18 @@ class IfConnectorImpl @Inject() (
   private def getWithDesIfHeaders(apiName: String, url: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[HttpResponse] =
+  ): Future[HttpResponse] = {
+
+    val headersConfig = desIfHeaders.headersConfig(viaIF = true, url, apiName)
+
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = true, Some(apiName)))(
+      httpClient.GET[HttpResponse](url, headers = headersConfig.explicitHeaders)(
         implicitly[HttpReads[HttpResponse]],
-        hc,
+        headersConfig.hc,
         ec
       )
     }
+  }
 
   private val utrPattern = "^\\d{10}$"
 

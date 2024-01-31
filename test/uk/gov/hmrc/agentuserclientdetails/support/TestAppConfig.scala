@@ -19,18 +19,19 @@ package uk.gov.hmrc.agentuserclientdetails.support
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 
 import scala.concurrent.duration.{DAYS, Duration}
+import scala.util.matching.Regex
 
 class TestAppConfig extends AppConfig {
   val citizenDetailsBaseUrl: String = ""
   val enrolmentStoreProxyUrl: String = ""
   val desBaseUrl: String = ""
-  val desEnvironment: String = ""
-  val desAuthToken: String = ""
+  val desEnvironment: String = "desEnv"
+  val desAuthToken: String = "desToken"
   val ifPlatformBaseUrl: String = ""
-  val ifEnvironment: String = ""
-  val ifAuthTokenAPI1171: String = ""
-  val ifAuthTokenAPI1712: String = ""
-  val ifAuthTokenAPI1495: String = ""
+  val ifEnvironment: String = "IFEnv"
+  val ifAuthTokenAPI1171: String = "API1171"
+  val ifAuthTokenAPI1712: String = "API1712"
+  val ifAuthTokenAPI1495: String = "API1495"
   val enableThrottling: Boolean = false
   val clientNameFetchThrottlingRate: String = "1 / second"
   override val es0ThrottlingRate: String = "20 / second"
@@ -65,4 +66,5 @@ class TestAppConfig extends AppConfig {
   override val es3MaxRecordsFetchCount: Int = 1000
   override val enableCbcFeature: Boolean = true
   override val enablePillar2Feature: Boolean = true
+  override val internalHostPatterns: Seq[Regex] = Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$").map(_.r)
 }

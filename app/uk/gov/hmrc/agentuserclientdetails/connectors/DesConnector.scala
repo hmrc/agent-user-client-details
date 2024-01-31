@@ -31,6 +31,7 @@ import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
 
+import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -126,12 +127,16 @@ class DesConnectorImpl @Inject() (
   private def getWithDesIfHeaders(apiName: String, url: String)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[HttpResponse] =
+  ): Future[HttpResponse] = {
+
+    val headersConfig = desIfHeaders.headersConfig(viaIF = false, url, apiName)
+
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET[HttpResponse](url, headers = desIfHeaders.outboundHeaders(viaIF = false, Some(apiName)))(
+      httpClient.GET[HttpResponse](url = url, headers = headersConfig.explicitHeaders)(
         implicitly[HttpReads[HttpResponse]],
-        hc,
+        headersConfig.hc,
         ec
       )
     }
+  }
 }

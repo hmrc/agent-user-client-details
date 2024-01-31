@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import com.codahale.metrics.{MetricRegistry, NoopMetricRegistry}
 import com.kenshoo.play.metrics.Metrics
 import org.scalamock.handlers.CallHandler0
+import play.api.Configuration
 import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.Writes
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
@@ -70,7 +71,8 @@ class EmailConnectorSpec extends BaseSpec {
     val mockMetrics: Metrics = mock[Metrics]
     val mockHttpClient: HttpClient = mock[HttpClient]
     val mockServicesConfig: ServicesConfig = mock[ServicesConfig]
-    val appConfig: AppConfig = new AppConfigImpl(mockServicesConfig)
+    val mockConfiguration: Configuration = mock[Configuration]
+    val appConfig: AppConfig = new AppConfigImpl(mockServicesConfig, mockConfiguration)
 
     lazy val underTest: EmailConnector = new EmailConnectorImpl(appConfig, mockHttpClient, mockMetrics)
 
