@@ -17,11 +17,13 @@
 package uk.gov.hmrc.agentuserclientdetails.config
 
 import com.google.inject.ImplementedBy
+import play.api.Configuration
 
 import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import scala.concurrent.duration.Duration
+import scala.util.matching.Regex
 
 @ImplementedBy(classOf[AppConfigImpl])
 trait AppConfig {
@@ -92,10 +94,12 @@ trait AppConfig {
   val enableCbcFeature: Boolean
 
   val enablePillar2Feature: Boolean
+
+  val internalHostPatterns: Seq[Regex]
 }
 
 @Singleton
-class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig {
+class AppConfigImpl @Inject() (servicesConfig: ServicesConfig, config: Configuration) extends AppConfig {
 
   private def getConf(key: String) =
     servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
@@ -183,4 +187,6 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig) extends AppConfig
 
   override lazy val enableCbcFeature: Boolean = servicesConfig.getBoolean("features.enable-cbc")
   override lazy val enablePillar2Feature: Boolean = servicesConfig.getBoolean("features.enable-pillar2")
+
+  override lazy val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 }

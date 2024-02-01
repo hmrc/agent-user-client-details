@@ -16,57 +16,144 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.config.{AppConfig, AppConfigImpl}
-import uk.gov.hmrc.http.{HeaderCarrier, RequestId, SessionId}
 import org.scalamock.scalatest.MockFactory
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.agentuserclientdetails.BaseSpec
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
+import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, RequestId, SessionId}
+
+import java.util.UUID
 
 class DesIfHeadersSpec extends BaseSpec with MockFactory {
 
-  "outboundHeaders" should {
-    "contain correct headers" when {
-      "sessionId and requestId found" in new TestScope {
-        mockServicesConfigDesEnvironment(key = "des.environment", configString = "testEnv")
-        mockServicesConfigDesEnvironment(key = "des.authorization-token", configString = "testAuthToken")
+  "headersConfig" should {
+    "contain correct headers for DES" when {
+      "service URL is internal" in new TestScope {
 
-        val hc: HeaderCarrier = new HeaderCarrier(
+        val desUrl = "http://localhost:9009/registration/personal-details/arn/HARN000123"
+
+        implicit val hc: HeaderCarrier = new HeaderCarrier(
+          authorization = Some(Authorization("Bearer session-xyz")),
           sessionId = Option(SessionId("testSession")),
           requestId = Option(RequestId("testRequestId"))
         )
-        val headersMap: Map[String, String] =
-          underTest.outboundHeaders(viaIF = false, Some("getAgencyDetails"))(hc).toMap
 
-        headersMap should contain("Authorization" -> "Bearer testAuthToken")
-        headersMap should contain("Environment" -> "testEnv")
-        headersMap should contain("x-session-id" -> "testSession")
-        headersMap should contain("x-request-id" -> "testRequestId")
+        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = false, desUrl, "getAgencyDetails")
+
+        val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
+        val headerCarrier: HeaderCarrier = headersConfig.hc
+
+        explicitHeaders should contain key "CorrelationId"
+        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
+        explicitHeaders should contain("Environment" -> "desEnv")
+        explicitHeaders should not contain (HeaderNames.authorisation)
+        explicitHeaders should not contain (HeaderNames.xSessionId)
+        explicitHeaders should not contain (HeaderNames.xRequestId)
+
+        headerCarrier.sessionId.get.value shouldBe "testSession"
+        headerCarrier.requestId.get.value shouldBe "testRequestId"
+        headerCarrier.authorization.get.value shouldBe "Bearer desToken"
       }
 
-      "sessionId and requestId not found" in new TestScope {
-        mockServicesConfigDesEnvironment(key = "des.environment", configString = "testEnv")
-        mockServicesConfigDesEnvironment(key = "des.authorization-token", configString = "testAuthToken")
+      "service url is external" in new TestScope {
 
-        val hc: HeaderCarrier = new HeaderCarrier
-        val headersMap: Map[String, String] =
-          underTest.outboundHeaders(viaIF = false, Some("getAgencyDetails"))(hc).toMap
+        val desUrl = "https://des.ws.ibt.hmrc.gov.uk/registration/personal-details/arn/HARN000123"
 
-        headersMap should contain("Authorization" -> "Bearer testAuthToken")
-        headersMap should contain("Environment" -> "testEnv")
-        headersMap.contains("x-session-id") shouldBe false
-        headersMap.contains("x-request-id") shouldBe true
+        implicit val hc: HeaderCarrier = new HeaderCarrier(
+          authorization = Some(Authorization("Bearer session-xyz")),
+          sessionId = Option(SessionId("testSession")),
+          requestId = Option(RequestId("testRequestId"))
+        )
+
+        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = false, desUrl, "getAgencyDetails")
+
+        val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
+        val headerCarrier: HeaderCarrier = headersConfig.hc
+
+        explicitHeaders should contain key "CorrelationId"
+        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
+        explicitHeaders should contain("Environment" -> "desEnv")
+        explicitHeaders should contain(HeaderNames.authorisation -> "Bearer desToken")
+        explicitHeaders should contain(HeaderNames.xSessionId -> "testSession")
+        explicitHeaders should contain(HeaderNames.xRequestId -> "testRequestId")
+
+        headerCarrier.authorization.get.value shouldBe "Bearer session-xyz"
+
+      }
+    }
+
+    "contain correct headers for IF" when {
+      "service URL is internal" in new TestScope {
+
+        val ifUrl = "http://localhost:9009/trust-known-fact-check/UTR/1234567890"
+
+        implicit val hc: HeaderCarrier = new HeaderCarrier(
+          authorization = Some(Authorization("Bearer session-xyz")),
+          sessionId = Option(SessionId("testSession")),
+          requestId = Option(RequestId("testRequestId"))
+        )
+
+        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = true, ifUrl, "getTrustName")
+
+        val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
+        val headerCarrier: HeaderCarrier = headersConfig.hc
+
+        explicitHeaders should contain key "CorrelationId"
+        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
+        explicitHeaders should contain("Environment" -> "IFEnv")
+        explicitHeaders should not contain (HeaderNames.authorisation)
+        explicitHeaders should not contain (HeaderNames.xSessionId)
+        explicitHeaders should not contain (HeaderNames.xRequestId)
+
+        headerCarrier.sessionId.get.value shouldBe "testSession"
+        headerCarrier.requestId.get.value shouldBe "testRequestId"
+        headerCarrier.authorization.get.value shouldBe "Bearer API1495"
+      }
+
+      "service url is external" in new TestScope {
+
+        val ifUrl = "https://ifs.ws.ibt.hmrc.gov.uk/trust-known-fact-check/UTR/1234567890"
+
+        implicit val hc: HeaderCarrier = new HeaderCarrier(
+          authorization = Some(Authorization("Bearer session-xyz")),
+          sessionId = Option(SessionId("testSession")),
+          requestId = Option(RequestId("testRequestId"))
+        )
+
+        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = true, ifUrl, "getTrustName")
+
+        val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
+        val headerCarrier: HeaderCarrier = headersConfig.hc
+
+        explicitHeaders should contain key "CorrelationId"
+        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
+        explicitHeaders should contain("Environment" -> "IFEnv")
+        explicitHeaders should contain(HeaderNames.authorisation -> "Bearer API1495")
+        explicitHeaders should contain(HeaderNames.xSessionId -> "testSession")
+        explicitHeaders should contain(HeaderNames.xRequestId -> "testRequestId")
+
+        headerCarrier.authorization.get.value shouldBe "Bearer session-xyz"
+
+      }
+
+    }
+
+    "throw an exception for IF requests" when {
+      "apiName is not recognised" in new TestScope {
+
+        val ifUrl = "http://localhost:9009/trust-known-fact-check/UTR/1234567890"
+
+        implicit val hc: HeaderCarrier = new HeaderCarrier()
+
+        an[RuntimeException] shouldBe thrownBy {
+          underTest.headersConfig(viaIF = true, ifUrl, "unknown_API")
+        }
       }
     }
   }
 
   trait TestScope {
-    val mockServicesConfig: ServicesConfig = mock[ServicesConfig]
-    val appConfig: AppConfig = new AppConfigImpl(mockServicesConfig)
+    val appConfig: AppConfig = new TestAppConfig
     val underTest: DesIfHeaders = new DesIfHeaders(appConfig)
-
-    def mockServicesConfigDesEnvironment(key: String, configString: String) =
-      (mockServicesConfig.getConfString _)
-        .expects(key, *)
-        .returning(configString)
   }
 }
