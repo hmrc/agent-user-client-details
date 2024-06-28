@@ -36,6 +36,8 @@ import scala.concurrent.{ExecutionContext, Future}
 trait Es3CacheRepository {
   def put(groupId: String, clients: Seq[Enrolment]): Future[Es3Cache]
   def get(groupId: String): Future[Option[Es3Cache]]
+
+  def deleteCache(groupId: String): Future[Long]
 }
 
 /** Caches ES3 enrolments of an agent's groupId for a configurable duration.
@@ -99,4 +101,8 @@ class Es3CacheRepositoryImpl @Inject() (
       .find(equal(FIELD_GROUP_ID, groupId))
       .toFuture()
       .map(Es3Cache.merge)
+
+  // test-only to remove perf-test data.
+  override def deleteCache(groupId: String): Future[Long] =
+    collection.deleteOne(equal("groupId", groupId)).toFuture().map(_.getDeletedCount)
 }

@@ -136,4 +136,11 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   }
 
+  "deleteWorkItems" should {
+    "delete all work items" in {
+      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded).futureValue
+      wir.deleteWorkItems(testGroupId).futureValue shouldBe 1L
+    }
+  }
+
 }

@@ -50,5 +50,15 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
       es3CacheFetched.clients.map(_.decryptedValue) shouldBe enrolments
     }
   }
+  "delete data" should {
+    "delete data for groupId" in {
+      val enrolments =
+        Seq(Enrolment("HMRC-MTD-IT", "Activated", "friend of a friend", Seq(Identifier("MTDITID", "X12345678909876"))))
+
+      es3CacheRepository.put(groupId, enrolments).futureValue
+
+      es3CacheRepository.deleteCache(groupId).futureValue shouldBe 1L
+    }
+  }
 
 }
