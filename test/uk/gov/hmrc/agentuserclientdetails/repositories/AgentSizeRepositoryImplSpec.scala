@@ -71,7 +71,13 @@ class AgentSizeRepositoryImplSpec
         agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordUpdated)
       }
     }
+  }
 
+  "delete" should {
+    "delete data" in new TestScope {
+      agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordInserted)
+      agentSizeRepository.delete(arn.value).futureValue shouldBe 1L
+    }
   }
 
   override protected val repository: PlayMongoRepository[AgentSize] = new AgentSizeRepositoryImpl(mongoComponent)

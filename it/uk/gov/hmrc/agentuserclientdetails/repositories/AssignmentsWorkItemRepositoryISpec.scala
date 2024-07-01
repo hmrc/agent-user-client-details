@@ -180,7 +180,15 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
         .futureValue // item was updated only 1 minute before the cleanup time, so it should be kept
       wis.query(Seq(Succeeded)).futureValue.length shouldBe 1
     }
+  }
 
+  "deleteWorkItems" should {
+    "delete all work items" in {
+      wis
+        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), Instant.now(), Succeeded)
+        .futureValue
+      wir.deleteWorkItems(testArn.value).futureValue shouldBe 1L
+    }
   }
 
 }

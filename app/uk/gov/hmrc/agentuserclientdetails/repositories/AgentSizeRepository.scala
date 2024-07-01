@@ -44,6 +44,8 @@ object AgentSize {
 trait AgentSizeRepository {
   def get(arn: Arn): Future[Option[AgentSize]]
   def upsert(agentSize: AgentSize): Future[Option[UpsertType]]
+
+  def delete(arn: String): Future[Long]
 }
 
 @Singleton
@@ -75,4 +77,8 @@ class AgentSizeRepositoryImpl @Inject() (
       }))
 
   private def upsertOptions = new ReplaceOptions().upsert(true)
+
+  // // test-only to remove perf-test data.
+  override def delete(arn: String): Future[Long] =
+    collection.deleteOne(equal("arn", arn)).toFuture().map(_.getDeletedCount)
 }

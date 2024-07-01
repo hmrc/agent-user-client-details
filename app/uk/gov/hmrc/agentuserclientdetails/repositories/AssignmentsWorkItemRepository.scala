@@ -17,13 +17,14 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
+import org.mongodb.scala.model.Filters
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
 
 import java.time.{Duration, Instant}
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class AssignmentsWorkItemRepository @Inject() (config: Config, mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext
@@ -40,4 +41,8 @@ case class AssignmentsWorkItemRepository @Inject() (config: Config, mongoCompone
 
   override def inProgressRetryAfter: Duration =
     config.getDuration("work-item-repository.assignments.retry-in-progress-after")
+
+  // test-only to remove perf-test data.
+  def deleteWorkItems(arn: String): Future[Long] =
+    collection.deleteMany(Filters.equal("item.arn", arn)).toFuture().map(_.getDeletedCount)
 }
