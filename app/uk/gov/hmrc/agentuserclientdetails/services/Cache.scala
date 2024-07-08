@@ -16,29 +16,27 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import com.codahale.metrics.MetricRegistry
 import com.github.blemale.scaffeine.Scaffeine
-import com.kenshoo.play.metrics.Metrics
-
-import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment, Logger, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
 import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, CgtSubscription, PptSubscription, VatCustomerDetails}
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
-trait KenshooCacheMetrics {
+trait CacheMetrics {
 
-  val kenshooRegistry: MetricRegistry
+  val metrics: Metrics
 
   def record[T](name: String): Unit = {
-    kenshooRegistry.getMeters.getOrDefault(name, kenshooRegistry.meter(name)).mark()
-    Logger(getClass).debug(s"kenshoo-event::meter::$name::recorded")
+    metrics.defaultRegistry.getMeters.getOrDefault(name, metrics.defaultRegistry.meter(name)).mark()
+    Logger(getClass).debug(s"metrics-event::meter::$name::recorded")
   }
 
 }
@@ -53,10 +51,10 @@ class DoNotCache[T] extends Cache[T] {
   def invalidate(key: String)(implicit ec: ExecutionContext): Unit = ()
 }
 
-class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit metrics: Metrics)
-    extends KenshooCacheMetrics with Cache[T] with Logging {
-
-  val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
+  val metrics: Metrics,
+  val ec: ExecutionContext
+) extends CacheMetrics with Cache[T] with Logging {
 
   private val underlying: com.github.blemale.scaffeine.Cache[String, T] =
     Scaffeine()
@@ -84,7 +82,8 @@ class LocalCaffeineCache[T](name: String, size: Int, expires: Duration)(implicit
 
 @Singleton
 class AgentCacheProvider @Inject() (val environment: Environment, configuration: Configuration)(implicit
-  metrics: Metrics
+  metrics: Metrics,
+  ec: ExecutionContext
 ) {
 
   val runModeConfiguration: Configuration = configuration

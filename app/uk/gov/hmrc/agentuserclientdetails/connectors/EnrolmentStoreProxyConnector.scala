@@ -16,22 +16,21 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
-import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
-import com.kenshoo.play.metrics.Metrics
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, Json, OFormat}
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments, Service}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpReads.is2xx
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpException, HttpResponse, NotFoundException, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -97,17 +96,16 @@ trait EnrolmentStoreProxyConnector {
   // ES21 - Query a group's delegated enrolments, returning information about the assigned agent users
   def getGroupDelegatedEnrolments(
     groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[GroupDelegatedEnrolments]]
+  )(implicit hc: HeaderCarrier): Future[Option[GroupDelegatedEnrolments]]
 }
 
 @Singleton
 class EnrolmentStoreProxyConnectorImpl @Inject() (
   http: HttpClient,
   agentCacheProvider: AgentCacheProvider,
-  metrics: Metrics
-)(implicit appConfig: AppConfig, materializer: Materializer)
+  val metrics: Metrics
+)(implicit appConfig: AppConfig, materializer: Materializer, val ec: ExecutionContext)
     extends EnrolmentStoreProxyConnector with HttpAPIMonitor with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
 
@@ -236,9 +234,9 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   }
 
   // ES3 - Query Enrolments allocated to a Group
-  def getEnrolmentsForGroupId(
+  override def getEnrolmentsForGroupId(
     groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Seq[Enrolment]] = {
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[Enrolment]] = {
 
     val enrolments: mutable.ArrayBuffer[Enrolment] = mutable.ArrayBuffer.empty
 
@@ -264,8 +262,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   }
 
   private def fetchGroupDelegatedEnrolments(groupId: String, startRecord: Int)(implicit
-    hc: HeaderCarrier,
-    executionContext: ExecutionContext
+    hc: HeaderCarrier
   ): Future[Option[PaginatedEnrolments]] = {
     val url =
       new URL(
@@ -352,7 +349,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   // ES21 - Query a group's delegated enrolments, returning information about the assigned agent users
   override def getGroupDelegatedEnrolments(
     groupId: String
-  )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[GroupDelegatedEnrolments]] = {
+  )(implicit hc: HeaderCarrier): Future[Option[GroupDelegatedEnrolments]] = {
     val url =
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated")
     monitor(s"ConsumedAPI-ES-getGroupDelegatedEnrolments-GET") {

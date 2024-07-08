@@ -17,13 +17,16 @@
 package uk.gov.hmrc.agentuserclientdetails.support
 
 import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
 import com.typesafe.config.Config
 import org.scalamock.scalatest.MockFactory
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.{Configuration, Environment}
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-trait FakeCache extends MockFactory {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+trait FakeCache extends AnyWordSpec with MockFactory {
   val mockConfig: Config = mock[Config]
   val mockConfiguration = new Configuration(mockConfig)
   val mockEnv: Environment = mock[Environment]

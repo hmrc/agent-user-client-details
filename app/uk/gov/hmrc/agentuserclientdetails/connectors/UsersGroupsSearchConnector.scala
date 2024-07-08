@@ -16,16 +16,15 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import javax.inject.{Inject, Singleton}
@@ -37,10 +36,10 @@ trait UsersGroupsSearchConnector {
 }
 
 @Singleton
-class UsersGroupsSearchConnectorImpl @Inject() (httpClient: HttpClient, metrics: Metrics)(implicit appConfig: AppConfig)
-    extends UsersGroupsSearchConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
-
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+class UsersGroupsSearchConnectorImpl @Inject() (httpClient: HttpClient, val metrics: Metrics)(implicit
+  appConfig: AppConfig,
+  val ec: ExecutionContext
+) extends UsersGroupsSearchConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
 
   override def getGroupUsers(
     groupId: String

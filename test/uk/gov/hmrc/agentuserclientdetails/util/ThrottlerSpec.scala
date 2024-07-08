@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentuserclientdetails.util
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Sink
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 import org.scalatest.time.{Seconds, Span}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec

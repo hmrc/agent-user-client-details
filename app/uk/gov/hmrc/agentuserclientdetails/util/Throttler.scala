@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentuserclientdetails.util
 
-import akka.NotUsed
-import akka.stream.ThrottleMode
-import akka.stream.scaladsl.{Flow, Source}
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.ThrottleMode
+import org.apache.pekko.stream.scaladsl.{Flow, Source}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt

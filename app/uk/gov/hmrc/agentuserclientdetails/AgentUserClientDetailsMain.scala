@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle

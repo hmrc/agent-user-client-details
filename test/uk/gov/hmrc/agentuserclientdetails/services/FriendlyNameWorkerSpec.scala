@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.testkit.NoMaterializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.testkit.NoMaterializer
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures._

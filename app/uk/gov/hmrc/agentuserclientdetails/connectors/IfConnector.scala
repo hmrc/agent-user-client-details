@@ -16,23 +16,21 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Reads._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
+import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -54,10 +52,10 @@ class IfConnectorImpl @Inject() (
   appConfig: AppConfig,
   agentCacheProvider: AgentCacheProvider,
   httpClient: HttpClient,
-  metrics: Metrics,
+  val metrics: Metrics,
   desIfHeaders: DesIfHeaders
-) extends HttpAPIMonitor with IfConnector with HttpErrorFunctions with Logging {
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+)(implicit val ec: ExecutionContext)
+    extends HttpAPIMonitor with IfConnector with HttpErrorFunctions with Logging {
 
   private val baseUrl: String = appConfig.ifPlatformBaseUrl
 

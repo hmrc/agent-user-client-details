@@ -27,7 +27,7 @@ import uk.gov.hmrc.auth.core._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AuthActionSpec extends BaseSpec with AuthorisationSupport {
+class AuthActionSpec extends AuthorisationSupport {
 
   trait TestScope {
     implicit val mockAuthConnector: AuthConnector = mock[AuthConnector]
