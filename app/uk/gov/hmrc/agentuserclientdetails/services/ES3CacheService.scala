@@ -73,7 +73,7 @@ class ES3CacheServiceImpl @Inject() (
   )(implicit hc: HeaderCarrier, executionContext: ExecutionContext): Future[Option[Unit]] =
     es3CacheRepository
       .get(groupId)
-      .map(_.map(_ => fetchEs3ClientsAndPersist(groupId)))
+      .map(_.map(_ => fetchEs3ClientsAndPersist(groupId)).map(_ => ()))
 
   private def fetchEs3ClientsAndPersist(groupId: String)(implicit
     hc: HeaderCarrier,

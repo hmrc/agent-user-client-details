@@ -50,46 +50,50 @@ class AgentUserClientDetailsMain @Inject() (
     }
   )
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.friendlyNameJobRestartRepoQueueInitialDelaySeconds.seconds,
     interval = appConfig.friendlyNameJobRestartRepoQueueIntervalSeconds.second
-  ) {
+  ) { () =>
     friendlyNameWorker.isRunning match {
       case true =>
         logger.debug("[Friendly name job] Was already running, so I did not trigger it again.")
       case false =>
         logger.debug("[Friendly name job] Triggered")
         friendlyNameWorker.start()
+        ()
     }
   }
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.assignEnrolmentJobRestartRepoQueueInitialDelaySeconds.seconds,
     interval = appConfig.assignEnrolmentJobRestartRepoQueueIntervalSeconds.second
-  ) {
+  ) { () =>
     assignmentsWorker.isRunning match {
       case true =>
         logger.debug("[Assign enrolment job] Was already running, so I did not trigger it again.")
       case false =>
         logger.debug("[Assign enrolment job] Triggered")
         assignmentsWorker.start()
+        ()
     }
+
   }
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.jobMonitoringWorkerInitialDelaySeconds.seconds,
     interval = appConfig.jobMonitoringWorkerIntervalSeconds.seconds
-  ) {
+  ) { () =>
     jobMonitoringWorker.isRunning match {
       case true =>
         logger.debug("[Job monitor] Was already running, so I did not trigger it again.")
       case false =>
         logger.debug("[Job monitor] Triggered")
         jobMonitoringWorker.start()
+        ()
     }
   }
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.serviceJobInitialDelaySeconds.seconds,
     interval = appConfig.serviceJobIntervalSeconds.seconds
   ) {
@@ -148,5 +152,7 @@ class AgentUserClientDetailsMain @Inject() (
       _ <- cleanup()
       _ = logger.info("Service job finished.")
     } yield ()
+    () => ()
+
   }
 }

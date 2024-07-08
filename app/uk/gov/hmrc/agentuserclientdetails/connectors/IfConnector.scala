@@ -90,7 +90,7 @@ class IfConnectorImpl @Inject() (
       getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
         response.status match {
           case status if is2xx(status) =>
-            Some(response.json.as[PptSubscription](PptSubscription.reads))
+            Some(response.json.as[PptSubscription](PptSubscription.reads(_)))
           case NOT_FOUND => None
           case other =>
             throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay: ${response.body}", other)

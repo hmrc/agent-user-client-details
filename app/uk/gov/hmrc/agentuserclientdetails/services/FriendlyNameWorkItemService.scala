@@ -57,7 +57,7 @@ trait FriendlyNameWorkItemService {
     implicit ec: ExecutionContext
   ): Future[Boolean]
 
-  def removeAll()(implicit ec: ExecutionContext): Future[DeleteResult]
+  def removeAll(): Future[DeleteResult]
 
   def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[DeleteResult]
 
@@ -126,7 +126,7 @@ class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkI
       wasThisSuccessful
     }
 
-  def removeAll()(implicit ec: ExecutionContext): Future[DeleteResult] =
+  def removeAll(): Future[DeleteResult] =
     workItemRepo.collection.deleteMany(Filters.empty()).toFuture()
 
   def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[DeleteResult] =
