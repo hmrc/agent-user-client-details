@@ -245,6 +245,8 @@ class ClientController @Inject() (
         Future.successful(NotFound)
       case Failure(uer: UpstreamErrorResponse) =>
         Future.failed(uer)
+      case Failure(exception: Throwable) =>
+        Future.failed(exception)
     }
   }
 

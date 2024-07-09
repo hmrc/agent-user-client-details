@@ -60,7 +60,6 @@ class AgentUserClientDetailsMain @Inject() (
       case false =>
         logger.debug("[Friendly name job] Triggered")
         friendlyNameWorker.start()
-        ()
     }
   }
 
@@ -74,7 +73,6 @@ class AgentUserClientDetailsMain @Inject() (
       case false =>
         logger.debug("[Assign enrolment job] Triggered")
         assignmentsWorker.start()
-        ()
     }
 
   }
@@ -89,7 +87,6 @@ class AgentUserClientDetailsMain @Inject() (
       case false =>
         logger.debug("[Job monitor] Triggered")
         jobMonitoringWorker.start()
-        ()
     }
   }
 
@@ -145,14 +142,13 @@ class AgentUserClientDetailsMain @Inject() (
       .map(_ => ())
 
     logger.info("Service job started.")
-    for {
-      _ <- heartbeat()
-      _ <- friendlyNameRepoStats()
-      _ <- assignmentsRepoStats()
-      _ <- cleanup()
-      _ = logger.info("Service job finished.")
-    } yield ()
-    () => ()
-
+    () =>
+      for {
+        _ <- heartbeat()
+        _ <- friendlyNameRepoStats()
+        _ <- assignmentsRepoStats()
+        _ <- cleanup()
+        _ = logger.info("Service job finished.")
+      } yield ()
   }
 }
