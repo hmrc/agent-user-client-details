@@ -16,11 +16,10 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import akka.NotUsed
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import org.joda.time.DateTime
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
@@ -163,7 +162,7 @@ class AssignmentsWorker @Inject() (
       }
     }
     val result =
-      if (appConfig.enableThrottling) assignmentsThrottler.throttledStartingFrom(DateTime.now())(f())
+      if (appConfig.enableThrottling) assignmentsThrottler.throttledStartingFrom(Instant.now())(f())
       else f()
     result.flatMap(_.fold(Future.successful(()))(Future.failed))
   }

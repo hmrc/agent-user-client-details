@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Format, JsDefined, JsObject, JsResult, JsString, JsValue, Json, OFormat}
+import play.api.libs.json.{Format, JsDefined, JsError, JsObject, JsResult, JsString, JsValue, Json, OFormat}
 
 // Keeping it generic so our options are open in case we want to track other kind of jobs later (e.g. ES11/ES12 assignments, etc.)
 sealed trait JobData
@@ -32,6 +32,7 @@ object JobData {
         (x \ "jobType") match {
           case JsDefined(JsString(FriendlyNameJobData.jobType)) => Json.fromJson[FriendlyNameJobData](x)
         }
+      case _ => JsError("Expected JSON object")
     }
   }
 }

@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
-import com.kenshoo.play.metrics.Metrics
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.Json
@@ -29,6 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}

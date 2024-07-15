@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.codahale.metrics.{MetricRegistry, NoopMetricRegistry}
-import com.kenshoo.play.metrics.Metrics
 import org.scalamock.handlers.CallHandler0
 import play.api.Configuration
 import play.api.http.Status.{BAD_REQUEST, OK}
@@ -27,6 +26,7 @@ import uk.gov.hmrc.agentuserclientdetails.config.{AppConfig, AppConfigImpl}
 import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.{ExecutionContext, Future}
 

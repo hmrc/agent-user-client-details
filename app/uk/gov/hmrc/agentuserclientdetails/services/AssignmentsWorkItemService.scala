@@ -58,7 +58,7 @@ trait AssignmentsWorkItemService {
     ec: ExecutionContext
   ): Future[Boolean]
 
-  def removeAll()(implicit ec: ExecutionContext): Future[DeleteResult]
+  def removeAll(): Future[DeleteResult]
 
   def pullOutstanding(failedBefore: Instant, availableBefore: Instant)(implicit
     ec: ExecutionContext
@@ -126,7 +126,7 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
   ): Future[Boolean] =
     workItemRepo.complete(id, newStatus)
 
-  def removeAll()(implicit ec: ExecutionContext): Future[DeleteResult] =
+  def removeAll(): Future[DeleteResult] =
     workItemRepo.collection.deleteMany(Filters.empty()).toFuture()
 
   def pullOutstanding(failedBefore: Instant, availableBefore: Instant)(implicit

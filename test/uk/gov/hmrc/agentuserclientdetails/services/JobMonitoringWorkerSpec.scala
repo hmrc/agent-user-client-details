@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
-import akka.stream.Materializer
-import akka.stream.testkit.NoMaterializer
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.testkit.NoMaterializer
 import com.mongodb.client.result.UpdateResult
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory

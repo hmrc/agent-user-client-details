@@ -2,25 +2,24 @@ import sbt._
 
 object AppDependencies {
 
-  private val bootstrapVer: String = "7.22.0"
-  private val mongoVer: String = "1.1.0"
+  private val bootstrapVer: String = "8.6.0"
+  private val mongoVer: String = "1.9.0"
+  private val pekkoVersion = "1.0.2"
 
-  val compile = Seq(
-    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-work-item-repo-play-28" % mongoVer,
-    "uk.gov.hmrc"             %% "agent-mtd-identifiers"             % "1.15.0",
-    "uk.gov.hmrc"             %% "cluster-work-throttling"           % "8.5.0-play-28",
-    "uk.gov.hmrc"             %% "agent-kenshoo-monitoring"          % "5.5.0",
-    "uk.gov.hmrc"             %% "crypto-json-play-28"               % "7.3.0",
+  val compile: Seq[ModuleID] = Seq(
+    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-work-item-repo-play-30" % mongoVer,
+    "uk.gov.hmrc"             %% "bootstrap-backend-play-30"        % bootstrapVer,
+    "uk.gov.hmrc"             %% "agent-mtd-identifiers"             % "2.0.0",
+    "uk.gov.hmrc"             %% "cluster-work-throttling"           % "8.6.0",
+    "uk.gov.hmrc"             %% "crypto-json-play-30"               % "7.6.0",
     "com.github.blemale"      %% "scaffeine"                         % "5.2.1",
-    "joda-time"               %  "joda-time"                         % "2.12.5",
     "net.codingwell"          %% "scala-guice"                       % "6.0.0"
   )
 
   val test = Seq(
-    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-test-play-28"    % mongoVer        % "test, it",
-    "uk.gov.hmrc"             %% "bootstrap-test-play-28"     % bootstrapVer    % "test, it",
-    "com.typesafe.akka"       %% "akka-stream-testkit"        % "2.6.21"        % "test, it",
-    "org.scalamock"           %% "scalamock"                  % "5.2.0"         % "test, it",
-    "com.vladsch.flexmark"    %  "flexmark-all"               % "0.36.8"        % "test, it"
+    "uk.gov.hmrc.mongo"       %% "hmrc-mongo-test-play-30"    % mongoVer        % Test,
+    "uk.gov.hmrc"             %% "bootstrap-test-play-30"     % bootstrapVer    % Test,
+    "org.apache.pekko"        %% "pekko-stream-testkit"       % pekkoVersion    % Test,
+    "org.scalamock"           %% "scalamock"                  % "6.0.0"         % Test
   )
 }

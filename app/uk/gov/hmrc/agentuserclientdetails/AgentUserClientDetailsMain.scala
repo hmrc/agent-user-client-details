@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
 import play.api.inject.ApplicationLifecycle
@@ -50,10 +50,10 @@ class AgentUserClientDetailsMain @Inject() (
     }
   )
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.friendlyNameJobRestartRepoQueueInitialDelaySeconds.seconds,
     interval = appConfig.friendlyNameJobRestartRepoQueueIntervalSeconds.second
-  ) {
+  ) { () =>
     friendlyNameWorker.isRunning match {
       case true =>
         logger.debug("[Friendly name job] Was already running, so I did not trigger it again.")
@@ -63,10 +63,10 @@ class AgentUserClientDetailsMain @Inject() (
     }
   }
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.assignEnrolmentJobRestartRepoQueueInitialDelaySeconds.seconds,
     interval = appConfig.assignEnrolmentJobRestartRepoQueueIntervalSeconds.second
-  ) {
+  ) { () =>
     assignmentsWorker.isRunning match {
       case true =>
         logger.debug("[Assign enrolment job] Was already running, so I did not trigger it again.")
@@ -74,12 +74,13 @@ class AgentUserClientDetailsMain @Inject() (
         logger.debug("[Assign enrolment job] Triggered")
         assignmentsWorker.start()
     }
+
   }
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.jobMonitoringWorkerInitialDelaySeconds.seconds,
     interval = appConfig.jobMonitoringWorkerIntervalSeconds.seconds
-  ) {
+  ) { () =>
     jobMonitoringWorker.isRunning match {
       case true =>
         logger.debug("[Job monitor] Was already running, so I did not trigger it again.")
@@ -89,7 +90,7 @@ class AgentUserClientDetailsMain @Inject() (
     }
   }
 
-  actorSystem.scheduler.schedule(
+  actorSystem.scheduler.scheduleAtFixedRate(
     initialDelay = appConfig.serviceJobInitialDelaySeconds.seconds,
     interval = appConfig.serviceJobIntervalSeconds.seconds
   ) {
@@ -141,12 +142,13 @@ class AgentUserClientDetailsMain @Inject() (
       .map(_ => ())
 
     logger.info("Service job started.")
-    for {
-      _ <- heartbeat()
-      _ <- friendlyNameRepoStats()
-      _ <- assignmentsRepoStats()
-      _ <- cleanup()
-      _ = logger.info("Service job finished.")
-    } yield ()
+    () =>
+      for {
+        _ <- heartbeat()
+        _ <- friendlyNameRepoStats()
+        _ <- assignmentsRepoStats()
+        _ <- cleanup()
+        _ = logger.info("Service job finished.")
+      } yield ()
   }
 }

@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, UpstreamErrorResponse}
-import uk.gov.hmrc.play.bootstrap.graphite.DisabledMetrics
+import uk.gov.hmrc.play.bootstrap.metrics.DisabledMetrics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}

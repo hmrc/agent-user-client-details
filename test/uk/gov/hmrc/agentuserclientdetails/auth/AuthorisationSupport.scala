@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.auth
 
 import org.scalamock.scalatest.MockFactory
+import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, Retrieval, ~}
 import uk.gov.hmrc.auth.core._
@@ -25,7 +26,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AuthorisationSupport extends MockFactory {
+trait AuthorisationSupport extends BaseSpec with MockFactory {
 
   val arnStr = "KARN0762398"
   val agentReferenceNumberIdentifier = "AgentReferenceNumber"

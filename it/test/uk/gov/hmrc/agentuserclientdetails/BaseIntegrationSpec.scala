@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentuserclientdetails
 
 import com.google.inject.AbstractModule
-import com.kenshoo.play.metrics.PlayModule
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
@@ -39,7 +38,7 @@ abstract class BaseIntegrationSpec
 
   override def fakeApplication(): Application =
     GuiceApplicationBuilder()
-      .disable[PlayModule]
+//      .disable[PlayModule]
       .configure("metrics.enabled" -> false)
       .configure("auditing.enabled" -> false)
       .configure("agent.cache.enabled" -> false)

@@ -91,7 +91,7 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
     case Failure(uer: UpstreamErrorResponse) =>
       logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
       Future.successful(InternalServerError)
-    case Failure(ex: Exception) =>
+    case Failure(ex: Throwable) =>
       logger.warn(s"Error encountered: ${ex.getMessage}")
       Future.successful(InternalServerError)
   }

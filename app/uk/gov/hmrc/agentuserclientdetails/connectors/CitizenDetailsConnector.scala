@@ -16,17 +16,16 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import com.codahale.metrics.MetricRegistry
 import com.google.inject.ImplementedBy
-import com.kenshoo.play.metrics.Metrics
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{JsPath, Reads}
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.{HttpClient, _}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -55,12 +54,11 @@ trait CitizenDetailsConnector {
 }
 
 @Singleton
-class CitizenDetailsConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClient, metrics: Metrics)
-    extends HttpAPIMonitor with CitizenDetailsConnector with Logging {
+class CitizenDetailsConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClient, val metrics: Metrics)(implicit
+  val ec: ExecutionContext
+) extends HttpAPIMonitor with CitizenDetailsConnector with Logging {
 
   private val baseUrl = appConfig.citizenDetailsBaseUrl
-
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
     monitor(s"ConsumedAPI-CitizenDetails-GET") {
