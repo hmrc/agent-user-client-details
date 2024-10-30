@@ -66,7 +66,7 @@ class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
         CgtSubscription(SubscriptionDetails(TypeOfPersonDetails("Individual", Left(IndividualName("Tom", "Jones")))))
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(cgtSubscription).toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}", mockResponse)(httpClient)
-      val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val desConnector = new DesConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       desConnector.getCgtSubscription(CgtRef("XMCGTP123456789")).futureValue should matchPattern {
         case Some(sub) if sub == cgtSubscription =>
       }
@@ -78,7 +78,7 @@ class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
         CgtSubscription(SubscriptionDetails(TypeOfPersonDetails("Trustee", Right(OrganisationName("Friendly Trust")))))
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(cgtSubscription).toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}", mockResponse)(httpClient)
-      val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val desConnector = new DesConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       desConnector.getCgtSubscription(CgtRef("XMCGTP123456789")).futureValue should matchPattern {
         case Some(sub) if sub == cgtSubscription =>
       }
@@ -187,7 +187,7 @@ class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information", mockResponse)(httpClient)
-      val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val desConnector = new DesConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(
         VatCustomerDetails(Some("Friendly Organisation"), None, None)
       )
@@ -254,7 +254,7 @@ class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
       mockHttpGet(s"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information", mockResponse)(httpClient)
-      val desConnector = new DesConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val desConnector = new DesConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(
         VatCustomerDetails(None, Some(VatIndividual(None, Some("Tom"), None, Some("Jones"))), None)
       )
