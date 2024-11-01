@@ -21,10 +21,7 @@ import com.typesafe.config.Config
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 trait FakeCache extends AnyWordSpec with MockFactory {
   val mockConfig: Config = mock[Config]
@@ -38,5 +35,4 @@ trait FakeCache extends AnyWordSpec with MockFactory {
   (mockConfig.getString(_: String)).expects("agent.cache.expires").returns("1 hour")
   (mockConfig.getBoolean(_: String)).expects("agent.cache.enabled").returns(true)
 
-  val agentCacheProvider: AgentCacheProvider = new AgentCacheProvider(mockEnv, mockConfiguration)
 }
