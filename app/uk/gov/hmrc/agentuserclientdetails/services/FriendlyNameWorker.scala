@@ -58,7 +58,6 @@ class FriendlyNameWorker @Inject() (
         _.instanceCount
       ) // must handle serviceInstances == null case (can happen in testing)
     }
-
   private val running = new AtomicBoolean(false)
 
   def isRunning: Boolean = running.get()
