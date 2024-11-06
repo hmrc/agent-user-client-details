@@ -32,8 +32,7 @@ class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
   val cns = new ClientNameService(
     FakeCitizenDetailsConnector,
     FakeDesConnector,
-    FakeIfConnector,
-    agentCacheProvider
+    FakeIfConnector
   )
 
   "retrieving the client's friendly name" should {

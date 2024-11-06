@@ -24,7 +24,6 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
-import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -50,7 +49,6 @@ trait IfConnector {
 @Singleton
 class IfConnectorImpl @Inject() (
   appConfig: AppConfig,
-  agentCacheProvider: AgentCacheProvider,
   httpClient: HttpClient,
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
@@ -86,15 +84,13 @@ class IfConnectorImpl @Inject() (
     pptRef: PptRef
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] = {
     val url = s"$baseUrl/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
-    agentCacheProvider.pptSubscriptionCache(pptRef.value) {
-      getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            Some(response.json.as[PptSubscription](PptSubscription.reads(_)))
-          case NOT_FOUND => None
-          case other =>
-            throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay: ${response.body}", other)
-        }
+    getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
+      response.status match {
+        case status if is2xx(status) =>
+          Some(response.json.as[PptSubscription](PptSubscription.reads(_)))
+        case NOT_FOUND => None
+        case other =>
+          throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay: ${response.body}", other)
       }
     }
   }
@@ -105,26 +101,24 @@ class IfConnectorImpl @Inject() (
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] = {
     val url =
       s"$baseUrl/registration/business-details/mtdId/${UriEncoding.encodePathSegment(mtdId.value, "UTF-8")}"
-    agentCacheProvider.tradingDetailsCache(mtdId.value) {
-      getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            Some(
-              TradingDetails(
-                (response.json \ "taxPayerDisplayResponse" \ "nino").as[Nino],
-                (response.json \ "taxPayerDisplayResponse" \ "businessData").toOption
-                  .map(_(0) \ "tradingName")
-                  .flatMap(_.asOpt[String])
-              )
+    getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
+      response.status match {
+        case status if is2xx(status) =>
+          Some(
+            TradingDetails(
+              (response.json \ "taxPayerDisplayResponse" \ "nino").as[Nino],
+              (response.json \ "taxPayerDisplayResponse" \ "businessData").toOption
+                .map(_(0) \ "tradingName")
+                .flatMap(_.asOpt[String])
             )
-          case NOT_FOUND => None
-          case other =>
-            throw UpstreamErrorResponse(
-              s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other",
-              other,
-              other
-            )
-        }
+          )
+        case NOT_FOUND => None
+        case other =>
+          throw UpstreamErrorResponse(
+            s"unexpected error during 'getTradingNameForMtdItId', statusCode=$other",
+            other,
+            other
+          )
       }
     }
   }

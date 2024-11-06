@@ -25,7 +25,6 @@ import play.api.libs.json.{Format, Json, OFormat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments, Service}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpReads.is2xx
@@ -102,7 +101,6 @@ trait EnrolmentStoreProxyConnector {
 @Singleton
 class EnrolmentStoreProxyConnectorImpl @Inject() (
   http: HttpClient,
-  agentCacheProvider: AgentCacheProvider,
   val metrics: Metrics
 )(implicit appConfig: AppConfig, materializer: Materializer, val ec: ExecutionContext)
     extends EnrolmentStoreProxyConnector with HttpAPIMonitor with Logging {
@@ -168,10 +166,8 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
       new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
 
     monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-GET") {
-      agentCacheProvider
-        .es1Cache(arn.value) {
-          http.GET[HttpResponse](url.toString)
-        }
+      http
+        .GET[HttpResponse](url.toString)
         .map { response =>
           response.status match {
             case Status.NO_CONTENT =>

@@ -23,7 +23,6 @@ import play.utils.UriEncoding
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{AgentDetailsDesResponse, CgtSubscription, VatCustomerDetails}
-import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -53,7 +52,6 @@ trait DesConnector {
 @Singleton
 class DesConnectorImpl @Inject() (
   appConfig: AppConfig,
-  agentCacheProvider: AgentCacheProvider,
   httpClient: HttpClient,
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
@@ -82,45 +80,41 @@ class DesConnectorImpl @Inject() (
     vrn: Vrn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] = {
     val url = s"$baseUrl/vat/customer/vrn/${UriEncoding.encodePathSegment(vrn.value, "UTF-8")}/information"
-    agentCacheProvider.vatCustomerDetailsCache(vrn.value) {
-      getWithDesIfHeaders("GetVatOrganisationNameByVrn", url).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            (response.json \ "approvedInformation" \ "customerDetails").asOpt[VatCustomerDetails]
-          case NOT_FOUND => None
-          case other =>
-            throw UpstreamErrorResponse(
-              s"unexpected error during 'getVatCustomerDetails', statusCode=$other",
-              other,
-              other
-            )
-        }
+    getWithDesIfHeaders("GetVatOrganisationNameByVrn", url).map { response =>
+      response.status match {
+        case status if is2xx(status) =>
+          (response.json \ "approvedInformation" \ "customerDetails").asOpt[VatCustomerDetails]
+        case NOT_FOUND => None
+        case other =>
+          throw UpstreamErrorResponse(
+            s"unexpected error during 'getVatCustomerDetails', statusCode=$other",
+            other,
+            other
+          )
       }
     }
   }
 
   override def getAgencyDetails(
     arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] =
-    agentCacheProvider
-      .agencyDetailsCache(arn.value) {
-        val url = s"$baseUrl/registration/personal-details/arn/${UriEncoding.encodePathSegment(arn.value, "UTF-8")}"
-        getWithDesIfHeaders("getAgencyDetails", url).map { response =>
-          response.status match {
-            case status if is2xx(status) => response.json.asOpt[AgentDetailsDesResponse]
-            case status if is4xx(status) => None
-            case _ if response.body.contains("AGENT_TERMINATED") =>
-              logger.warn(s"Discovered a Termination for agent: $arn")
-              None
-            case other =>
-              throw UpstreamErrorResponse(
-                s"unexpected response during 'getAgencyDetails', status: $other, response: ${response.body}",
-                other,
-                other
-              )
-          }
-        }
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] = {
+    val url = s"$baseUrl/registration/personal-details/arn/${UriEncoding.encodePathSegment(arn.value, "UTF-8")}"
+    getWithDesIfHeaders("getAgencyDetails", url).map { response =>
+      response.status match {
+        case status if is2xx(status) => response.json.asOpt[AgentDetailsDesResponse]
+        case status if is4xx(status) => None
+        case _ if response.body.contains("AGENT_TERMINATED") =>
+          logger.warn(s"Discovered a Termination for agent: $arn")
+          None
+        case other =>
+          throw UpstreamErrorResponse(
+            s"unexpected response during 'getAgencyDetails', status: $other, response: ${response.body}",
+            other,
+            other
+          )
       }
+    }
+  }
 
   private def getWithDesIfHeaders(apiName: String, url: String)(implicit
     hc: HeaderCarrier,

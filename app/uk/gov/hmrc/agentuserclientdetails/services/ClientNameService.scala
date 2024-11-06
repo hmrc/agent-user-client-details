@@ -32,12 +32,8 @@ case class ClientNameNotFound() extends Exception
 class ClientNameService @Inject() (
   citizenDetailsConnector: CitizenDetailsConnector,
   desConnector: DesConnector,
-  ifConnector: IfConnector,
-  agentCacheProvider: AgentCacheProvider
+  ifConnector: IfConnector
 ) extends AnyRef with Logging {
-
-  private def trustCache = agentCacheProvider.trustResponseCache
-  private def cgtCache = agentCacheProvider.cgtSubscriptionCache
 
   def getClientName(enrolmentKey: String)(implicit
     hc: HeaderCarrier,
@@ -92,19 +88,17 @@ class ClientNameService @Inject() (
   def getTrustName(
     trustTaxIdentifier: String
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    trustCache(trustTaxIdentifier) {
-      ifConnector.getTrustName(trustTaxIdentifier)
-    }
+    ifConnector.getTrustName(trustTaxIdentifier)
 
   def getCgtName(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    cgtCache(cgtRef.value) {
-      desConnector.getCgtSubscription(cgtRef)
-    }.map(_.map { cgtSubscription =>
-      cgtSubscription.subscriptionDetails.typeOfPersonDetails.name match {
-        case Right(trusteeName)   => trusteeName.name
-        case Left(individualName) => s"${individualName.firstName} ${individualName.lastName}"
-      }
-    })
+    desConnector
+      .getCgtSubscription(cgtRef)
+      .map(_.map { cgtSubscription =>
+        cgtSubscription.subscriptionDetails.typeOfPersonDetails.name match {
+          case Right(trusteeName)   => trusteeName.name
+          case Left(individualName) => s"${individualName.firstName} ${individualName.lastName}"
+        }
+      })
 
   def getPptCustomerName(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))
