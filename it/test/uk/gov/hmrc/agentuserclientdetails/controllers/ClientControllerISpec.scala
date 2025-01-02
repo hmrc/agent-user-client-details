@@ -63,7 +63,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
   lazy val jobMonitoringRepository = new JobMonitoringRepository(mongoComponent, config)
   lazy val jobMonitoringService = new JobMonitoringServiceImpl(jobMonitoringRepository, appConfig)
-  lazy val agentCacheProvider = app.injector.instanceOf[AgentCacheProvider]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
@@ -104,8 +103,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
     val clientNameService = new ClientNameService(
       citizenDetailsConnector,
       desConnector,
-      ifConnector,
-      agentCacheProvider
+      ifConnector
     )
     val controller = new ClientController(
       cc,

@@ -37,7 +37,7 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory with FakeCache {
+class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
 
   val testUserId = "ABCEDEFGI1234568"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"

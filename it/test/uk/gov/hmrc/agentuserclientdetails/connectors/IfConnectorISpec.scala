@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{PptRef, Urn, Utr}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
-import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -35,7 +34,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   lazy val appConfig = app.injector.instanceOf[AppConfig]
-  lazy val cache = app.injector.instanceOf[AgentCacheProvider]
   lazy val metrics = app.injector.instanceOf[Metrics]
   lazy val desIfHeaders = app.injector.instanceOf[DesIfHeaders]
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -65,7 +63,7 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
       mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}", mockResponse)(
         httpClient
       )
-      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       ifConnector.getTrustName(testUrn.value).futureValue shouldBe Some("Friendly Trust")
     }
     "getTrustName (UTR)" in {
@@ -75,7 +73,7 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
       mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}", mockResponse)(
         httpClient
       )
-      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       ifConnector.getTrustName(testUtr.value).futureValue shouldBe Some("Friendly Trust")
     }
     "getPptSubscription (individual)" in {
@@ -98,7 +96,7 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
         s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display",
         mockResponse
       )(httpClient)
-      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Bill Sikes"))
     }
     "getPptSubscription (organisation)" in {
@@ -120,7 +118,7 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
         s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display",
         mockResponse
       )(httpClient)
-      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Friendly Organisation"))
     }
   }

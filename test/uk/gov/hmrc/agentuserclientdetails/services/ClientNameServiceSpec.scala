@@ -21,12 +21,12 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
-import uk.gov.hmrc.agentuserclientdetails.support.{FakeCache, FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector}
+import uk.gov.hmrc.agentuserclientdetails.support.{FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ClientNameServiceSpec extends AnyWordSpec with Matchers with FakeCache {
+class ClientNameServiceSpec extends AnyWordSpec with Matchers {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val cns = new ClientNameService(

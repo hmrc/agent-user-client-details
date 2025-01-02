@@ -39,7 +39,7 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory with FakeCache {
+class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
 
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
 
