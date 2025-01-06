@@ -22,7 +22,6 @@ import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
@@ -34,7 +33,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class CitizenDetailsConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   lazy val appConfig = app.injector.instanceOf[AppConfig]
-  lazy val cache = app.injector.instanceOf[AgentCacheProvider]
   lazy val metrics = app.injector.instanceOf[Metrics]
   lazy val desIfHeaders = app.injector.instanceOf[DesIfHeaders]
   implicit val hc: HeaderCarrier = HeaderCarrier()

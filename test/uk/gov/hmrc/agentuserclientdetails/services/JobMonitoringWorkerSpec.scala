@@ -36,7 +36,7 @@ import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory with FakeCache {
+class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
 
   val groupId = "myGroupId"
   val client1 = Client("HMRC-MTD-VAT~VRN~000000001", "Frank Wright")

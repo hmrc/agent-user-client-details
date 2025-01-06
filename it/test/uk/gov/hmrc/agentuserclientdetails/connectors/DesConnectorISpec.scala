@@ -24,7 +24,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, MtdItId, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._
-import uk.gov.hmrc.agentuserclientdetails.services.AgentCacheProvider
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
@@ -36,7 +35,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   lazy val appConfig = app.injector.instanceOf[AppConfig]
-  lazy val cache = app.injector.instanceOf[AgentCacheProvider]
   lazy val metrics = app.injector.instanceOf[Metrics]
   lazy val desIfHeaders = app.injector.instanceOf[DesIfHeaders]
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -124,7 +122,7 @@ class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
       )(
         httpClient
       )
-      val ifConnector = new IfConnectorImpl(appConfig, cache, httpClient, metrics, desIfHeaders)
+      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
       ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue should matchPattern {
         case Some(TradingDetails(Nino("ZR987654C"), Some("Surname DADTN"))) =>
       }
