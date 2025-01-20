@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey}
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{DesConnector, EnrolmentStoreProxyConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.{AgentAssuranceConnector, EnrolmentStoreProxyConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem, PaginatedClientsBuilder}
 import uk.gov.hmrc.agentuserclientdetails.services.{ES3CacheService, FriendlyNameWorkItemService, JobMonitoringService}
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -44,7 +44,7 @@ class ClientController @Inject() (
   espConnector: EnrolmentStoreProxyConnector,
   es3CacheService: ES3CacheService,
   jobMonitoringService: JobMonitoringService,
-  desConnector: DesConnector,
+  agentAssuranceConnector: AgentAssuranceConnector,
   appConfig: AppConfig
 )(implicit authAction: AuthAction, ec: ExecutionContext)
     extends BackendController(cc) with AuthorisedAgentSupport {
@@ -277,7 +277,7 @@ class ClientController @Inject() (
 
   def getAgencyDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
-      desConnector.getAgencyDetails(arn).map(_.flatMap(_.agencyDetails)).map {
+      agentAssuranceConnector.getAgentDetails(arn).map(_.agencyDetails).map {
         case Some(agencyDetails) => Ok(Json.toJson(agencyDetails))
         case None                => NotFound
       }
@@ -319,34 +319,35 @@ class ClientController @Inject() (
     if (toBeAdded.isEmpty) Future.successful(None)
     else {
       for {
-        maybeAgentDetailsDesResponse <- desConnector.getAgencyDetails(arn)
+        maybeAgentDetailsDesResponse <- agentAssuranceConnector.getAgentDetails(arn)
         _ =
-          if (maybeAgentDetailsDesResponse.isEmpty)
+          if (maybeAgentDetailsDesResponse.agencyDetails.isEmpty)
             logger.warn(
               s"Agency details could not be retrieved for ${arn.value}. It will not be possible to notify them by email when the client name fetch job is complete."
             )
-        maybeObjectId <- maybeAgentDetailsDesResponse.fold[Future[Option[ObjectId]]](Future successful None) {
-                           agentDetailsDesResponse =>
-                             val agencyName = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyName)
-                             val agencyEmail = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyEmail)
-                             jobMonitoringService
-                               .createFriendlyNameFetchJobData(
-                                 FriendlyNameJobData(
-                                   groupId = groupId,
-                                   enrolmentKeys = toBeAdded.map(_.enrolmentKey),
-                                   sendEmailOnCompletion = sendEmail,
-                                   agencyName = agencyName,
-                                   email = agencyEmail,
-                                   emailLanguagePreference =
-                                     if (List("cy", "en").contains(lang)) Some(lang)
-                                     else Some("en"),
-                                   sessionId =
-                                     if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
-                                     else None // only required for local testing against stubs
-                                 )
-                               )
-                               .map(Some(_))
-                         }
+        maybeObjectId <-
+          maybeAgentDetailsDesResponse.agencyDetails.fold[Future[Option[ObjectId]]](Future successful None) {
+            agentDetailsDesResponse =>
+              val agencyName = agentDetailsDesResponse.agencyName
+              val agencyEmail = agentDetailsDesResponse.agencyEmail
+              jobMonitoringService
+                .createFriendlyNameFetchJobData(
+                  FriendlyNameJobData(
+                    groupId = groupId,
+                    enrolmentKeys = toBeAdded.map(_.enrolmentKey),
+                    sendEmailOnCompletion = sendEmail,
+                    agencyName = agencyName,
+                    email = agencyEmail,
+                    emailLanguagePreference =
+                      if (List("cy", "en").contains(lang)) Some(lang)
+                      else Some("en"),
+                    sessionId =
+                      if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
+                      else None // only required for local testing against stubs
+                  )
+                )
+                .map(Some(_))
+          }
       } yield maybeObjectId
 
     }

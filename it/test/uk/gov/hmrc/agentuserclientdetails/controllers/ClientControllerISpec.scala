@@ -96,6 +96,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
   trait TestScope {
     val citizenDetailsConnector = mock[CitizenDetailsConnector]
     val desConnector = stub[DesConnector]
+    val agentAssuranceConnector = stub[AgentAssuranceConnector]
     val ifConnector = mock[IfConnector]
     val ugs = mock[UsersGroupsSearchConnector]
     val esp = mock[EnrolmentStoreProxyConnector]
@@ -111,7 +112,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       esp,
       es3CacheService,
       jobMonitoringService,
-      desConnector,
+      agentAssuranceConnector,
       appConfig
     )
 
