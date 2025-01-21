@@ -22,17 +22,16 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, StringContextOps, UpstreamErrorResponse}
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClientV2)(implicit ec: ExecutionContext) {
+class AgentAssuranceConnector @Inject() (appConfig: AppConfig, http: HttpClient)(implicit ec: ExecutionContext) {
 
   private val baseUrl = appConfig.agentAssuranceBaseUrl
+  import uk.gov.hmrc.http.HttpReads.Implicits._
 
   def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AgentDetailsDesResponse] =
     httpV2
@@ -44,5 +43,4 @@ class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClien
           case other => throw UpstreamErrorResponse(s"agent details unavailable: des response code: $other", 500)
         }
       )
-
 }

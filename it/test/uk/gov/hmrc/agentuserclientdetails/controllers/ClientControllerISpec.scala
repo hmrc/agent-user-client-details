@@ -117,18 +117,19 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
     )
 
     val testAgencyDetails = AgencyDetails(Some("Perfect Accounts Ltd"), Some("a@b.c"))
+    val testEmptyAgencyDetails = AgencyDetails(Some(""), Some(""))
 
     def mockGetPrincipalForGroupIdSuccess() =
       (esp
         .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
-    def mockDesConnectorGetAgencyDetails(
-      maybeAgentDetailsDesResponse: Option[AgentDetailsDesResponse]
-    ): CallHandler3[Arn, HeaderCarrier, ExecutionContext, Future[Option[AgentDetailsDesResponse]]] = (desConnector
-      .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-      .when(*, *, *)
-      .returns(Future successful maybeAgentDetailsDesResponse)
+
+    def mockAgentAssuranceConnectorGetAgencyDetails(agentDetailsDesResponse: AgentDetailsDesResponse) =
+      (agentAssuranceConnector
+        .getAgentDetails(_: Arn)(_: HeaderCarrier))
+        .when(*, *)
+        .returns(Future.successful(agentDetailsDesResponse))
 
     def mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(
       clients: Seq[Client]
@@ -168,7 +169,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClient(testArn, client2.enrolmentKey)(request)
@@ -182,7 +183,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClient(testArn, "whatever")(request).futureValue
@@ -195,7 +196,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -209,7 +210,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponseAssistant)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -251,7 +252,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 202
@@ -272,7 +273,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true))(request).futureValue
       result.header.status shouldBe 202
@@ -289,7 +290,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
       result.header.status shouldBe 202
@@ -316,7 +317,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockDesConnectorGetAgencyDetails(Some(AgentDetailsDesResponse(Some(testAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
@@ -342,7 +343,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       val request = FakeRequest("GET", "")
-      mockDesConnectorGetAgencyDetails(None)
+      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testEmptyAgencyDetails)))
       val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 202
       result.body shouldBe NoEntity
@@ -625,10 +626,10 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
     "return 200 with agency details if found" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val agencyDetails = AgencyDetails(Some("Agency Name"), Some("agency@email.com"))
-      (desConnector
-        .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .when(testArn, *, *)
-        .returns(Future.successful(Some(AgentDetailsDesResponse(Some(agencyDetails)))))
+      (agentAssuranceConnector
+        .getAgentDetails(_: Arn)(_: HeaderCarrier))
+        .when(testArn, *)
+        .returns(Future.successful(AgentDetailsDesResponse(Some(agencyDetails))))
 
       val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
       result.futureValue.header.status shouldBe 200
@@ -637,10 +638,10 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "return 404 when agency details not found" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (desConnector
-        .getAgencyDetails(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
-        .when(testArn, *, *)
-        .returns(Future.successful(None))
+      (agentAssuranceConnector
+        .getAgentDetails(_: Arn)(_: HeaderCarrier))
+        .when(testArn, *)
+        .returns(Future.successful(AgentDetailsDesResponse(Some(testEmptyAgencyDetails))))
 
       val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
       result.futureValue.header.status shouldBe 404

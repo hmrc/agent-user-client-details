@@ -328,8 +328,8 @@ class ClientController @Inject() (
         maybeObjectId <-
           maybeAgentDetailsDesResponse.agencyDetails.fold[Future[Option[ObjectId]]](Future successful None) {
             agentDetailsDesResponse =>
-              val agencyName = agentDetailsDesResponse.agencyName
-              val agencyEmail = agentDetailsDesResponse.agencyEmail
+              val agencyName: Option[String] = agentDetailsDesResponse.agencyName
+              val agencyEmail: Option[String] = agentDetailsDesResponse.agencyEmail
               jobMonitoringService
                 .createFriendlyNameFetchJobData(
                   FriendlyNameJobData(
