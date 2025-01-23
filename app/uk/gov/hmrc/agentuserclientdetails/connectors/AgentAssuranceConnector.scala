@@ -21,26 +21,28 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
 
+import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AgentAssuranceConnector @Inject() (appConfig: AppConfig, http: HttpClient)(implicit ec: ExecutionContext) {
+class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClientV2)(implicit ec: ExecutionContext) {
 
-  private val baseUrl = appConfig.agentAssuranceBaseUrl
-  import uk.gov.hmrc.http.HttpReads.Implicits._
+  val baseUrl = appConfig.agentAssuranceBaseUrl
 
-  def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[AgentDetailsDesResponse] =
+  def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] =
     httpV2
-      .get(new URL(s"$baseUrl/agent-assurance/agent/agency-details/$arn"))
+      .get(new URL(s"$baseUrl/agent-assurance/agent/agency-details/${arn.value}"))
       .execute[HttpResponse]
       .map(response =>
         response.status match {
-          case OK    => Json.parse(response.body).as[AgentDetailsDesResponse]
-          case other => throw UpstreamErrorResponse(s"agent details unavailable: des response code: $other", 500)
+          case OK         => Json.parse(response.body).asOpt[AgentDetailsDesResponse]
+          case NO_CONTENT => None
+          case other      => throw UpstreamErrorResponse(s"agent details unavailable: des response code: $other", 500)
         }
       )
 }

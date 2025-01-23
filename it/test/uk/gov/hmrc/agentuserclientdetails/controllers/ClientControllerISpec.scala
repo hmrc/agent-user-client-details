@@ -16,21 +16,18 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.stream.Materializer
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
-import org.scalamock.handlers.{CallHandler3, CallHandler4}
-import play.api.Configuration
+import org.scalamock.handlers.{CallHandler2, CallHandler3, CallHandler4}
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
+import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
 import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout, status}
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agents.accessgroups.Client
-import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors._
@@ -38,22 +35,21 @@ import uk.gov.hmrc.agentuserclientdetails.model.{AgencyDetails, AgentDetailsDesR
 import uk.gov.hmrc.agentuserclientdetails.repositories.{FriendlyNameWorkItemRepository, JobMonitoringRepository}
 import uk.gov.hmrc.agentuserclientdetails.services._
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 
+import java.net.URL
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
-class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with AuthorisationMockSupport {
+class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
 
   lazy val cc = app.injector.instanceOf[ControllerComponents]
   lazy val config = app.injector.instanceOf[Config]
-  lazy val configuration = app.injector.instanceOf[Configuration]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
-  implicit lazy val materializer = app.injector.instanceOf[Materializer]
-  implicit lazy val actorSystem = app.injector.instanceOf[ActorSystem]
 
   lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
@@ -94,18 +90,12 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
   }
 
   trait TestScope {
-    val citizenDetailsConnector = mock[CitizenDetailsConnector]
-    val desConnector = stub[DesConnector]
-    val agentAssuranceConnector = stub[AgentAssuranceConnector]
-    val ifConnector = mock[IfConnector]
-    val ugs = mock[UsersGroupsSearchConnector]
+    val mockHttpClientV2: HttpClientV2 = mock[HttpClientV2]
+    val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
+    val agentAssuranceConnector: AgentAssuranceConnector = new AgentAssuranceConnector(appConfig, mockHttpClientV2)
+
     val esp = mock[EnrolmentStoreProxyConnector]
     val es3CacheService = mock[ES3CacheService]
-    val clientNameService = new ClientNameService(
-      citizenDetailsConnector,
-      desConnector,
-      ifConnector
-    )
     val controller = new ClientController(
       cc,
       wis,
@@ -116,8 +106,8 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       appConfig
     )
 
-    val testAgencyDetails = AgencyDetails(Some("Perfect Accounts Ltd"), Some("a@b.c"))
-    val testEmptyAgencyDetails = AgencyDetails(Some(""), Some(""))
+    val testAgencyDetails =
+      AgentDetailsDesResponse(Some(AgencyDetails(Some("Perfect Accounts Ltd"), Some("a@b.c"))))
 
     def mockGetPrincipalForGroupIdSuccess() =
       (esp
@@ -125,11 +115,27 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
         .expects(testArn, *, *)
         .returning(Future.successful(Some(testGroupId)))
 
-    def mockAgentAssuranceConnectorGetAgencyDetails(agentDetailsDesResponse: AgentDetailsDesResponse) =
-      (agentAssuranceConnector
-        .getAgentDetails(_: Arn)(_: HeaderCarrier))
-        .when(*, *)
-        .returns(Future.successful(agentDetailsDesResponse))
+    def mockHttpGetV2[A](url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+      (mockHttpClientV2
+        .get(_: URL)(_: HeaderCarrier))
+        .expects(url, *)
+        .returning(mockRequestBuilder)
+
+    def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] =
+      (mockRequestBuilder
+        .execute(_: HttpReads[A], _: ExecutionContext))
+        .expects(*, *)
+        .returning(Future successful value)
+
+    def mockAgentAssuranceConnectorGetAgencyDetails(agentDetailsResponse: AgentDetailsDesResponse) = {
+      mockHttpGetV2(
+        new URL(
+          s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+        )
+      )
+      val response = HttpResponse(OK, Json.toJson(agentDetailsResponse).toString)
+      mockRequestBuilderExecute(response)
+    }
 
     def mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(
       clients: Seq[Client]
@@ -169,7 +175,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClient(testArn, client2.enrolmentKey)(request)
@@ -183,7 +188,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClient(testArn, "whatever")(request).futureValue
@@ -196,7 +200,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -210,7 +213,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponseAssistant)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
@@ -252,7 +254,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 202
@@ -273,7 +274,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true))(request).futureValue
       result.header.status shouldBe 202
@@ -290,7 +290,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
       result.header.status shouldBe 202
@@ -317,7 +316,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testAgencyDetails)))
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 200
@@ -343,7 +341,6 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       val request = FakeRequest("GET", "")
-      mockAgentAssuranceConnectorGetAgencyDetails(AgentDetailsDesResponse(Some(testEmptyAgencyDetails)))
       val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 202
       result.body shouldBe NoEntity
@@ -626,10 +623,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
     "return 200 with agency details if found" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val agencyDetails = AgencyDetails(Some("Agency Name"), Some("agency@email.com"))
-      (agentAssuranceConnector
-        .getAgentDetails(_: Arn)(_: HeaderCarrier))
-        .when(testArn, *)
-        .returns(Future.successful(AgentDetailsDesResponse(Some(agencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(testAgencyDetails)
 
       val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
       result.futureValue.header.status shouldBe 200
@@ -638,10 +632,7 @@ class ClientControllerISpec extends BaseIntegrationSpec with MongoSupport with A
 
     "return 404 when agency details not found" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      (agentAssuranceConnector
-        .getAgentDetails(_: Arn)(_: HeaderCarrier))
-        .when(testArn, *)
-        .returns(Future.successful(AgentDetailsDesResponse(Some(testEmptyAgencyDetails))))
+      mockAgentAssuranceConnectorGetAgencyDetails(testAgencyDetails)
 
       val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
       result.futureValue.header.status shouldBe 404

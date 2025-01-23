@@ -277,7 +277,7 @@ class ClientController @Inject() (
 
   def getAgencyDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
-      agentAssuranceConnector.getAgentDetails(arn).map(_.agencyDetails).map {
+      agentAssuranceConnector.getAgentDetails(arn).map(_.flatMap(_.agencyDetails)).map {
         case Some(agencyDetails) => Ok(Json.toJson(agencyDetails))
         case None                => NotFound
       }
@@ -321,15 +321,15 @@ class ClientController @Inject() (
       for {
         maybeAgentDetailsDesResponse <- agentAssuranceConnector.getAgentDetails(arn)
         _ =
-          if (maybeAgentDetailsDesResponse.agencyDetails.isEmpty)
+          if (maybeAgentDetailsDesResponse.isEmpty)
             logger.warn(
               s"Agency details could not be retrieved for ${arn.value}. It will not be possible to notify them by email when the client name fetch job is complete."
             )
         maybeObjectId <-
-          maybeAgentDetailsDesResponse.agencyDetails.fold[Future[Option[ObjectId]]](Future successful None) {
+          maybeAgentDetailsDesResponse.fold[Future[Option[ObjectId]]](Future successful None) {
             agentDetailsDesResponse =>
-              val agencyName: Option[String] = agentDetailsDesResponse.agencyName
-              val agencyEmail: Option[String] = agentDetailsDesResponse.agencyEmail
+              val agencyName: Option[String] = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyName)
+              val agencyEmail: Option[String] = agentDetailsDesResponse.agencyDetails.flatMap(_.agencyEmail)
               jobMonitoringService
                 .createFriendlyNameFetchJobData(
                   FriendlyNameJobData(
