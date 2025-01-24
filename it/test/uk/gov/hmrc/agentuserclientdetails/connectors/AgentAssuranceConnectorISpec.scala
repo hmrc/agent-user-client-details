@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, UpstreamErrorResponse}
 
 import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -116,9 +116,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
         mockRequestBuilderExecute(mockResponse)
 
-        //  agentAssuranceConnector.getAgentDetails(testArn).failed.futureValue shouldBe an[UpstreamErrorResponse]
-
-        agentAssuranceConnector.getAgentDetails(testArn) shouldBe None
+        agentAssuranceConnector.getAgentDetails(testArn).failed.futureValue shouldBe an[UpstreamErrorResponse]
       }
     }
   }
