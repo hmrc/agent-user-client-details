@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClientV2)(implicit ec: ExecutionContext) {
 
-  val baseUrl = appConfig.agentAssuranceBaseUrl
+  private lazy val baseUrl = appConfig.agentAssuranceBaseUrl
 
   def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] =
     httpV2
@@ -42,7 +42,8 @@ class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClien
         response.status match {
           case OK         => Json.parse(response.body).asOpt[AgentDetailsDesResponse]
           case NO_CONTENT => None
-          case other      => throw UpstreamErrorResponse(s"agent details unavailable: des response code: $other", 500)
+          case other =>
+            throw UpstreamErrorResponse(s"agent details unavailable: agent assurance response code: $other", 500)
         }
       )
 }

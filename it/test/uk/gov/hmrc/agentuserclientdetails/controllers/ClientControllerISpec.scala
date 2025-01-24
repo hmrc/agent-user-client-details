@@ -21,7 +21,7 @@ import com.typesafe.config.Config
 import org.scalamock.handlers.{CallHandler2, CallHandler3, CallHandler4}
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
-import play.api.http.Status.OK
+import play.api.http.Status.{NO_CONTENT, OK}
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
@@ -107,7 +107,10 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
     )
 
     val testAgencyDetails =
-      AgentDetailsDesResponse(Some(AgencyDetails(Some("Perfect Accounts Ltd"), Some("a@b.c"))))
+      AgentDetailsDesResponse(Some(AgencyDetails(Some("Agency Name"), Some("agency@email.com"))))
+
+    val testEmptyAgencyDetails =
+      AgentDetailsDesResponse(Some(AgencyDetails(None, None)))
 
     def mockGetPrincipalForGroupIdSuccess() =
       (esp
@@ -134,6 +137,16 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
         )
       )
       val response = HttpResponse(OK, Json.toJson(agentDetailsResponse).toString)
+      mockRequestBuilderExecute(response)
+    }
+
+    def mockAgentAssuranceConnectorGetAgencyDetailsStatusNoContent(agentDetailsResponse: AgentDetailsDesResponse) = {
+      mockHttpGetV2(
+        new URL(
+          s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+        )
+      )
+      val response = HttpResponse(NO_CONTENT, Json.toJson(agentDetailsResponse).toString)
       mockRequestBuilderExecute(response)
     }
 
@@ -254,6 +267,8 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
+      mockAgentAssuranceConnectorGetAgencyDetails(testAgencyDetails)
+
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
       result.header.status shouldBe 202
@@ -274,6 +289,8 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
+      mockAgentAssuranceConnectorGetAgencyDetails(testAgencyDetails)
+
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true))(request).futureValue
       result.header.status shouldBe 202
@@ -290,6 +307,8 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
+      mockAgentAssuranceConnectorGetAgencyDetails(testAgencyDetails)
+
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true), lang = Some("cy"))(request).futureValue
       result.header.status shouldBe 202
@@ -340,6 +359,8 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalForGroupIdSuccess()
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
+      mockAgentAssuranceConnectorGetAgencyDetails(testAgencyDetails)
+
       val request = FakeRequest("GET", "")
       val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 202
@@ -632,7 +653,7 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
 
     "return 404 when agency details not found" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      mockAgentAssuranceConnectorGetAgencyDetails(testAgencyDetails)
+      mockAgentAssuranceConnectorGetAgencyDetailsStatusNoContent(testAgencyDetails)
 
       val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
       result.futureValue.header.status shouldBe 404

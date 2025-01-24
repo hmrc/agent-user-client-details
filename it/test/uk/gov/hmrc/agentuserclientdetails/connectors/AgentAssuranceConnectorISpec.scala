@@ -20,7 +20,7 @@ import com.codahale.metrics.NoopMetricRegistry
 import com.google.inject.AbstractModule
 import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
-import play.api.http.Status.OK
+import play.api.http.Status.{NO_CONTENT, OK, SERVICE_UNAVAILABLE}
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
@@ -45,8 +45,10 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
   val mockHttpClientV2: HttpClientV2 = mock[HttpClientV2]
   val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
-  // val mockMetrics: Metrics = mock[Metrics]
   val noopMetricRegistry = new NoopMetricRegistry
+
+  val agentAssuranceConnector = new AgentAssuranceConnector(appConfig, mockHttpClientV2)
+  val testArn: Arn = Arn("KARN0762398")
 
   override def moduleOverrides: AbstractModule = new AbstractModule {
     override def configure(): Unit =
@@ -65,28 +67,59 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
       .expects(*, *)
       .returning(Future successful value)
 
-  "AgentAssuranceConnector" should {
-    "getAgentDetails" in {
-      val testArn: Arn = Arn("KARN0762398")
+  "AgentAssuranceConnector" when {
+    "getAgentDetails" should {
+      "returns agency details response" in {
 
-      val agencyDetails =
-        Some(AgentDetailsDesResponse(Some(AgencyDetails(Some("Agency Name"), Some("agency@email.com")))))
+        val agencyDetails =
+          Some(AgentDetailsDesResponse(Some(AgencyDetails(Some("Agency Name"), Some("agency@email.com")))))
 
-      val agentAssuranceConnector = new AgentAssuranceConnector(appConfig, mockHttpClientV2)
+        val mockResponse: HttpResponse = HttpResponse(OK, Json.toJson(agencyDetails).toString)
 
-      val mockResponse: HttpResponse = HttpResponse(OK, Json.toJson(agencyDetails).toString)
-
-      mockHttpGetV2(
-        new URL(
-          s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+        mockHttpGetV2(
+          new URL(
+            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+          )
         )
-      )
 
-      mockRequestBuilderExecute(mockResponse)
+        mockRequestBuilderExecute(mockResponse)
 
-      agentAssuranceConnector.getAgentDetails(testArn).futureValue shouldBe agencyDetails
+        agentAssuranceConnector.getAgentDetails(testArn).futureValue shouldBe agencyDetails
+      }
+      "returns None when no agency details response" in {
+
+        val agencyDetails = None
+
+        val mockResponse: HttpResponse = HttpResponse(NO_CONTENT, Json.toJson(agencyDetails).toString)
+
+        mockHttpGetV2(
+          new URL(
+            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+          )
+        )
+
+        mockRequestBuilderExecute(mockResponse)
+
+        agentAssuranceConnector.getAgentDetails(testArn).futureValue shouldBe None
+
+      }
+
+      "returns an error when the agent assurance service returns an error" in {
+
+        val mockResponse: HttpResponse = HttpResponse(SERVICE_UNAVAILABLE, "")
+
+        mockHttpGetV2(
+          new URL(
+            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+          )
+        )
+
+        mockRequestBuilderExecute(mockResponse)
+
+        //  agentAssuranceConnector.getAgentDetails(testArn).failed.futureValue shouldBe an[UpstreamErrorResponse]
+
+        agentAssuranceConnector.getAgentDetails(testArn) shouldBe None
+      }
     }
-
-    //      intercept[UpstreamErrorResponse](agentAssuranceConnector.getAgentDetails(testArn).futureValue)
   }
 }
