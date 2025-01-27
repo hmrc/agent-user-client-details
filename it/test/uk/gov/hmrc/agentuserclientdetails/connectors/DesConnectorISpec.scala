@@ -62,9 +62,13 @@ class DesConnectorISpec extends BaseIntegrationSpec with MockFactory {
       val httpClient = stub[HttpClient]
       val cgtSubscription =
         CgtSubscription(SubscriptionDetails(TypeOfPersonDetails("Individual", Left(IndividualName("Tom", "Jones")))))
+
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(cgtSubscription).toString)
+
       mockHttpGet(s"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}", mockResponse)(httpClient)
+
       val desConnector = new DesConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
+
       desConnector.getCgtSubscription(CgtRef("XMCGTP123456789")).futureValue should matchPattern {
         case Some(sub) if sub == cgtSubscription =>
       }

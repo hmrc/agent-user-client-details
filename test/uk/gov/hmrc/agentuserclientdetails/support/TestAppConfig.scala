@@ -23,6 +23,7 @@ import scala.util.matching.Regex
 
 class TestAppConfig extends AppConfig {
   val citizenDetailsBaseUrl: String = ""
+  val agentAssuranceBaseUrl: String = ""
   val enrolmentStoreProxyUrl: String = ""
   val desBaseUrl: String = ""
   val desEnvironment: String = "desEnv"

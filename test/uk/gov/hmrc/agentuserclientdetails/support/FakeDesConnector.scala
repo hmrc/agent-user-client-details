@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, CgtRef, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, Vrn}
 import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
@@ -44,12 +44,6 @@ case object FakeDesConnector extends DesConnector {
     vrn: Vrn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] =
     Future.successful(Some(VatCustomerDetails(Some("VAT Client"), None, Some("VAT Client"))))
-
-  override def getAgencyDetails(
-    arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] = Future successful Some(
-    AgentDetailsDesResponse(Some(AgencyDetails(Some("Delightful agency"), Some("id@domain.com"))))
-  )
 }
 
 case class FailingDesConnector(status: Int) extends DesConnector {
@@ -61,11 +55,6 @@ case class FailingDesConnector(status: Int) extends DesConnector {
   def getVatCustomerDetails(
     vrn: Vrn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] =
-    Future.failed(UpstreamErrorResponse("A fake exception", status))
-
-  override def getAgencyDetails(
-    arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] =
     Future.failed(UpstreamErrorResponse("A fake exception", status))
 
 }
@@ -80,9 +69,4 @@ case object NotFoundDesConnector extends DesConnector {
     vrn: Vrn
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] =
     Future.successful(None)
-
-  override def getAgencyDetails(
-    arn: Arn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[AgentDetailsDesResponse]] = Future successful None
-
 }

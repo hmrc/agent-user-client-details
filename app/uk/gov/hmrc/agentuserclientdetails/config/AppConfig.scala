@@ -30,6 +30,8 @@ trait AppConfig {
 
   val appName: String = "agent-user-client-details"
 
+  val agentAssuranceBaseUrl: String
+
   val citizenDetailsBaseUrl: String
 
   val emailBaseUrl: String
@@ -107,6 +109,8 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig, config: Configura
   private def baseUrl(key: String) = servicesConfig.baseUrl(key)
 
   lazy val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
+
+  lazy val agentAssuranceBaseUrl: String = baseUrl("agent-assurance")
 
   override lazy val emailBaseUrl: String = baseUrl("email")
 
