@@ -133,7 +133,7 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
     def mockAgentAssuranceConnectorGetAgencyDetails(agentDetailsResponse: AgentDetailsDesResponse) = {
       mockHttpGetV2(
         new URL(
-          s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+          s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
         )
       )
       val response = HttpResponse(OK, Json.toJson(agentDetailsResponse).toString)
@@ -143,7 +143,7 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
     def mockAgentAssuranceConnectorGetAgencyDetailsStatusNoContent(agentDetailsResponse: AgentDetailsDesResponse) = {
       mockHttpGetV2(
         new URL(
-          s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+          s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
         )
       )
       val response = HttpResponse(NO_CONTENT, Json.toJson(agentDetailsResponse).toString)

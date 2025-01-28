@@ -36,7 +36,7 @@ class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClien
 
   def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] =
     httpV2
-      .get(new URL(s"$baseUrl/agent-assurance/agent/agency-details/${arn.value}"))
+      .get(new URL(s"$baseUrl/agent-assurance/agent/agency-details/arn/${arn.value}"))
       .execute[HttpResponse]
       .map(response =>
         response.status match {

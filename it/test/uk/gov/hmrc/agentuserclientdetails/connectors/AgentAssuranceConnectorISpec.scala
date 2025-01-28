@@ -78,7 +78,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
         mockHttpGetV2(
           new URL(
-            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
           )
         )
 
@@ -94,7 +94,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
         mockHttpGetV2(
           new URL(
-            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
           )
         )
 
@@ -110,7 +110,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
         mockHttpGetV2(
           new URL(
-            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/${testArn.value}"
+            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
           )
         )
 
