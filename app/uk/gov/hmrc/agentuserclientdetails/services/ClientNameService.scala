@@ -43,7 +43,7 @@ class ClientNameService @Inject() (
     val identifiers = EnrolmentKey.identifiersOf(enrolmentKey)
     val clientId = identifiers.head.value
     service match {
-      case HMRCMTDIT =>
+      case HMRCMTDIT | HMRCMTDITSUPP =>
         getItsaTradingDetails(MtdItId(clientId))
           .flatMap { td =>
             val tradingName: Option[String] = td.flatMap(_.tradingName)

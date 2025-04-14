@@ -36,14 +36,23 @@ class ClientNameServiceSpec extends AnyWordSpec with Matchers {
   )
 
   "retrieving the client's friendly name" should {
-    "hit the correct endpoint for income tax" in {
+    "hit the correct endpoint for income tax MAIN" in {
       cns.getClientName("HMRC-MTD-IT~NINO~someId").futureValue shouldBe Some("IT Client")
     }
-    "check the client details if IF returns None for trading name" in {
+    "hit the correct endpoint for income tax SUPP" in {
+      cns.getClientName("HMRC-MTD-IT-SUPP~NINO~someId").futureValue shouldBe Some("IT Client")
+    }
+    "check the client details if IF returns None for trading name (main)" in {
       cns.getClientName("HMRC-MTD-IT~NINO~GK873907D").futureValue shouldBe Some("Tom Client")
     }
-    "check the client details if IF returns an empty string for trading name" in {
+    "check the client details if IF returns None for trading name (supp)" in {
+      cns.getClientName("HMRC-MTD-IT-SUPP~NINO~GK873907D").futureValue shouldBe Some("Tom Client")
+    }
+    "check the client details if IF returns an empty string for trading name (main)" in {
       cns.getClientName("HMRC-MTD-IT~NINO~GK873908D").futureValue shouldBe Some("Tom Client")
+    }
+    "check the client details if IF returns an empty string for trading name (supp)" in {
+      cns.getClientName("HMRC-MTD-IT-SUPP~NINO~GK873908D").futureValue shouldBe Some("Tom Client")
     }
     "hit the correct endpoint for income record viewer" in {
       cns.getClientName("HMRC-PT~NINO~GK873907D").futureValue shouldBe Some("Tom Client")
