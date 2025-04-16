@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, EnrolmentKey, MtdItId, PptRef, Vrn}
-import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, IfConnector, TradingDetails}
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, HipConnector, IfConnector, TradingDetails}
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
@@ -32,7 +33,9 @@ case class ClientNameNotFound() extends Exception
 class ClientNameService @Inject() (
   citizenDetailsConnector: CitizenDetailsConnector,
   desConnector: DesConnector,
-  ifConnector: IfConnector
+  ifConnector: IfConnector,
+  hipConnector: HipConnector,
+  appConfig: AppConfig
 ) extends AnyRef with Logging {
 
   def getClientName(enrolmentKey: String)(implicit
@@ -70,7 +73,10 @@ class ClientNameService @Inject() (
   private def getItsaTradingDetails(
     mtdItId: MtdItId
   )(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
-    ifConnector.getTradingDetailsForMtdItId(mtdItId)
+    if (appConfig.hipEnabled)
+      hipConnector.getTradingDetailsForMtdItId(mtdItId)
+    else
+      ifConnector.getTradingDetailsForMtdItId(mtdItId)
 
   private def getCitizenName(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
     citizenDetailsConnector.getCitizenDetails(nino).map(_.flatMap(_.name))

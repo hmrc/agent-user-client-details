@@ -21,7 +21,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
-import uk.gov.hmrc.agentuserclientdetails.support.{FakeCitizenDetailsConnector, FakeDesConnector, FakeIfConnector}
+import uk.gov.hmrc.agentuserclientdetails.support.{FakeCitizenDetailsConnector, FakeDesConnector, FakeHipConnector, FakeIfConnector, TestAppConfig}
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -32,7 +32,9 @@ class ClientNameServiceSpec extends AnyWordSpec with Matchers {
   val cns = new ClientNameService(
     FakeCitizenDetailsConnector,
     FakeDesConnector,
-    FakeIfConnector
+    FakeIfConnector,
+    FakeHipConnector,
+    new TestAppConfig {}
   )
 
   "retrieving the client's friendly name" should {

@@ -68,4 +68,7 @@ class TestAppConfig extends AppConfig {
   override val enableCbcFeature: Boolean = true
   override val enablePillar2Feature: Boolean = true
   override val internalHostPatterns: Seq[Regex] = Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$").map(_.r)
+  override val hipEnabled: Boolean = true
+  override val hipBaseUrl: String = ""
+  override val hipAuthToken: String = "hipToken"
 }
