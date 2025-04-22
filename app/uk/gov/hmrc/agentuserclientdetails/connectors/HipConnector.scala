@@ -95,8 +95,13 @@ class HipConnectorImpl @Inject() (
                     .flatMap(_.asOpt[String])
                 )
               )
-            case Status.UNPROCESSABLE_ENTITY if (response.json \ "errors" \ "code").as[String] == "008" => None
-            case Status.UNPROCESSABLE_ENTITY if (response.json \ "errors" \ "code").as[String] == "006" => None
+            case Status.UNPROCESSABLE_ENTITY
+                if List(
+                  ErrorCodes.`Subscription data not found`,
+                  ErrorCodes.`ID not found`
+                )
+                  .contains((response.json \ "errors" \ "code").as[String]) =>
+              None
             case otherStatus =>
               throw new RuntimeException(
                 s"Unexpected response from HIP API: [correlationId: $correlationId] [status: $otherStatus] [responseBody: ${response.body}]"
@@ -107,4 +112,10 @@ class HipConnectorImpl @Inject() (
   }
 
   protected def makeCorrelationId(): String = UUID.randomUUID().toString
+
+  object ErrorCodes {
+    val `Subscription data not found`: String = "006"
+    val `ID not found`: String = "008"
+
+  }
 }
