@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
 import org.scalamock.scalatest.MockFactory
-import play.api.http.Status
+import play.api.http.{HeaderNames, Status}
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, PptRef, Urn, Utr}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
@@ -31,7 +31,8 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.time.format.DateTimeFormatter
-import java.time.{Clock, LocalDateTime, ZoneId, ZoneOffset}
+import java.time.temporal.ChronoUnit
+import java.time.{Clock, Instant, LocalDateTime, ZoneId, ZoneOffset}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -80,22 +81,27 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
       )
     ).foreach { tc =>
       tc.testCaseName in {
-        val mtdItId: MtdItId = MtdItId("XNIT00000068707")
-        val httpClient: HttpClient = makeMockedHttpClient(tc.responseStatus, tc.responseBody)
+        val httpClient: HttpClient =
+          makeMockedHttpClient(
+            url = url,
+            responseHttpStatus = tc.responseStatus,
+            responseBody = tc.responseBody
+          )
         val hipConnector: HipConnector = new HipConnectorImpl(
           appConfig,
           httpClient,
           metrics,
           fixedClock
-        )
+        ) {
+          protected override def makeCorrelationId(): String = correlationId
+        }
         hipConnector.getTradingDetailsForMtdItId(mtdItId).futureValue shouldBe tc.expectedReturn
       }
     }
   }
 
   "HipConnector.getTradingDetailsForMtdItId fails for any other response codes" in {
-    val mtdItId: MtdItId = MtdItId("XNIT00000068707")
-    val httpClient: HttpClient = makeMockedHttpClient(Status.NOT_FOUND, "url not found")
+    val httpClient: HttpClient = makeMockedHttpClient(url, Status.NOT_FOUND, "url not found")
 
     val hipConnector: HipConnector = new HipConnectorImpl(
       appConfig,
@@ -103,7 +109,7 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
       metrics,
       fixedClock
     ) {
-      protected override def makeCorrelationId(): String = "5c290341-2d37-4e3c-a348-06724b2cf1c0"
+      protected override def makeCorrelationId(): String = correlationId
     }
 
     hipConnector
@@ -366,20 +372,29 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
       }
     }"""
 
-  def makeMockedHttpClient(responseHttpStatus: Int, responseBody: String) = {
+  def makeMockedHttpClient(url: String, responseHttpStatus: Int, responseBody: String) = {
     val httpClient: HttpClient = mock[HttpClient]
     val mockResponse: HttpResponse = HttpResponse(
       status = responseHttpStatus,
       body = responseBody
     )
 
+    val headers = Seq(
+      (HeaderNames.AUTHORIZATION, s"Basic hip-secret"),
+      ("correlationId", correlationId),
+      ("X-Message-Type", "TaxpayerDisplay"),
+      ("X-Originating-System", "MDTP"),
+      ("X-Receipt-Date", "2059-11-25T16:33:51Z"),
+      ("X-Regime-Type", "ITSA"),
+      ("X-Transmitting-System", "HIP")
+    )
     (httpClient
       .GET[HttpResponse](_: URL, _: Seq[(String, String)])(
         _: HttpReads[HttpResponse],
         _: HeaderCarrier,
         _: ExecutionContext
       ))
-      .expects(*, *, *, *, *)
+      .expects(new URL(url), headers, *, *, *)
       .returning(Future.successful(mockResponse))
       .once()
     httpClient
@@ -387,6 +402,9 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   lazy val appConfig = app.injector.instanceOf[AppConfig]
   lazy val metrics = app.injector.instanceOf[Metrics]
+  lazy val correlationId: String = "5c290341-2d37-4e3c-a348-06724b2cf1c0"
+  lazy val mtdItId: MtdItId = MtdItId("XNIT00000068707")
+  lazy val url = "http://localhost:9009/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=XNIT00000068707"
 
   lazy val fixedClock = Clock.fixed(
     LocalDateTime.parse("2059-11-25T16:33:51.880", DateTimeFormatter.ISO_DATE_TIME).toInstant(ZoneOffset.UTC),
