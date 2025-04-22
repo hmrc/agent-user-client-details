@@ -57,12 +57,12 @@ class HipConnectorImpl @Inject() (
     */
   def getTradingDetailsForMtdItId(mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] = {
 
-    val url: URL = uri"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details?param=whatever"
+    val url: URL = uri"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details"
       .withParam("mtdReference", Some(mtdItId.value))
       .toJavaUri
       .toURL
 
-    val correlationId: String = UUID.randomUUID().toString
+    val correlationId: String = makeCorrelationId()
     val headers = Seq(
       (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
       ("correlationId", correlationId),
@@ -81,7 +81,7 @@ class HipConnectorImpl @Inject() (
     monitor(s"ConsumedAPI-HIP-ITSA_Taxpayer_Business_Details-GET") {
       httpClient
         .GET[HttpResponse](
-          url,
+          url = url,
           headers = headers
         )
         .map { response =>
@@ -106,4 +106,5 @@ class HipConnectorImpl @Inject() (
     }
   }
 
+  protected def makeCorrelationId(): String = UUID.randomUUID().toString
 }

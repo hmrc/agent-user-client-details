@@ -109,7 +109,7 @@ class AppConfigImpl @Inject() (servicesConfig: ServicesConfig, config: Configura
 
   override lazy val hipEnabled: Boolean = servicesConfig.getBoolean("features.hip-enabled")
   override lazy val hipBaseUrl: String = servicesConfig.baseUrl("hip")
-  override lazy val hipAuthToken: String = getConf("hip.auth-token")
+  override lazy val hipAuthToken: String = getConf("hip.authorization-token")
 
   private def getConf(key: String) =
     servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
