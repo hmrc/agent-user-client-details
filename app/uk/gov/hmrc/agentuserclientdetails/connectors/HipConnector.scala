@@ -116,6 +116,5 @@ class HipConnectorImpl @Inject() (
   object ErrorCodes {
     val `Subscription data not found`: String = "006"
     val `ID not found`: String = "008"
-
   }
 }
