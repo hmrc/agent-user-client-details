@@ -28,6 +28,10 @@ import scala.util.matching.Regex
 @ImplementedBy(classOf[AppConfigImpl])
 trait AppConfig {
 
+  val hipEnabled: Boolean // Remove flag and the IF connector in June 2025 when it's live
+  val hipBaseUrl: String
+  val hipAuthToken: String
+
   val appName: String = "agent-user-client-details"
 
   val agentAssuranceBaseUrl: String
@@ -102,6 +106,10 @@ trait AppConfig {
 
 @Singleton
 class AppConfigImpl @Inject() (servicesConfig: ServicesConfig, config: Configuration) extends AppConfig {
+
+  override lazy val hipEnabled: Boolean = servicesConfig.getBoolean("features.hip-enabled")
+  override lazy val hipBaseUrl: String = servicesConfig.baseUrl("hip")
+  override lazy val hipAuthToken: String = getConf("hip.authorization-token")
 
   private def getConf(key: String) =
     servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))

@@ -23,9 +23,10 @@ import play.api.Configuration
 import uk.gov.hmrc.clusterworkthrottling.{DefaultServiceInstances, ServiceInstances}
 import uk.gov.hmrc.mongo.MongoComponent
 
+import java.time.{Clock, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
-class ClientNameModule extends AbstractModule with ScalaModule {
+class Module extends AbstractModule with ScalaModule {
 
   override def configure(): Unit = bind[AgentUserClientDetailsMain].asEagerSingleton()
 
@@ -35,5 +36,9 @@ class ClientNameModule extends AbstractModule with ScalaModule {
     ec: ExecutionContext
   ): ServiceInstances =
     new DefaultServiceInstances(configuration, mongo)
+
+  @Provides
+  @Singleton
+  def clock(): Clock = Clock.systemDefaultZone.withZone(ZoneOffset.UTC)
 
 }
