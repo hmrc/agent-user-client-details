@@ -18,6 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import play.api.Logging
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.connectors.HipConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSizeRepository, AssignmentsWorkItemRepository, Es3CacheRepository, FriendlyNameWorkItemRepository}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -29,10 +31,17 @@ class TestOnlyController @Inject() (
   agentSizeRepository: AgentSizeRepository,
   assignmentsWorkItemRepository: AssignmentsWorkItemRepository,
   es3CacheRepository: Es3CacheRepository,
-  friendlyNameWorkItemRepository: FriendlyNameWorkItemRepository
+  friendlyNameWorkItemRepository: FriendlyNameWorkItemRepository,
+  hipConnector: HipConnector
 )(implicit ec: ExecutionContext, cc: ControllerComponents)
     extends BackendController(cc) with Logging {
 
+  def getTradingDetailsForMtdItId(mtdItId: String) = Action.async { implicit request =>
+    hipConnector
+      .getTradingDetailsForMtdItId(MtdItId(mtdItId))
+      .map(response => Ok(response.toString()))
+
+  }
   // called from agents-external-stubs perf-test data generator. Cleans test data prior to running perf-tests.
   def deleteTestData(arn: String, groupId: String): Action[AnyContent] = Action.async { _ =>
     for {
