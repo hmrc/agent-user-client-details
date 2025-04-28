@@ -17,12 +17,16 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import play.api.Logging
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import sttp.model.Uri.UriContext
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.HipConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSizeRepository, AssignmentsWorkItemRepository, Es3CacheRepository, FriendlyNameWorkItemRepository}
+import uk.gov.hmrc.http.{HttpClient, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
@@ -32,16 +36,37 @@ class TestOnlyController @Inject() (
   assignmentsWorkItemRepository: AssignmentsWorkItemRepository,
   es3CacheRepository: Es3CacheRepository,
   friendlyNameWorkItemRepository: FriendlyNameWorkItemRepository,
-  hipConnector: HipConnector
+  hipConnector: HipConnector,
+  appConfig: AppConfig,
+  httpClient: HttpClient
 )(implicit ec: ExecutionContext, cc: ControllerComponents)
     extends BackendController(cc) with Logging {
 
-  def getTradingDetailsForMtdItId(mtdItId: String) = Action.async { implicit request =>
+  def getTradingDetailsForMtdItId(mtdItId: String): Action[AnyContent] = Action.async { implicit request =>
     hipConnector
       .getTradingDetailsForMtdItId(MtdItId(mtdItId))
       .map(response => Ok(response.toString()))
-
   }
+
+  def hipConnectivityTest(hipPath: String): Action[AnyContent] = Action.async { implicit request: Request[AnyContent] =>
+    val queryParams: Map[String, String] = request.queryString.view.mapValues(_.headOption.getOrElse("")).toMap
+
+    val url: URL = uri"${appConfig.hipBaseUrl}"
+      .withWholePath(hipPath)
+      .withParams(queryParams)
+      .toJavaUri
+      .toURL
+
+    import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
+
+    httpClient
+      .GET[HttpResponse](
+        url = url,
+        headers = request.headers.headers
+      )
+      .map(response => Status(response.status)(response.body))
+  }
+
   // called from agents-external-stubs perf-test data generator. Cleans test data prior to running perf-tests.
   def deleteTestData(arn: String, groupId: String): Action[AnyContent] = Action.async { _ =>
     for {

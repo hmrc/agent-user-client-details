@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import uk.gov.hmrc.http.HttpReads.Implicits._
 
 import java.net.URL
 import java.time.{Clock, Instant}

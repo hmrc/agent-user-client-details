@@ -352,7 +352,7 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
           }
           """
 
-  lazy val responseBodyErrors008: String =
+  lazy val responseBodyErrors0082: String =
     // language=JSON
     """{
       "errors": {
@@ -361,6 +361,11 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
         "text": "ID not Found"
       }
     }"""
+  lazy val responseBodyErrors008: String = {
+    // language=JSON
+    """{"errors":{"processingDate":"2025-04-24T15:46:30Z","code":"008","text":"ID not found"}}"""
+    """{"errors":{"processingDate":"2025-04-24T15:46:30Z","code":"0083","text":"ID not found"}}"""
+  }
 
   lazy val responseBodyErrors006: String =
     // language=JSON
