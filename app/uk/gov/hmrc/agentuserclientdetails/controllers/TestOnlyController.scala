@@ -32,15 +32,15 @@ import scala.concurrent.ExecutionContext
 
 @Singleton
 class TestOnlyController @Inject() (
-  agentSizeRepository: AgentSizeRepository,
-  assignmentsWorkItemRepository: AssignmentsWorkItemRepository,
-  es3CacheRepository: Es3CacheRepository,
-  friendlyNameWorkItemRepository: FriendlyNameWorkItemRepository,
-  hipConnector: HipConnector,
-  appConfig: AppConfig,
-  httpClient: HttpClient
-)(implicit ec: ExecutionContext, cc: ControllerComponents)
-    extends BackendController(cc) with Logging {
+                                     agentSizeRepository: AgentSizeRepository,
+                                     assignmentsWorkItemRepository: AssignmentsWorkItemRepository,
+                                     es3CacheRepository: Es3CacheRepository,
+                                     friendlyNameWorkItemRepository: FriendlyNameWorkItemRepository,
+                                     hipConnector: HipConnector,
+                                     appConfig: AppConfig,
+                                     httpClient: HttpClient
+                                   )(implicit ec: ExecutionContext, cc: ControllerComponents)
+  extends BackendController(cc) with Logging {
 
   def getTradingDetailsForMtdItId(mtdItId: String): Action[AnyContent] = Action.async { implicit request =>
     hipConnector
@@ -75,8 +75,8 @@ class TestOnlyController @Inject() (
       c <- es3CacheRepository.deleteCache(groupId)
       d <- friendlyNameWorkItemRepository.deleteWorkItems(groupId)
       _ = logger.info(
-            s"Deleted test-data for $arn $groupId: agentSize: $a, assignmentsWi: $b, es3Cache: $c, friendlyNameWi: $d"
-          )
+        s"Deleted test-data for $arn $groupId: agentSize: $a, assignmentsWi: $b, es3Cache: $c, friendlyNameWi: $d"
+      )
     } yield Ok
   }
 }
