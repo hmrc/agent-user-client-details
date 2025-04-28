@@ -1,6 +1,5 @@
-import uk.gov.hmrc.{DefaultBuildSettings, SbtAutoBuildPlugin}
+import uk.gov.hmrc.{DefaultBuildSettings}
 import play.sbt.routes.RoutesKeys
-import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
 
 val appName = "agent-user-client-details"
 
@@ -43,6 +42,7 @@ lazy val root = (project in file("."))
   .settings(
     PlayKeys.devSettings             += "play.server.http.idleTimeout" -> "3600 seconds",
   )
+  .settings(commands ++= SbtCommands.commands)
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
 
@@ -56,8 +56,4 @@ lazy val it = project
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true
   )
-
-
-//Test / javaOptions += "-Dlogger.resource=logback-test.xml"
-//IntegrationTest / javaOptions += "-Dlogger.resource=logback-test.xml"
 

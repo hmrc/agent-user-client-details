@@ -16,23 +16,18 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import com.google.inject.AbstractModule
 import org.scalamock.scalatest.MockFactory
 import play.api.http.{HeaderNames, Status}
-import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, PptRef, Urn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
-import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant, LocalDateTime, ZoneId, ZoneOffset}
+import java.time.{Clock, LocalDateTime, ZoneId, ZoneOffset}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
