@@ -100,17 +100,21 @@ class JobMonitoringWorker @Inject() (
                           else "agent_permissions_some_failed") + (if (job.emailLanguagePreference.contains("cy"))
                                                                      "_cy"
                                                                    else "")
-                       logger.info(
+                       logger.debug(
                          s"Sending email $emailTemplateName to ${job.email.getOrElse("")} for agent ${job.agencyName}"
                        )
                        implicit val hc: HeaderCarrier = HeaderCarrier()
-                       emailConnector.sendEmail(
-                         EmailInformation(
-                           job.email.toSeq,
-                           emailTemplateName,
-                           Map("agencyName" -> job.agencyName.getOrElse(""))
+                       emailConnector
+                         .sendEmail(
+                           EmailInformation(
+                             job.email.toSeq,
+                             emailTemplateName,
+                             Map("agencyName" -> job.agencyName.getOrElse(""))
+                           )
                          )
-                       )
+                         .recover { case e =>
+                           logger.error("Error during sending email", e)
+                         }
                      }
                    } else Future.successful(false)
             } yield ()
