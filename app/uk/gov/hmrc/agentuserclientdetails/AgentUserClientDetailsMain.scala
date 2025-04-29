@@ -129,7 +129,7 @@ class AgentUserClientDetailsMain @Inject() (
     )
     def cleanup(): Future[Unit] = Future
       .traverse(cleanupJobs) { case (name, f) =>
-        logger.info(s"[$name] Starting work item cleanup.")
+        logger.debug(s"[$name] Starting work item cleanup.")
         f()
           .map { result =>
             logger.info(s"[$name] Work item cleanup complete. ${result.getDeletedCount} work items deleted.")
@@ -148,7 +148,7 @@ class AgentUserClientDetailsMain @Inject() (
         _ <- friendlyNameRepoStats()
         _ <- assignmentsRepoStats()
         _ <- cleanup()
-        _ = logger.info("Service job finished.")
+        _ = logger.debug("Service job finished.")
       } yield ()
   }
 }

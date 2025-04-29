@@ -72,7 +72,7 @@ class FriendlyNameWorker @Inject() (
         logger.info("Friendly name processing triggered but was already running.")
         Future.successful(())
       case false =>
-        logger.info("Friendly name triggered. Starting...")
+        logger.debug("Friendly name triggered. Starting...")
         running.set(true)
         val workItems: Source[WorkItem[FriendlyNameWorkItem], NotUsed] =
           Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
@@ -82,7 +82,7 @@ class FriendlyNameWorker @Inject() (
         }
         val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
         result.onComplete { case _ =>
-          logger.info("Friendly name processing finished.")
+          logger.debug("Friendly name processing finished.")
           running.set(false)
         }
         result
