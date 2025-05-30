@@ -54,7 +54,7 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
   lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
-  implicit lazy val mockAuthConnector = mock[AuthConnector]
+  implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
   lazy val jobMonitoringRepository = new JobMonitoringRepository(mongoComponent, config)

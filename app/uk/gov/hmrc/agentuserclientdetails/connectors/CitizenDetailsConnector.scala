@@ -24,7 +24,8 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HttpClient, _}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
@@ -54,7 +55,7 @@ trait CitizenDetailsConnector {
 }
 
 @Singleton
-class CitizenDetailsConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClient, val metrics: Metrics)(implicit
+class CitizenDetailsConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClientV2, val metrics: Metrics)(implicit
   val ec: ExecutionContext
 ) extends HttpAPIMonitor with CitizenDetailsConnector with Logging {
 
@@ -62,14 +63,16 @@ class CitizenDetailsConnectorImpl @Inject() (appConfig: AppConfig, http: HttpCli
 
   def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
     monitor(s"ConsumedAPI-CitizenDetails-GET") {
-      val url = s"$baseUrl/citizen-details/nino/${nino.value}"
-      http.GET[HttpResponse](url).map { response =>
-        response.status match {
-          case Status.OK        => Try(response.json.asOpt[Citizen]).getOrElse(None)
-          case Status.NOT_FOUND => None
-          case other =>
-            throw UpstreamErrorResponse(s"unexpected error during 'getCitizenDetails', statusCode=$other", other)
+      http
+        .get(url"$baseUrl/citizen-details/nino/${nino.value}")
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case Status.OK        => Try(response.json.asOpt[Citizen]).getOrElse(None)
+            case Status.NOT_FOUND => None
+            case other =>
+              throw UpstreamErrorResponse(s"unexpected error during 'getCitizenDetails', statusCode=$other", other)
+          }
         }
-      }
     }
 }

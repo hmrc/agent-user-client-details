@@ -58,7 +58,7 @@ class AssignmentControllerISpec
   lazy val wis = new AssignmentsWorkItemServiceImpl(wir, appConfig)
   lazy val esp = mock[EnrolmentStoreProxyConnector]
 
-  implicit lazy val mockAuthConnector = mock[AuthConnector]
+  implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()

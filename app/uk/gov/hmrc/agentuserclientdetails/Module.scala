@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentuserclientdetails
 
 import javax.inject.Singleton
 import com.google.inject.{AbstractModule, Provides}
-import net.codingwell.scalaguice.ScalaModule
 import play.api.Configuration
 import uk.gov.hmrc.clusterworkthrottling.{DefaultServiceInstances, ServiceInstances}
 import uk.gov.hmrc.mongo.MongoComponent
@@ -26,9 +25,9 @@ import uk.gov.hmrc.mongo.MongoComponent
 import java.time.{Clock, ZoneOffset}
 import scala.concurrent.ExecutionContext
 
-class Module extends AbstractModule with ScalaModule {
+class Module extends AbstractModule {
 
-  override def configure(): Unit = bind[AgentUserClientDetailsMain].asEagerSingleton()
+  override def configure(): Unit = bind(classOf[AgentUserClientDetailsMain]).asEagerSingleton()
 
   @Provides
   @Singleton

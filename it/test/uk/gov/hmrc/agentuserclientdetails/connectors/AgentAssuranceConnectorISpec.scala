@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentuserclientdetails.connectors
+package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.codahale.metrics.NoopMetricRegistry
 import com.google.inject.AbstractModule
@@ -25,11 +25,10 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 
 import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -37,11 +36,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
-  lazy val appConfig = app.injector.instanceOf[AppConfig]
+  lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  lazy val mockAuthConnector = mock[AuthConnector]
+  lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   val mockHttpClientV2: HttpClientV2 = mock[HttpClientV2]
   val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
@@ -55,7 +54,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
       bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
   }
 
-  def mockHttpGetV2[A](url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpGet(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
     (mockHttpClientV2
       .get(_: URL)(_: HeaderCarrier))
       .expects(url, *)
@@ -76,12 +75,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
         val mockResponse: HttpResponse = HttpResponse(OK, Json.toJson(agencyDetails).toString)
 
-        mockHttpGetV2(
-          new URL(
-            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
-          )
-        )
-
+        mockHttpGet(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}")
         mockRequestBuilderExecute(mockResponse)
 
         agentAssuranceConnector.getAgentDetails(testArn).futureValue shouldBe agencyDetails
@@ -92,12 +86,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
         val mockResponse: HttpResponse = HttpResponse(NO_CONTENT, Json.toJson(agencyDetails).toString)
 
-        mockHttpGetV2(
-          new URL(
-            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
-          )
-        )
-
+        mockHttpGet(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}")
         mockRequestBuilderExecute(mockResponse)
 
         agentAssuranceConnector.getAgentDetails(testArn).futureValue shouldBe None
@@ -108,12 +97,7 @@ class AgentAssuranceConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
         val mockResponse: HttpResponse = HttpResponse(SERVICE_UNAVAILABLE, "")
 
-        mockHttpGetV2(
-          new URL(
-            s"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}"
-          )
-        )
-
+        mockHttpGet(url"${appConfig.agentAssuranceBaseUrl}/agent-assurance/agent/agency-details/arn/${testArn.value}")
         mockRequestBuilderExecute(mockResponse)
 
         agentAssuranceConnector.getAgentDetails(testArn).failed.futureValue shouldBe an[UpstreamErrorResponse]

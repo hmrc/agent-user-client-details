@@ -16,47 +16,44 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.http.Status
 import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
-@ImplementedBy(classOf[UsersGroupsSearchConnectorImpl])
-trait UsersGroupsSearchConnector {
-  def getGroupUsers(groupId: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]]
-}
-
 @Singleton
-class UsersGroupsSearchConnectorImpl @Inject() (httpClient: HttpClient, val metrics: Metrics)(implicit
+class UsersGroupsSearchConnector @Inject() (httpClient: HttpClientV2, val metrics: Metrics)(implicit
   appConfig: AppConfig,
   val ec: ExecutionContext
-) extends UsersGroupsSearchConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
+) extends HttpAPIMonitor with HttpErrorFunctions with Logging {
 
-  override def getGroupUsers(
+  def getGroupUsers(
     groupId: String
   )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]] = {
-    val url = new URL(s"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users")
+    val url = url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users"
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
-      httpClient.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case status if is2xx(status) => response.json.as[Seq[UserDetails]]
-          case Status.NOT_FOUND =>
-            logger.warn(s"Group $groupId not found in SCP")
-            Seq.empty
-          case other =>
-            logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
-            throw UpstreamErrorResponse(response.body, other, other)
+      httpClient
+        .get(url)
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case status if is2xx(status) => response.json.as[Seq[UserDetails]]
+            case Status.NOT_FOUND =>
+              logger.warn(s"Group $groupId not found in SCP")
+              Seq.empty
+            case other =>
+              logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
+              throw UpstreamErrorResponse(response.body, other, other)
+          }
         }
-      }
     }
   }
 

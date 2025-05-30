@@ -1,10 +1,10 @@
-import uk.gov.hmrc.{DefaultBuildSettings}
+import uk.gov.hmrc.DefaultBuildSettings
 import play.sbt.routes.RoutesKeys
 
 val appName = "agent-user-client-details"
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "2.13.12"
+ThisBuild / scalaVersion := "2.13.16"
 
 val scalaCOptions = Seq(
   "-Xlint:-missing-interpolator,_",
@@ -25,7 +25,6 @@ lazy val root = (project in file("."))
     organization := "uk.gov.hmrc",
     PlayKeys.playDefaultPort := 9449,
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
-    resolvers ++= Seq(Resolver.typesafeRepo("releases")),
     routesImport ++= Seq("uk.gov.hmrc.agentuserclientdetails.binders.Binders._"),
     scalacOptions ++= scalaCOptions,
     Compile / scalafmtOnCompile := true,
@@ -35,7 +34,6 @@ lazy val root = (project in file("."))
   .settings(
     RoutesKeys.routesImport += "uk.gov.hmrc.play.bootstrap.binders.RedirectUrl"
   )
-  .settings(resolvers += Resolver.jcenterRepo)
   .settings(Test / parallelExecution := false,
     CodeCoverageSettings.settings
   )

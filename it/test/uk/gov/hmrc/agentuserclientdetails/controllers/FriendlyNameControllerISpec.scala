@@ -55,7 +55,7 @@ class FriendlyNameControllerISpec
   lazy val wir: FriendlyNameWorkItemRepository = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
-  implicit lazy val mockAuthConnector = mock[AuthConnector]
+  implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
   implicit val hc: HeaderCarrier = HeaderCarrier()

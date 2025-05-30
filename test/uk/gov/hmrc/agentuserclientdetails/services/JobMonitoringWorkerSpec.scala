@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import com.mongodb.client.result.UpdateResult
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.testkit.NoMaterializer
-import com.mongodb.client.result.UpdateResult
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures._
@@ -27,7 +27,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
 import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameJobData, FriendlyNameWorkItem, JobData}
-import uk.gov.hmrc.agentuserclientdetails.support._
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
@@ -39,8 +38,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class JobMonitoringWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
 
   val groupId = "myGroupId"
-  val client1 = Client("HMRC-MTD-VAT~VRN~000000001", "Frank Wright")
-  val client2 = Client("HMRC-MTD-VAT~VRN~000000002", "Howell & Son")
+  val client1: Client = Client("HMRC-MTD-VAT~VRN~000000001", "Frank Wright")
+  val client2: Client = Client("HMRC-MTD-VAT~VRN~000000002", "Howell & Son")
 
   val materializer: Materializer = NoMaterializer
 

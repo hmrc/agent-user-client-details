@@ -23,7 +23,8 @@ import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.HipConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSizeRepository, AssignmentsWorkItemRepository, Es3CacheRepository, FriendlyNameWorkItemRepository}
-import uk.gov.hmrc.http.{HttpClient, HttpResponse}
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.net.URL
@@ -38,14 +39,14 @@ class TestOnlyController @Inject() (
   friendlyNameWorkItemRepository: FriendlyNameWorkItemRepository,
   hipConnector: HipConnector,
   appConfig: AppConfig,
-  httpClient: HttpClient
+  httpClient: HttpClientV2
 )(implicit ec: ExecutionContext, cc: ControllerComponents)
     extends BackendController(cc) with Logging {
 
   def getTradingDetailsForMtdItId(mtdItId: String): Action[AnyContent] = Action.async { implicit request =>
     hipConnector
       .getTradingDetailsForMtdItId(MtdItId(mtdItId))
-      .map(response => Ok(response.toString()))
+      .map(response => Ok(response.toString))
   }
 
   def hipConnectivityTest(hipPath: String): Action[AnyContent] = Action.async { implicit request: Request[AnyContent] =>
@@ -60,10 +61,9 @@ class TestOnlyController @Inject() (
     import uk.gov.hmrc.http.HttpReads.Implicits.readRaw
 
     httpClient
-      .GET[HttpResponse](
-        url = url,
-        headers = request.headers.headers
-      )
+      .get(url)
+      .setHeader(request.headers.headers: _*)
+      .execute[HttpResponse]
       .map(response => Status(response.status)(response.body))
   }
 
