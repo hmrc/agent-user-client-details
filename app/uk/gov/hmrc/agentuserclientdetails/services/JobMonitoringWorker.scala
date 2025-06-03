@@ -59,7 +59,7 @@ class JobMonitoringWorker @Inject() (
           processItem(item)
         }
         val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
-        result.onComplete { case _ =>
+        result.onComplete { _ =>
           logger.debug("Job monitoring finished.")
           running.set(false)
         }
@@ -88,7 +88,7 @@ class JobMonitoringWorker @Inject() (
           case true =>
             logger.info(s"Job monitor: Job ${workItem.id} has finished.")
 
-            implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = job.sessionId.map(SessionId))
+            implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = job.sessionId.map(SessionId.apply))
 
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)

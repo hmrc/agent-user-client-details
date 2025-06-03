@@ -107,98 +107,98 @@ trait AppConfig {
 @Singleton
 class AppConfigImpl @Inject() (servicesConfig: ServicesConfig, config: Configuration) extends AppConfig {
 
-  override lazy val hipEnabled: Boolean = servicesConfig.getBoolean("features.hip-enabled")
-  override lazy val hipBaseUrl: String = servicesConfig.baseUrl("hip")
-  override lazy val hipAuthToken: String = getConf("hip.authorization-token")
+  val hipEnabled: Boolean = servicesConfig.getBoolean("features.hip-enabled")
+  val hipBaseUrl: String = servicesConfig.baseUrl("hip")
+  val hipAuthToken: String = getConf("hip.authorization-token")
 
   private def getConf(key: String) =
     servicesConfig.getConfString(key, throw new RuntimeException(s"config $key not found"))
 
   private def baseUrl(key: String) = servicesConfig.baseUrl(key)
 
-  lazy val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
+  val citizenDetailsBaseUrl: String = baseUrl("citizen-details")
 
-  lazy val agentAssuranceBaseUrl: String = baseUrl("agent-assurance")
+  val agentAssuranceBaseUrl: String = baseUrl("agent-assurance")
 
-  override lazy val emailBaseUrl: String = baseUrl("email")
+  val emailBaseUrl: String = baseUrl("email")
 
-  lazy val enrolmentStoreProxyUrl: String = baseUrl("enrolment-store-proxy")
+  val enrolmentStoreProxyUrl: String = baseUrl("enrolment-store-proxy")
 
-  lazy val desBaseUrl: String = baseUrl("des")
-  lazy val desEnvironment: String = getConf("des.environment")
-  lazy val desAuthToken: String = getConf("des.authorization-token")
+  val desBaseUrl: String = baseUrl("des")
+  val desEnvironment: String = getConf("des.environment")
+  val desAuthToken: String = getConf("des.authorization-token")
 
-  lazy val ifPlatformBaseUrl: String = baseUrl("if")
-  lazy val ifEnvironment: String = getConf("if.environment")
-  lazy val ifAuthTokenAPI1171: String = getConf("if.authorization-token.API1171")
-  lazy val ifAuthTokenAPI1712: String = getConf("if.authorization-token.API1712")
-  lazy val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
+  val ifPlatformBaseUrl: String = baseUrl("if")
+  val ifEnvironment: String = getConf("if.environment")
+  val ifAuthTokenAPI1171: String = getConf("if.authorization-token.API1171")
+  val ifAuthTokenAPI1712: String = getConf("if.authorization-token.API1712")
+  val ifAuthTokenAPI1495: String = getConf("if.authorization-token.API1495")
 
-  lazy val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
-  lazy val es0ThrottlingRate: String = servicesConfig.getString("throttling-rate.es0")
-  lazy val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
-  lazy val assignmentsThrottlingRate: String = servicesConfig.getString("throttling-rate.assignments")
+  val enableThrottling: Boolean = servicesConfig.getBoolean("throttling-rate.enable")
+  val es0ThrottlingRate: String = servicesConfig.getString("throttling-rate.es0")
+  val es19ThrottlingRate: String = servicesConfig.getString("throttling-rate.es19")
+  val assignmentsThrottlingRate: String = servicesConfig.getString("throttling-rate.assignments")
 
-  lazy val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int =
+  val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.friendly-name.available-before-seconds")
-  lazy val friendlyNameWorkItemRepoFailedBeforeSeconds: Int =
+  val friendlyNameWorkItemRepoFailedBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.friendly-name.failed-before-seconds")
-  lazy val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int =
+  val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int =
     servicesConfig.getInt("work-item-repository.friendly-name.give-up-after-minutes")
-  lazy val friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds: Int =
+  val friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds: Int =
     servicesConfig.getInt("work-item-repository.friendly-name.delete-finished-items-after-seconds")
 
-  lazy val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int =
+  val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.assignments.available-before-seconds")
-  lazy val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int =
+  val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.assignments.failed-before-seconds")
-  lazy val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int =
+  val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int =
     servicesConfig.getInt("work-item-repository.assignments.give-up-after-minutes")
-  lazy val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfterSeconds: Int =
+  val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfterSeconds: Int =
     servicesConfig.getInt("work-item-repository.assignments.delete-finished-items-after-seconds")
 
-  lazy val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
+  val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
 
-  lazy val friendlyNameJobRestartRepoQueueInitialDelaySeconds: Int =
+  val friendlyNameJobRestartRepoQueueInitialDelaySeconds: Int =
     servicesConfig.getInt("job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds")
-  lazy val friendlyNameJobRestartRepoQueueIntervalSeconds: Int =
+  val friendlyNameJobRestartRepoQueueIntervalSeconds: Int =
     servicesConfig.getInt("job-scheduling.friendly-name.restart-repo-queue.intervalSeconds")
 
-  lazy val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int =
+  val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int =
     servicesConfig.getInt("job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds")
-  lazy val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int =
+  val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int =
     servicesConfig.getInt("job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds")
 
-  lazy val jobMonitoringWorkerIntervalSeconds: Int =
+  val jobMonitoringWorkerIntervalSeconds: Int =
     servicesConfig.getInt("job-scheduling.job-monitoring.initialDelaySeconds")
-  lazy val jobMonitoringWorkerInitialDelaySeconds: Int =
+  val jobMonitoringWorkerInitialDelaySeconds: Int =
     servicesConfig.getInt("job-scheduling.job-monitoring.intervalSeconds")
 
-  lazy val serviceJobInitialDelaySeconds: Int =
+  val serviceJobInitialDelaySeconds: Int =
     servicesConfig.getInt("job-scheduling.service-job.initialDelaySeconds")
-  lazy val serviceJobIntervalSeconds: Int =
+  val serviceJobIntervalSeconds: Int =
     servicesConfig.getInt("job-scheduling.service-job.intervalSeconds")
 
-  lazy val jobMonitoringAvailableBeforeSeconds: Int =
+  val jobMonitoringAvailableBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.job-monitoring.available-before-seconds")
-  lazy val jobMonitoringFailedBeforeSeconds: Int =
+  val jobMonitoringFailedBeforeSeconds: Int =
     servicesConfig.getInt("work-item-repository.job-monitoring.failed-before-seconds")
-  lazy val jobMonitoringGiveUpAfterMinutes: Int =
+  val jobMonitoringGiveUpAfterMinutes: Int =
     servicesConfig.getInt("work-item-repository.job-monitoring.give-up-after-minutes")
-  lazy val jobMonitoringDeleteFinishedItemsAfterSeconds: Int =
+  val jobMonitoringDeleteFinishedItemsAfterSeconds: Int =
     servicesConfig.getInt("work-item-repository.job-monitoring.delete-finished-items-after-seconds")
 
-  lazy val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
+  val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 
-  lazy val agentsizeRefreshDuration: Duration = servicesConfig.getDuration("agentsize.refreshduration")
+  val agentsizeRefreshDuration: Duration = servicesConfig.getDuration("agentsize.refreshduration")
 
-  lazy val es3CacheRefreshDuration: Duration = servicesConfig.getDuration("es3Cache.refreshduration")
+  val es3CacheRefreshDuration: Duration = servicesConfig.getDuration("es3Cache.refreshduration")
 
-  lazy val userGroupsSearchUrl: String = servicesConfig.baseUrl("users-groups-search")
-  override lazy val es3MaxRecordsFetchCount: Int = servicesConfig.getInt("es3.max-records-fetch-count")
+  val userGroupsSearchUrl: String = servicesConfig.baseUrl("users-groups-search")
+  val es3MaxRecordsFetchCount: Int = servicesConfig.getInt("es3.max-records-fetch-count")
 
-  override lazy val enableCbcFeature: Boolean = servicesConfig.getBoolean("features.enable-cbc")
-  override lazy val enablePillar2Feature: Boolean = servicesConfig.getBoolean("features.enable-pillar2")
+  val enableCbcFeature: Boolean = servicesConfig.getBoolean("features.enable-cbc")
+  val enablePillar2Feature: Boolean = servicesConfig.getBoolean("features.enable-pillar2")
 
-  override lazy val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
+  val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 }

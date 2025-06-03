@@ -49,7 +49,7 @@ object SensitiveEnrolment {
     activationDate = enrolment.activationDate,
     enrolmentDate = enrolment.enrolmentDate
   )
-  implicit def format(implicit crypto: Encrypter with Decrypter): Format[SensitiveEnrolment] = {
+  implicit def format(implicit crypto: Encrypter & Decrypter): Format[SensitiveEnrolment] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] =
       JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveEnrolment]
@@ -65,7 +65,7 @@ object SensitiveIdentifier {
     key = identifier.key,
     value = SensitiveString(identifier.value)
   )
-  implicit def format(implicit crypto: Encrypter with Decrypter): Format[SensitiveIdentifier] = {
+  implicit def format(implicit crypto: Encrypter & Decrypter): Format[SensitiveIdentifier] = {
     implicit val sensitiveStringFormat: Format[SensitiveString] =
       JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveIdentifier]

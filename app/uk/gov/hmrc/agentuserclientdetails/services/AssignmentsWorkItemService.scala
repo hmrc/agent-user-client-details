@@ -27,6 +27,8 @@ import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemReposi
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Duplicate, Succeeded}
 import uk.gov.hmrc.mongo.workitem._
 
+import org.mongodb.scala.SingleObservableFuture
+
 import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,7 +56,7 @@ trait AssignmentsWorkItemService {
     ec: ExecutionContext
   ): Future[Unit]
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus)(implicit
+  def complete(id: ObjectId, newStatus: ProcessingStatus & ResultStatus)(implicit
     ec: ExecutionContext
   ): Future[Boolean]
 
@@ -74,7 +76,7 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
     ec: ExecutionContext
   ): Future[Seq[WorkItem[AssignmentWorkItem]]] =
     workItemRepo.collection
-      .find[WorkItem[AssignmentWorkItem]](Filters.in("status", status.map(_.name): _*))
+      .find[WorkItem[AssignmentWorkItem]](Filters.in("status", status.map(_.name) *))
       .collect()
       .toFuture()
 
@@ -105,12 +107,12 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
       .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
       .collect()
       .toFuture()
-      .map { xs: Seq[BsonValue] =>
+      .map { (xs: Seq[BsonValue]) =>
         val elems = xs.map { x =>
           val document = x.asDocument()
-          (document.getString("_id").getValue -> document.getNumber("count").intValue())
+          document.getString("_id").getValue -> document.getNumber("count").intValue()
         }
-        Map(elems: _*)
+        Map(elems *)
       }
 
   def pushNew(items: Seq[AssignmentWorkItem], receivedAt: Instant, initialState: ProcessingStatus)(implicit
@@ -121,7 +123,7 @@ class AssignmentsWorkItemServiceImpl @Inject() (workItemRepo: AssignmentsWorkIte
     else
       Future.successful(())
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus)(implicit
+  def complete(id: ObjectId, newStatus: ProcessingStatus & ResultStatus)(implicit
     ec: ExecutionContext
   ): Future[Boolean] =
     workItemRepo.complete(id, newStatus)

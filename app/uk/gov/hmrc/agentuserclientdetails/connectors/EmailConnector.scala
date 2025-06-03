@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor

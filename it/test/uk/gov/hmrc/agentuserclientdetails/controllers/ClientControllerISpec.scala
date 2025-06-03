@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
+import org.mongodb.scala.SingleObservableFuture
 import org.scalamock.handlers.{CallHandler2, CallHandler3, CallHandler4}
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
@@ -126,7 +127,7 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
 
     def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] =
       (mockRequestBuilder
-        .execute(_: HttpReads[A], _: ExecutionContext))
+        .execute(using _: HttpReads[A], _: ExecutionContext))
         .expects(*, *)
         .returning(Future successful value)
 

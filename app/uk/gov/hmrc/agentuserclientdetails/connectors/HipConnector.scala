@@ -78,7 +78,7 @@ class HipConnectorImpl @Inject() (
     monitor(s"ConsumedAPI-HIP-ITSA_Taxpayer_Business_Details-GET") {
       httpClient
         .get(url)
-        .setHeader(headers: _*)
+        .setHeader(headers *)
         .execute[HttpResponse]
         .map { response =>
           response.status match {

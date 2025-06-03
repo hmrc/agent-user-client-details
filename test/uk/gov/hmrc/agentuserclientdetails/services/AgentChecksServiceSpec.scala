@@ -17,21 +17,19 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.bson.types.ObjectId
-import play.api.Configuration
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.{Client, UserDetails}
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.config.AppConfigImpl
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameWorkItem}
-import uk.gov.hmrc.agentuserclientdetails.repositories._
+import uk.gov.hmrc.agentuserclientdetails.repositories.*
+import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.time.{Instant, LocalDateTime}
-import scala.concurrent.duration.{DAYS, Duration}
 import scala.concurrent.{ExecutionContext, Future}
 
 class AgentChecksServiceSpec extends BaseSpec {
@@ -47,15 +45,12 @@ class AgentChecksServiceSpec extends BaseSpec {
   val enrolmentKey = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
 
   val refreshDays = 12
-  val refreshDuration: Duration = Duration(refreshDays, DAYS)
 
   trait TestScope {
-    val mockServicesConfig: ServicesConfig = mock[ServicesConfig]
-    val mockConfiguration: Configuration = mock[Configuration]
-    val appconfig = new AppConfigImpl(mockServicesConfig, mockConfiguration)
+    val appconfig: AppConfig = new TestAppConfig
     val mockAgentSizeRepository: AgentSizeRepository = mock[AgentSizeRepository]
     val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
-    val mockES3CacheService = mock[ES3CacheService]
+    val mockES3CacheService: ES3CacheService = mock[ES3CacheService]
     val mockUsersGroupsSearchConnector: UsersGroupsSearchConnector = mock[UsersGroupsSearchConnector]
     val mockWorkItemService: FriendlyNameWorkItemService = mock[FriendlyNameWorkItemService]
     val mockAssignmentsWorkItemService: AssignmentsWorkItemService = mock[AssignmentsWorkItemService]
@@ -100,7 +95,6 @@ class AgentChecksServiceSpec extends BaseSpec {
         val agentSize: AgentSize = buildAgentSize(lastRefreshedAt)
 
         mockAgentSizeRepositoryGet(Some(agentSize))(mockAgentSizeRepository)
-        mockServicesConfigGetDuration(mockServicesConfig)
 
         agentChecksService.getAgentSize(arn).futureValue shouldBe Some(agentSize)
       }
@@ -156,7 +150,6 @@ class AgentChecksServiceSpec extends BaseSpec {
         "enrolment store proxy returns no group for ARN" should {
           "return None" in new TestScope {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
-            mockServicesConfigGetDuration(mockServicesConfig)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(None)(mockEnrolmentStoreProxyConnector)
 
             agentChecksService.getAgentSize(arn).futureValue shouldBe None
@@ -166,7 +159,6 @@ class AgentChecksServiceSpec extends BaseSpec {
         "enrolment store proxy returns empty list of enrolments" should {
           "have client count 0" in new TestScope {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
-            mockServicesConfigGetDuration(mockServicesConfig)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
             mockES3CacheServiceGetCachedClients(Seq.empty)(mockES3CacheService)
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
@@ -180,7 +172,6 @@ class AgentChecksServiceSpec extends BaseSpec {
         "enrolment store proxy returns non-empty list of enrolments" should {
           "return correct count of enrolments" in new TestScope {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
-            mockServicesConfigGetDuration(mockServicesConfig)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
             mockES3CacheServiceGetCachedClients(Seq(client1, client2, client3, client4))(
               mockES3CacheService
@@ -430,8 +421,7 @@ class AgentChecksServiceSpec extends BaseSpec {
 
   private def mockAgentSizeRepositoryGet(maybeAgentSize: Option[AgentSize])(
     mockAgentSizeRepository: AgentSizeRepository
-  ) =
-    (mockAgentSizeRepository.get _).expects(arn).returning(Future.successful(maybeAgentSize))
+  ) = mockAgentSizeRepository.get.expects(arn).returning(Future.successful(maybeAgentSize))
 
   private def mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(
     maybeGroupId: Option[String]
@@ -440,9 +430,6 @@ class AgentChecksServiceSpec extends BaseSpec {
       .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
       .expects(arn, *, *)
       .returning(Future.successful(maybeGroupId))
-
-  private def mockServicesConfigGetDuration(mockServicesConfig: ServicesConfig) =
-    (mockServicesConfig.getDuration _).expects(refreshdurationConfigKey).returning(refreshDuration)
 
   private def mockES3CacheServiceGetCachedClients(
     clients: Seq[Client]
@@ -454,8 +441,7 @@ class AgentChecksServiceSpec extends BaseSpec {
 
   private def mockAgentSizeRepositoryUpsert(maybeUpsertType: Option[UpsertType])(
     mockAgentSizeRepository: AgentSizeRepository
-  ) =
-    (mockAgentSizeRepository.upsert _).expects(*).returning(Future.successful(maybeUpsertType))
+  ) = mockAgentSizeRepository.upsert.expects(*).returning(Future.successful(maybeUpsertType))
 
   private def mockUsersGroupsSearchConnectorGetGroupUsers(
     seqUserDetail: Seq[UserDetails]

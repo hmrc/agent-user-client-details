@@ -134,7 +134,7 @@ class IfConnectorImpl @Inject() (
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
       httpClient
         .get(url"$url")
-        .setHeader(headersConfig.explicitHeaders: _*)
+        .setHeader(headersConfig.explicitHeaders *)
         .execute[HttpResponse]
     }
   }

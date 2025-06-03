@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
+import org.mongodb.scala.SingleObservableFuture
 import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment, Identifier}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.mongo.test.MongoSupport

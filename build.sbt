@@ -4,18 +4,14 @@ import play.sbt.routes.RoutesKeys
 val appName = "agent-user-client-details"
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scalaVersion := "3.6.1"
 
 val scalaCOptions = Seq(
-  "-Xlint:-missing-interpolator,_",
-  "-Ywarn-value-discard",
-  "-Ywarn-dead-code",
-  "-deprecation",
   "-feature",
-  "-unchecked",
   "-language:implicitConversions",
   "-Wconf:src=target/.*:s", // silence warnings from compiled files
-  "-Wconf:src=Routes/.*:s" // silence warnings from routes files
+  "-Wconf:src=Routes/.*:s", // silence warnings from routes files
+  "-Wconf:msg=Flag.*repeatedly:s" // silence warnings regarding compiler settings being set multiple times by both sbt-auto-build and sbt-plugin
 )
 
 
@@ -51,6 +47,7 @@ lazy val it = project
   .settings(DefaultBuildSettings.itSettings())
   .settings(libraryDependencies ++= AppDependencies.test)
   .settings(
+    scalacOptions ++= scalaCOptions,
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true
   )

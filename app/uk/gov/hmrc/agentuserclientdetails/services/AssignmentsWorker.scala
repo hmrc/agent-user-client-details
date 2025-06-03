@@ -78,7 +78,7 @@ class AssignmentsWorker @Inject() (
           processItem(item)
         }
         val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
-        result.onComplete { case _ =>
+        result.onComplete { _ =>
           logger.debug("Assignments processing finished.")
           running.set(false)
         }
@@ -101,7 +101,7 @@ class AssignmentsWorker @Inject() (
    Main logic
    */
   def processItem(workItem: WorkItem[AssignmentWorkItem]): Future[Unit] = {
-    implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId))
+    implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId.apply))
     val userId = workItem.item.userId
     val enrolmentKey = workItem.item.enrolmentKey
     val endpoint = workItem.item.operation match {

@@ -35,7 +35,7 @@ class TestAppConfig extends AppConfig {
   val ifAuthTokenAPI1495: String = "API1495"
   val enableThrottling: Boolean = false
   val clientNameFetchThrottlingRate: String = "1 / second"
-  override val es0ThrottlingRate: String = "20 / second"
+  val es0ThrottlingRate: String = "20 / second"
   val es19ThrottlingRate: String = "20 / second"
   val assignmentsThrottlingRate: String = "20 / second"
   val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int = 0
@@ -54,7 +54,7 @@ class TestAppConfig extends AppConfig {
   val friendlyNameJobRestartRepoQueueIntervalSeconds: Int = 60
   val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int = 60
   val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int = 60
-  val agentsizeRefreshDuration: Duration = Duration(7, DAYS)
+  val agentsizeRefreshDuration: Duration = Duration(12, DAYS)
   val es3CacheRefreshDuration: Duration = Duration(1, DAYS)
   val userGroupsSearchUrl: String = "http://localhost"
   val maxFriendlyNameUpdateBatchSize: Int = 20
@@ -64,11 +64,11 @@ class TestAppConfig extends AppConfig {
   val jobMonitoringDeleteFinishedItemsAfterSeconds: Int = 900
   val serviceJobIntervalSeconds: Int = 60
   val serviceJobInitialDelaySeconds: Int = 60
-  override val es3MaxRecordsFetchCount: Int = 1000
-  override val enableCbcFeature: Boolean = true
-  override val enablePillar2Feature: Boolean = true
-  override val internalHostPatterns: Seq[Regex] = Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$").map(_.r)
-  override val hipEnabled: Boolean = true
-  override val hipBaseUrl: String = ""
-  override val hipAuthToken: String = "hipToken"
+  val es3MaxRecordsFetchCount: Int = 1000
+  val enableCbcFeature: Boolean = true
+  val enablePillar2Feature: Boolean = true
+  val internalHostPatterns: Seq[Regex] = Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$").map(_.r)
+  val hipEnabled: Boolean = true
+  val hipBaseUrl: String = ""
+  val hipAuthToken: String = "hipToken"
 }

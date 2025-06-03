@@ -81,7 +81,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
 
   def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] =
     (mockRequestBuilder
-      .execute(_: HttpReads[A], _: ExecutionContext))
+      .execute(using _: HttpReads[A], _: ExecutionContext))
       .expects(*, *)
       .returning(Future successful value)
 
@@ -274,7 +274,7 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
         url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name"
       )
       (mockRequestBuilder
-        .withBody(_: JsValue)(_: BodyWritable[JsValue], _: Tag[JsValue], _: ExecutionContext))
+        .withBody(_: JsValue)(using _: BodyWritable[JsValue], _: Tag[JsValue], _: ExecutionContext))
         .expects(*, *, *, *)
         .returns(mockRequestBuilder)
       mockRequestBuilderExecute(mockResponse)

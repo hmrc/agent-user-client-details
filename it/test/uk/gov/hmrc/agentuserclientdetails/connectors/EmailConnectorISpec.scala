@@ -49,12 +49,12 @@ class EmailConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] = {
     (mockRequestBuilder
-      .withBody(_: JsValue)(_: BodyWritable[JsValue], _: Tag[JsValue], _: ExecutionContext))
+      .withBody(_: JsValue)(using _: BodyWritable[JsValue], _: Tag[JsValue], _: ExecutionContext))
       .expects(*, *, *, *)
       .returns(mockRequestBuilder)
 
     (mockRequestBuilder
-      .execute(_: HttpReads[A], _: ExecutionContext))
+      .execute(using _: HttpReads[A], _: ExecutionContext))
       .expects(*, *)
       .returning(Future successful value)
   }

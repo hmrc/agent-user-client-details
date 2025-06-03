@@ -20,6 +20,8 @@ import com.google.inject.ImplementedBy
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions}
+import org.mongodb.scala.ObservableFuture
+import org.mongodb.scala.SingleObservableFuture
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -46,7 +48,7 @@ trait Es3CacheRepository {
 class Es3CacheRepositoryImpl @Inject() (
   mongoComponent: MongoComponent,
   appConfig: AppConfig,
-  crypto: Encrypter with Decrypter,
+  crypto: Encrypter & Decrypter,
   timestampSupport: TimestampSupport
 )(implicit ec: ExecutionContext)
     extends PlayMongoRepository[Es3Cache](

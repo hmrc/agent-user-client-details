@@ -59,12 +59,12 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] = {
     (mockRequestBuilder
-      .setHeader(_: (String, String)))
+      .setHeader(_*))
       .expects(*)
       .returning(mockRequestBuilder)
 
     (mockRequestBuilder
-      .execute(_: HttpReads[A], _: ExecutionContext))
+      .execute(using _: HttpReads[A], _: ExecutionContext))
       .expects(*, *)
       .returning(Future successful value)
   }

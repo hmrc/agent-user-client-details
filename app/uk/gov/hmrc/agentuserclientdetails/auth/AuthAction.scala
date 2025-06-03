@@ -21,10 +21,10 @@ import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.agentuserclientdetails.util.AuthRedirects
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentialRole, credentials, itmpName}
-import uk.gov.hmrc.auth.core.retrieve.{Credentials, ItmpName, ~}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentialRole, credentials, name}
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, ~}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
@@ -44,19 +44,21 @@ class AuthAction @Inject() (
 
   def getAuthorisedAgent(allowStandardUser: Boolean = false)(implicit
     ec: ExecutionContext,
-    request: Request[_]
+    request: Request[?]
   ): Future[Option[AuthorisedAgent]] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
     authorised(AuthProviders(GovernmentGateway) and Enrolment(agentEnrolment))
-      .retrieve(allEnrolments and credentialRole and itmpName and credentials) {
+      .retrieve(allEnrolments and credentialRole and name and credentials) {
         case enrols ~ credRole ~ name ~ credentials =>
           getArnAndAgentUser(enrols, name, credentials) match {
             case Some(authorisedAgent) =>
-              if (credRole.contains(User) | (credRole.contains(Assistant) & allowStandardUser))
-                Future successful Option(authorisedAgent)
-              else {
+              if (
+                credRole.contains(User) | credRole.contains(Admin) | (credRole.contains(Assistant) & allowStandardUser)
+              ) {
+                Future.successful(Option(authorisedAgent))
+              } else {
                 logger.warn(
                   s"Either invalid credential role $credRole or the endpoint is not allowed for standard users (allowStandardUser:$allowStandardUser)"
                 )
@@ -69,7 +71,7 @@ class AuthAction @Inject() (
       } transformWith failureHandler
   }
 
-  def simpleAuth(body: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
+  def simpleAuth(body: => Future[Result])(implicit request: Request[?], ec: ExecutionContext): Future[Result] = {
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
     authorised() {
       body
@@ -78,7 +80,7 @@ class AuthAction @Inject() (
 
   private def getArnAndAgentUser(
     enrolments: Enrolments,
-    maybeName: Option[ItmpName],
+    maybeName: Option[Name],
     maybeCredentials: Option[Credentials]
   ): Option[AuthorisedAgent] =
     for {
@@ -90,7 +92,7 @@ class AuthAction @Inject() (
       Arn(identifier.value),
       AgentUser(
         credentials.providerId,
-        (name.givenName.getOrElse("") + " " + name.familyName.getOrElse("")).trim
+        (name.name.getOrElse("") + " " + name.lastName.getOrElse("")).trim
       )
     )
 

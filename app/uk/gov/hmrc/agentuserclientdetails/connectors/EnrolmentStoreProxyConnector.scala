@@ -22,6 +22,7 @@ import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import play.api.http.Status
 import play.api.libs.json.{Format, Json, OFormat}
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments, Service}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -331,6 +332,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit] = {
+    implicit val format: Format[ES19Request] = ES19Request.format
     val url =
       url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name"
     monitor(s"ConsumedAPI-ES-updateEnrolmentFriendlyName-PUT") {

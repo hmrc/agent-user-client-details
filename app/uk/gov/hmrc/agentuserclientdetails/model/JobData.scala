@@ -29,8 +29,9 @@ object JobData {
     }
     def reads(json: JsValue): JsResult[JobData] = json match {
       case x: JsObject =>
-        (x \ "jobType") match {
+        x \ "jobType" match {
           case JsDefined(JsString(FriendlyNameJobData.jobType)) => Json.fromJson[FriendlyNameJobData](x)
+          case _                                                => JsError("Expected field 'jobType' was not present")
         }
       case _ => JsError("Expected JSON object")
     }

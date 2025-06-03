@@ -62,7 +62,7 @@ class TestOnlyController @Inject() (
 
     httpClient
       .get(url)
-      .setHeader(request.headers.headers: _*)
+      .setHeader(request.headers.headers *)
       .execute[HttpResponse]
       .map(response => Status(response.status)(response.body))
   }

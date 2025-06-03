@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import org.mongodb.scala.model.Filters
+import org.mongodb.scala.ObservableFuture
 import play.api.Configuration
 import play.api.libs.json._
 import play.api.mvc.{ControllerComponents, Request}

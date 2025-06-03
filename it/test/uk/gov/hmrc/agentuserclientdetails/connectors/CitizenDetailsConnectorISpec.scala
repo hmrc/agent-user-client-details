@@ -58,7 +58,7 @@ class CitizenDetailsConnectorISpec extends BaseIntegrationSpec with MockFactory 
 
   def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] =
     (mockRequestBuilder
-      .execute(_: HttpReads[A], _: ExecutionContext))
+      .execute(using _: HttpReads[A], _: ExecutionContext))
       .expects(*, *)
       .returning(Future successful value)
 

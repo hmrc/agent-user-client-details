@@ -21,6 +21,7 @@ import com.mongodb.client.model.{IndexOptions, ReplaceOptions}
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.SingleObservableFuture
 import play.api.Logging
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn

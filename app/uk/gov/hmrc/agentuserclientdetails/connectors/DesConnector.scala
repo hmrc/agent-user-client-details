@@ -102,7 +102,7 @@ class DesConnectorImpl @Inject() (
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
       httpClient
         .get(url"$url")
-        .setHeader(headersConfig.explicitHeaders: _*)
+        .setHeader(headersConfig.explicitHeaders *)
         .execute[HttpResponse]
     }
   }

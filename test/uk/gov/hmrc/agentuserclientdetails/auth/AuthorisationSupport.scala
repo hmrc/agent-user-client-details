@@ -20,7 +20,7 @@ import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.{Credentials, ItmpName, Retrieval, ~}
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, Retrieval, ~}
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
 import uk.gov.hmrc.http.HeaderCarrier
 
@@ -35,8 +35,8 @@ trait AuthorisationSupport extends BaseSpec with MockFactory {
   )
   val agentEnrolment = "HMRC-AS-AGENT"
 
-  val name: ItmpName = ItmpName(Some("Jane"), None, Some("Doe"))
-  val emptyName: ItmpName = ItmpName(None, None, None)
+  val name: Name = Name(Some("Jane"), Some("Doe"))
+  val emptyName: Name = Name(None, None)
 
   val ggCredentials: Credentials = Credentials("user1", "GovernmentGateway")
 
@@ -84,7 +84,7 @@ trait AuthorisationSupport extends BaseSpec with MockFactory {
       Some(name) and
       Some(ggCredentials)
 
-  type GrantAccess = Enrolments ~ Option[CredentialRole] ~ Option[ItmpName] ~ Option[Credentials]
+  type GrantAccess = Enrolments ~ Option[CredentialRole] ~ Option[Name] ~ Option[Credentials]
 
   def mockAuthResponseWithoutException(response: GrantAccess)(implicit authConnector: AuthConnector): Unit =
     (authConnector
