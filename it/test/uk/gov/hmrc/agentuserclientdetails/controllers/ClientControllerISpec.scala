@@ -369,47 +369,6 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
     }
   }
 
-  "POST /groupid/:groupid/refresh-names" should {
-    "delete all work items from the repo for the given groupId and recreate work items, ignoring any names already present in the enrolment store" in new TestScope {
-      mockAuthResponseWithoutException(buildAuthorisedResponse)
-      mockGetPrincipalForGroupIdSuccess()
-      mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      wis
-        .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(0))),
-          Instant.now(),
-          Succeeded
-        )
-        .futureValue
-      wis
-        .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(1))),
-          Instant.now(),
-          PermanentlyFailed
-        )
-        .futureValue
-      wis
-        .pushNew(
-          Seq(FriendlyNameWorkItem(anotherTestGroupId, clientsWithFriendlyNames(3))),
-          Instant.now(),
-          Succeeded
-        )
-        .futureValue
-      val request = FakeRequest("POST", "")
-      val result = controller.forceRefreshFriendlyNames(testArn)(request).futureValue
-      result.header.status shouldBe Status.ACCEPTED
-      // Check that none of the old work items are left and that now we have new to-do ones with no name filled in.
-      val workItems = wis.query(testGroupId, None).futureValue
-      workItems.length shouldBe clientsWithFriendlyNames.length
-      all(workItems.map(_.status)) shouldBe ToDo
-      all(workItems.map(_.item.client.friendlyName)) shouldBe empty
-      // Test that work items for a different groupId haven't been affected
-      val otherWorkItems = wis.query(anotherTestGroupId, None).futureValue
-      otherWorkItems.length shouldBe 1
-      otherWorkItems.head.status shouldBe Succeeded
-    }
-  }
-
   "/work-items/clean" should {
     "trigger cleanup of work items when requested" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)

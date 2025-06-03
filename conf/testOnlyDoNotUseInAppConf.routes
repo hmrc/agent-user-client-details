@@ -12,9 +12,9 @@
 # Add all the application routes to the prod.routes file
 ->         /                          prod.Routes
 
-POST       /test-only/agent-user-client-details/arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.forceRefreshFriendlyNames(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-DELETE     /test-only/agent-user-client-details/delete-test-data/arn/:arn/groupId/:groupId uk.gov.hmrc.agentuserclientdetails.controllers.TestOnlyController.deleteTestData(arn: String, groupId: String)
+POST       /test-only/agent-user-client-details/arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.forceRefreshFriendlyNames(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+DELETE     /test-only/agent-user-client-details/delete-test-data/arn/:arn/groupId/:groupId uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.deleteTestData(arn: String, groupId: String)
 
-GET        /test-only/agent-user-client-details/hip-connectivity-test/get-trading-details-for-mtditid  uk.gov.hmrc.agentuserclientdetails.controllers.TestOnlyController.getTradingDetailsForMtdItId(mtdItId: String)
+GET        /test-only/agent-user-client-details/hip-connectivity-test/get-trading-details-for-mtditid  uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.getTradingDetailsForMtdItId(mtdItId: String)
 
-GET        /test-only/hip-connectivity-test/*hipPath  uk.gov.hmrc.agentuserclientdetails.controllers.TestOnlyController.hipConnectivityTest(hipPath: String)
+GET        /test-only/hip-connectivity-test/*hipPath  uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.hipConnectivityTest(hipPath: String)
