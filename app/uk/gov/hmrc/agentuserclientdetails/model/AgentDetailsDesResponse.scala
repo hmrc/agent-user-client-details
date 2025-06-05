@@ -16,11 +16,16 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Json, OFormat, Reads}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
+import play.api.libs.json.Reads
 
 case class AgentDetailsDesResponse(agencyDetails: Option[AgencyDetails])
 
-case class AgencyDetails(agencyName: Option[String], agencyEmail: Option[String])
+case class AgencyDetails(
+  agencyName: Option[String],
+  agencyEmail: Option[String]
+)
 
 object AgencyDetails {
   implicit val agencyDetailsFormat: OFormat[AgencyDetails] = Json.format[AgencyDetails]

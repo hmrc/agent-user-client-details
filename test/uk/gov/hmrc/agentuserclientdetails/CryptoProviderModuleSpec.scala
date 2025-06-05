@@ -18,12 +18,15 @@ package uk.gov.hmrc.agentuserclientdetails
 
 import com.typesafe.config.ConfigFactory
 import play.api.Configuration
-import uk.gov.hmrc.crypto.{Crypted, PlainBytes, PlainText}
+import uk.gov.hmrc.crypto.Crypted
+import uk.gov.hmrc.crypto.PlainBytes
+import uk.gov.hmrc.crypto.PlainText
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-class CryptoProviderModuleSpec extends BaseSpec {
+class CryptoProviderModuleSpec
+extends BaseSpec {
 
   def configuration(fieldLevelEncryptionEnabled: Boolean) = Configuration(
     ConfigFactory.parseString(s"""fieldLevelEncryption {
@@ -35,13 +38,11 @@ class CryptoProviderModuleSpec extends BaseSpec {
 
   "CryptoProviderModule" should {
     "provide a real crypto instance if field-level encryption is enabled in config" in {
-      val x =
-        new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = true))
+      val x = new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = true))
       x should not be a[NoCrypto]
     }
     "provide a no-op crypto instance if field-level encryption is enabled in config" in {
-      val x =
-        new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = false))
+      val x = new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = false))
       x shouldBe a[NoCrypto]
     }
   }
@@ -61,4 +62,5 @@ class CryptoProviderModuleSpec extends BaseSpec {
       NoCrypto.decryptAsBytes(Crypted(base64Bytes)).value shouldBe bytes
     }
   }
+
 }

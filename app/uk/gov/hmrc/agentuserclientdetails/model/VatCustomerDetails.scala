@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentuserclientdetails.model
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-case class CustomerDetailsNotFound() extends Exception
+case class CustomerDetailsNotFound()
+extends Exception
 
 case class VatCustomerDetails(
   organisationName: Option[String],
@@ -33,8 +34,12 @@ case class VatIndividual(
   middleName: Option[String],
   lastName: Option[String]
 ) {
-  def name: String =
-    Seq(title, firstName, middleName, lastName).flatten.map(_.trim).filter(_.nonEmpty).mkString(" ")
+  def name: String = Seq(
+    title,
+    firstName,
+    middleName,
+    lastName
+  ).flatten.map(_.trim).filter(_.nonEmpty).mkString(" ")
 }
 
 object VatCustomerDetails {
@@ -60,11 +65,12 @@ object VatIndividual {
 
   implicit val writes: OWrites[VatIndividual] = Json.writes[VatIndividual]
 
-  implicit val reads: Reads[VatIndividual] = (
-    (JsPath \ "title").readNullable[String].map(title => titles.get(title.getOrElse(""))) and
-      (JsPath \ "firstName").readNullable[String] and
-      (JsPath \ "middleName").readNullable[String] and
-      (JsPath \ "lastName").readNullable[String]
-  )(VatIndividual.apply)
+  implicit val reads: Reads[VatIndividual] =
+    (
+      (JsPath \ "title").readNullable[String].map(title => titles.get(title.getOrElse(""))) and
+        (JsPath \ "firstName").readNullable[String] and
+        (JsPath \ "middleName").readNullable[String] and
+        (JsPath \ "lastName").readNullable[String]
+    )(VatIndividual.apply)
 
 }

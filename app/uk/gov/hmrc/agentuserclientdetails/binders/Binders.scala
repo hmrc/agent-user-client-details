@@ -22,6 +22,7 @@ import scala.reflect.ClassTag
 
 object Binders {
 
-  implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)
+  implicit object ArnBinder
+  extends SimpleObjectBinder[Arn](Arn.apply, _.value)
 
 }

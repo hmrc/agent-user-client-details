@@ -19,27 +19,39 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.google.inject.ImplementedBy
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.{IndexModel, IndexOptions}
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.SingleObservableFuture
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.{Es3Cache, SensitiveEnrolment}
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, PlainText}
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.Es3Cache
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveEnrolment
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
-import uk.gov.hmrc.mongo.{MongoComponent, TimestampSupport}
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.TimestampSupport
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.duration.SECONDS
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[Es3CacheRepositoryImpl])
 trait Es3CacheRepository {
-  def put(groupId: String, clients: Seq[Enrolment]): Future[Es3Cache]
+
+  def put(
+    groupId: String,
+    clients: Seq[Enrolment]
+  ): Future[Es3Cache]
   def get(groupId: String): Future[Option[Es3Cache]]
 
   def deleteCache(groupId: String): Future[Long]
+
 }
 
 /** Caches ES3 enrolments of an agent's groupId for a configurable duration.
@@ -51,25 +63,27 @@ class Es3CacheRepositoryImpl @Inject() (
   crypto: Encrypter & Decrypter,
   timestampSupport: TimestampSupport
 )(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[Es3Cache](
-      mongoComponent = mongoComponent,
-      collectionName = "es3-cache",
-      domainFormat = Es3Cache.format(crypto),
-      indexes = Seq(
-        IndexModel(
-          ascending("groupId"),
-          IndexOptions().name("idxGroupId")
-        ),
-        IndexModel(
-          ascending("createdAt"),
-          IndexOptions()
-            .background(false)
-            .name("idxCreatedAt")
-            .expireAfter(appConfig.es3CacheRefreshDuration.toSeconds, SECONDS)
-        )
-      ),
-      replaceIndexes = true
-    ) with Es3CacheRepository with Logging {
+extends PlayMongoRepository[Es3Cache](
+  mongoComponent = mongoComponent,
+  collectionName = "es3-cache",
+  domainFormat = Es3Cache.format(crypto),
+  indexes = Seq(
+    IndexModel(
+      ascending("groupId"),
+      IndexOptions().name("idxGroupId")
+    ),
+    IndexModel(
+      ascending("createdAt"),
+      IndexOptions()
+        .background(false)
+        .name("idxCreatedAt")
+        .expireAfter(appConfig.es3CacheRefreshDuration.toSeconds, SECONDS)
+    )
+  ),
+  replaceIndexes = true
+)
+with Es3CacheRepository
+with Logging {
 
   override lazy val requiresTtlIndex = false
 
@@ -83,10 +97,17 @@ class Es3CacheRepositoryImpl @Inject() (
 
   private val FIELD_GROUP_ID = "groupId"
 
-  override def put(groupId: String, clients: Seq[Enrolment]): Future[Es3Cache] = {
+  override def put(
+    groupId: String,
+    clients: Seq[Enrolment]
+  ): Future[Es3Cache] = {
     val timestamp = timestampSupport.timestamp()
 
-    val es3Cache = Es3Cache(groupId, clients.map(SensitiveEnrolment(_)), timestamp)
+    val es3Cache = Es3Cache(
+      groupId,
+      clients.map(SensitiveEnrolment(_)),
+      timestamp
+    )
 
     val documents = Es3Cache.split(es3Cache, COUNT_OF_CLIENTS_PER_DOCUMENT)
 
@@ -98,13 +119,12 @@ class Es3CacheRepositoryImpl @Inject() (
     } yield es3Cache
   }
 
-  override def get(groupId: String): Future[Option[Es3Cache]] =
-    collection
-      .find(equal(FIELD_GROUP_ID, groupId))
-      .toFuture()
-      .map(Es3Cache.merge)
+  override def get(groupId: String): Future[Option[Es3Cache]] = collection
+    .find(equal(FIELD_GROUP_ID, groupId))
+    .toFuture()
+    .map(Es3Cache.merge)
 
   // test-only to remove perf-test data.
-  override def deleteCache(groupId: String): Future[Long] =
-    collection.deleteOne(equal("groupId", groupId)).toFuture().map(_.getDeletedCount)
+  override def deleteCache(groupId: String): Future[Long] = collection.deleteOne(equal("groupId", groupId)).toFuture().map(_.getDeletedCount)
+
 }

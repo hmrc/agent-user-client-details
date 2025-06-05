@@ -31,19 +31,31 @@ import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[IfConnectorImpl])
 trait IfConnector {
-  def getTrustName(trustTaxIdentifier: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]]
+
+  def getTrustName(trustTaxIdentifier: String)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]]
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]]
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[PptSubscription]]
 
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]]
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[TradingDetails]]
 
 }
 
@@ -54,21 +66,26 @@ class IfConnectorImpl @Inject() (
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
 )(implicit val ec: ExecutionContext)
-    extends IfConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
+extends IfConnector
+with HttpAPIMonitor
+with HttpErrorFunctions
+with Logging {
 
   private val baseUrl: String = appConfig.ifPlatformBaseUrl
 
   // IF API#1495 Agent Known Fact Check (Trusts)
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = {
 
     val url = getTrustNameUrl(trustTaxIdentifier)
 
     getWithDesIfHeaders("getTrustName", url).map { response =>
       response.status match {
-        case status if is2xx(status) =>
-          Some((response.json \ "trustDetails" \ "trustName").as[String])
+        case status if is2xx(status) => Some((response.json \ "trustDetails" \ "trustName").as[String])
         case NOT_FOUND => None
         case other =>
           throw UpstreamErrorResponse(
@@ -83,15 +100,16 @@ class IfConnectorImpl @Inject() (
   // IF API#1712 PPT Subscription Display
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] = {
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[PptSubscription]] = {
     val url = s"$baseUrl/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
     getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
       response.status match {
-        case status if is2xx(status) =>
-          Some(response.json.as[PptSubscription](PptSubscription.reads(_)))
+        case status if is2xx(status) => Some(response.json.as[PptSubscription](PptSubscription.reads(_)))
         case NOT_FOUND => None
-        case other =>
-          throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay: ${response.body}", other)
+        case other => throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay: ${response.body}", other)
       }
     }
   }
@@ -99,9 +117,11 @@ class IfConnectorImpl @Inject() (
   /* IF API#1171 Get Business Details (for ITSA customers) */
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] = {
-    val url =
-      s"$baseUrl/registration/business-details/mtdId/${UriEncoding.encodePathSegment(mtdId.value, "UTF-8")}"
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[TradingDetails]] = {
+    val url = s"$baseUrl/registration/business-details/mtdId/${UriEncoding.encodePathSegment(mtdId.value, "UTF-8")}"
     getWithDesIfHeaders("GetTradingNameByMtdItId", url).map { response =>
       response.status match {
         case status if is2xx(status) =>
@@ -124,12 +144,19 @@ class IfConnectorImpl @Inject() (
     }
   }
 
-  private def getWithDesIfHeaders(apiName: String, url: String)(implicit
+  private def getWithDesIfHeaders(
+    apiName: String,
+    url: String
+  )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[HttpResponse] = {
 
-    val headersConfig = desIfHeaders.headersConfig(viaIF = true, url, apiName)
+    val headersConfig = desIfHeaders.headersConfig(
+      viaIF = true,
+      url,
+      apiName
+    )
 
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
       httpClient
@@ -144,5 +171,7 @@ class IfConnectorImpl @Inject() (
   private def getTrustNameUrl(trustTaxIdentifier: String): String =
     if (trustTaxIdentifier.matches(utrPattern))
       s"$baseUrl/trusts/agent-known-fact-check/UTR/$trustTaxIdentifier"
-    else s"$baseUrl/trusts/agent-known-fact-check/URN/$trustTaxIdentifier"
+    else
+      s"$baseUrl/trusts/agent-known-fact-check/URN/$trustTaxIdentifier"
+
 }

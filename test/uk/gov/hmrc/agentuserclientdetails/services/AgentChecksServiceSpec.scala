@@ -18,21 +18,29 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.bson.types.ObjectId
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.{Client, UserDetails}
+import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
+import uk.gov.hmrc.agentuserclientdetails.model.Assign
+import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.*
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
-import java.time.{Instant, LocalDateTime}
-import scala.concurrent.{ExecutionContext, Future}
+import java.time.Instant
+import java.time.LocalDateTime
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class AgentChecksServiceSpec extends BaseSpec {
+class AgentChecksServiceSpec
+extends BaseSpec {
 
   implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -47,6 +55,7 @@ class AgentChecksServiceSpec extends BaseSpec {
   val refreshDays = 12
 
   trait TestScope {
+
     val appconfig: AppConfig = new TestAppConfig
     val mockAgentSizeRepository: AgentSizeRepository = mock[AgentSizeRepository]
     val mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector = mock[EnrolmentStoreProxyConnector]
@@ -55,19 +64,27 @@ class AgentChecksServiceSpec extends BaseSpec {
     val mockWorkItemService: FriendlyNameWorkItemService = mock[FriendlyNameWorkItemService]
     val mockAssignmentsWorkItemService: AssignmentsWorkItemService = mock[AssignmentsWorkItemService]
 
-    val agentChecksService: AgentChecksService = new AgentChecksService(
-      appconfig,
-      mockAgentSizeRepository,
-      mockEnrolmentStoreProxyConnector,
-      mockES3CacheService,
-      mockUsersGroupsSearchConnector,
-      mockWorkItemService,
-      mockAssignmentsWorkItemService
+    val agentChecksService: AgentChecksService =
+      new AgentChecksService(
+        appconfig,
+        mockAgentSizeRepository,
+        mockEnrolmentStoreProxyConnector,
+        mockES3CacheService,
+        mockUsersGroupsSearchConnector,
+        mockWorkItemService,
+        mockAssignmentsWorkItemService
+      )
+
+    def buildAgentSize(refreshDateTime: LocalDateTime): AgentSize = AgentSize(
+      arn,
+      50,
+      refreshDateTime
     )
 
-    def buildAgentSize(refreshDateTime: LocalDateTime): AgentSize = AgentSize(arn, 50, refreshDateTime)
-
-    def buildWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
+    def buildWorkItem[A](
+      item: A,
+      status: ProcessingStatus
+    ): WorkItem[A] = {
       val now = Instant.now()
       WorkItem(
         id = ObjectId.get(),
@@ -79,6 +96,7 @@ class AgentChecksServiceSpec extends BaseSpec {
         item = item
       )
     }
+
   }
 
   "Get AgentSize" when {
@@ -130,7 +148,12 @@ class AgentChecksServiceSpec extends BaseSpec {
           "return correct count of enrolments" in new TestScope {
             mockAgentSizeRepositoryGet(None)(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockES3CacheServiceGetCachedClients(Seq(client1, client2, client3, client4))(
+            mockES3CacheServiceGetCachedClients(Seq(
+              client1,
+              client2,
+              client3,
+              client4
+            ))(
               mockES3CacheService
             )
             mockAgentSizeRepositoryUpsert(Some(RecordInserted))(mockAgentSizeRepository)
@@ -173,7 +196,12 @@ class AgentChecksServiceSpec extends BaseSpec {
           "return correct count of enrolments" in new TestScope {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-            mockES3CacheServiceGetCachedClients(Seq(client1, client2, client3, client4))(
+            mockES3CacheServiceGetCachedClients(Seq(
+              client1,
+              client2,
+              client3,
+              client4
+            ))(
               mockES3CacheService
             )
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
@@ -240,9 +268,13 @@ class AgentChecksServiceSpec extends BaseSpec {
     "enrolment store proxy returns a group for ARN" when {
       val client = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
 
-      val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
-      val nonOutstandingProcessingStatuses: Set[ProcessingStatus] =
-        ProcessingStatus.values -- outstandingProcessingStatuses
+      val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(
+        ToDo,
+        InProgress,
+        Failed,
+        Deferred
+      )
+      val nonOutstandingProcessingStatuses: Set[ProcessingStatus] = ProcessingStatus.values -- outstandingProcessingStatuses
 
       "workItemService returns an empty list of work items" should {
         "return false" in new TestScope {
@@ -257,8 +289,10 @@ class AgentChecksServiceSpec extends BaseSpec {
         "return false" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
 
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] =
-            nonOutstandingProcessingStatuses.toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = nonOutstandingProcessingStatuses.toSeq.map(buildWorkItem(
+            FriendlyNameWorkItem(groupId, client),
+            _
+          ))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe false
@@ -280,8 +314,10 @@ class AgentChecksServiceSpec extends BaseSpec {
       s"workItemService returns a list of work items that contains a $ToDo" should {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
-          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] =
-            (nonOutstandingProcessingStatuses + ToDo).toSeq.map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+          val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + ToDo).toSeq.map(buildWorkItem(
+            FriendlyNameWorkItem(groupId, client),
+            _
+          ))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -317,9 +353,13 @@ class AgentChecksServiceSpec extends BaseSpec {
 
   "Outstanding Assignments Work Items exist" when {
 
-    val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
-    val nonOutstandingProcessingStatuses: Set[ProcessingStatus] =
-      ProcessingStatus.values -- outstandingProcessingStatuses
+    val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(
+      ToDo,
+      InProgress,
+      Failed,
+      Deferred
+    )
+    val nonOutstandingProcessingStatuses: Set[ProcessingStatus] = ProcessingStatus.values -- outstandingProcessingStatuses
 
     "workItemService returns an empty list of work items" should {
       "return false" in new TestScope {
@@ -331,10 +371,17 @@ class AgentChecksServiceSpec extends BaseSpec {
 
     s"workItemService returns a list of work items that does not contain any of $outstandingProcessingStatuses" should {
       "return false" in new TestScope {
-        val workItems: Seq[WorkItem[AssignmentWorkItem]] =
-          nonOutstandingProcessingStatuses.toSeq.map(
-            buildWorkItem(AssignmentWorkItem(Assign, userId, enrolmentKey, arn.value), _)
+        val workItems: Seq[WorkItem[AssignmentWorkItem]] = nonOutstandingProcessingStatuses.toSeq.map(
+          buildWorkItem(
+            AssignmentWorkItem(
+              Assign,
+              userId,
+              enrolmentKey,
+              arn.value
+            ),
+            _
           )
+        )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
         agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe false
@@ -343,10 +390,17 @@ class AgentChecksServiceSpec extends BaseSpec {
 
     s"workItemService returns a list of work items that contains a $InProgress" should {
       "return true" in new TestScope {
-        val workItems: Seq[WorkItem[AssignmentWorkItem]] =
-          (nonOutstandingProcessingStatuses + InProgress).toSeq.map(
-            buildWorkItem(AssignmentWorkItem(Assign, userId, enrolmentKey, arn.value), _)
+        val workItems: Seq[WorkItem[AssignmentWorkItem]] = (nonOutstandingProcessingStatuses + InProgress).toSeq.map(
+          buildWorkItem(
+            AssignmentWorkItem(
+              Assign,
+              userId,
+              enrolmentKey,
+              arn.value
+            ),
+            _
           )
+        )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
         agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
@@ -355,10 +409,17 @@ class AgentChecksServiceSpec extends BaseSpec {
 
     s"workItemService returns a list of work items that contains a $ToDo" should {
       "return true" in new TestScope {
-        val workItems: Seq[WorkItem[AssignmentWorkItem]] =
-          (nonOutstandingProcessingStatuses + ToDo).toSeq.map(
-            buildWorkItem(AssignmentWorkItem(Assign, userId, enrolmentKey, arn.value), _)
+        val workItems: Seq[WorkItem[AssignmentWorkItem]] = (nonOutstandingProcessingStatuses + ToDo).toSeq.map(
+          buildWorkItem(
+            AssignmentWorkItem(
+              Assign,
+              userId,
+              enrolmentKey,
+              arn.value
+            ),
+            _
           )
+        )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
         agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
@@ -367,10 +428,17 @@ class AgentChecksServiceSpec extends BaseSpec {
 
     s"workItemService returns a list of work items that contains a $Deferred" should {
       "return true" in new TestScope {
-        val workItems: Seq[WorkItem[AssignmentWorkItem]] =
-          (nonOutstandingProcessingStatuses + Deferred).toSeq.map(
-            buildWorkItem(AssignmentWorkItem(Assign, userId, enrolmentKey, arn.value), _)
+        val workItems: Seq[WorkItem[AssignmentWorkItem]] = (nonOutstandingProcessingStatuses + Deferred).toSeq.map(
+          buildWorkItem(
+            AssignmentWorkItem(
+              Assign,
+              userId,
+              enrolmentKey,
+              arn.value
+            ),
+            _
           )
+        )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
         agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
@@ -379,10 +447,17 @@ class AgentChecksServiceSpec extends BaseSpec {
 
     s"workItemService returns a list of work items that contains a $Failed" should {
       "return true" in new TestScope {
-        val workItems: Seq[WorkItem[AssignmentWorkItem]] =
-          (nonOutstandingProcessingStatuses + Failed).toSeq.map(
-            buildWorkItem(AssignmentWorkItem(Assign, userId, enrolmentKey, arn.value), _)
+        val workItems: Seq[WorkItem[AssignmentWorkItem]] = (nonOutstandingProcessingStatuses + Failed).toSeq.map(
+          buildWorkItem(
+            AssignmentWorkItem(
+              Assign,
+              userId,
+              enrolmentKey,
+              arn.value
+            ),
+            _
           )
+        )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
         agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
@@ -456,7 +531,11 @@ class AgentChecksServiceSpec extends BaseSpec {
   )(mockWorkItemService: FriendlyNameWorkItemService) =
     (mockWorkItemService
       .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
-      .expects(groupId, None, *)
+      .expects(
+        groupId,
+        None,
+        *
+      )
       .returning(Future.successful(workItems))
 
   private def mockAssignmentsWorkItemServiceQuery(
@@ -466,4 +545,5 @@ class AgentChecksServiceSpec extends BaseSpec {
       .queryBy(_: Arn)(_: ExecutionContext))
       .expects(arn, *)
       .returning(Future.successful(workItems))
+
 }

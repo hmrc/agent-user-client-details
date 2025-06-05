@@ -17,11 +17,14 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import org.mongodb.scala.SingleObservableFuture
-import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.mongo.test.MongoSupport
 
-class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
+class Es3CacheRepositoryISpec
+extends BaseIntegrationSpec
+with MongoSupport {
 
   lazy val es3CacheRepository = app.injector.instanceOf[Es3CacheRepositoryImpl]
 
@@ -40,8 +43,12 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
 
   "Fetching from DB" should {
     "return cached data when data exists in DB" in {
-      val enrolments =
-        Seq(Enrolment("HMRC-MTD-IT", "Activated", "friend of a friend", Seq(Identifier("MTDITID", "X12345678909876"))))
+      val enrolments = Seq(Enrolment(
+        "HMRC-MTD-IT",
+        "Activated",
+        "friend of a friend",
+        Seq(Identifier("MTDITID", "X12345678909876"))
+      ))
 
       es3CacheRepository.put(groupId, enrolments).futureValue.groupId shouldBe groupId
 
@@ -53,8 +60,12 @@ class Es3CacheRepositoryISpec extends BaseIntegrationSpec with MongoSupport {
   }
   "delete data" should {
     "delete data for groupId" in {
-      val enrolments =
-        Seq(Enrolment("HMRC-MTD-IT", "Activated", "friend of a friend", Seq(Identifier("MTDITID", "X12345678909876"))))
+      val enrolments = Seq(Enrolment(
+        "HMRC-MTD-IT",
+        "Activated",
+        "friend of a friend",
+        Seq(Identifier("MTDITID", "X12345678909876"))
+      ))
 
       es3CacheRepository.put(groupId, enrolments).futureValue
 

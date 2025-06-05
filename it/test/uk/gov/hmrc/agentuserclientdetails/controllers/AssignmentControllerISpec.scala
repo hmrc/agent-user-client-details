@@ -22,29 +22,38 @@ import org.mongodb.scala.model.Filters
 import org.mongodb.scala.ObservableFuture
 import play.api.Configuration
 import play.api.libs.json._
-import play.api.mvc.{ControllerComponents, Request}
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, EnrolmentKey, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Unassign}
+import uk.gov.hmrc.agentuserclientdetails.model.Assign
+import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.Unassign
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.http.{HeaderCarrier, NotFoundException}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.NotFoundException
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class AssignmentControllerISpec
-    extends BaseIntegrationSpec with DefaultPlayMongoRepositorySupport[WorkItem[AssignmentWorkItem]]
-    with AuthorisationMockSupport {
+extends BaseIntegrationSpec
+with DefaultPlayMongoRepositorySupport[WorkItem[AssignmentWorkItem]]
+with AuthorisationMockSupport {
 
   override protected val repository: PlayMongoRepository[WorkItem[AssignmentWorkItem]] = wir
 
@@ -70,10 +79,10 @@ class AssignmentControllerISpec
   val ue4 = UserEnrolment(testUserId, "HMRC-MTD-VAT~VRN~VRN")
   val testArn = Arn("BARN9706518")
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
-      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
-  }
+  override def moduleOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -84,9 +93,24 @@ class AssignmentControllerISpec
     "respond with 202 Accepted and add items to the queue (assign)" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(
-        Json.toJson(UserEnrolmentAssignments(assign = Set(ue1, ue2, ue3, ue4), unassign = Set.empty, arn = testArn))
+        Json.toJson(UserEnrolmentAssignments(
+          assign = Set(
+            ue1,
+            ue2,
+            ue3,
+            ue4
+          ),
+          unassign = Set.empty,
+          arn = testArn
+        ))
       )
-      val fnc = new AssignmentController(cc, wis, esp, appConfig)
+      val fnc =
+        new AssignmentController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.assignEnrolments(request: Request[JsValue])
       status(result) shouldBe 202
       wis.collectStats.futureValue.values.sum shouldBe 4
@@ -94,9 +118,24 @@ class AssignmentControllerISpec
     "respond with 202 Accepted and add items to the queue (unassign)" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(
-        Json.toJson(UserEnrolmentAssignments(assign = Set.empty, unassign = Set(ue1, ue2, ue3, ue4), arn = testArn))
+        Json.toJson(UserEnrolmentAssignments(
+          assign = Set.empty,
+          unassign = Set(
+            ue1,
+            ue2,
+            ue3,
+            ue4
+          ),
+          arn = testArn
+        ))
       )
-      val fnc = new AssignmentController(cc, wis, esp, appConfig)
+      val fnc =
+        new AssignmentController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.assignEnrolments(request: Request[JsValue])
       status(result) shouldBe 202
       wis.collectStats.futureValue.values.sum shouldBe 4
@@ -104,9 +143,19 @@ class AssignmentControllerISpec
     "respond with 202 Accepted and add items to the queue (mixed)" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(
-        Json.toJson(UserEnrolmentAssignments(assign = Set(ue1), unassign = Set(ue2, ue3, ue4), arn = testArn))
+        Json.toJson(UserEnrolmentAssignments(
+          assign = Set(ue1),
+          unassign = Set(ue2, ue3, ue4),
+          arn = testArn
+        ))
       )
-      val fnc = new AssignmentController(cc, wis, esp, appConfig)
+      val fnc =
+        new AssignmentController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.assignEnrolments(request: Request[JsValue])
       status(result) shouldBe 202
       wis.collectStats.futureValue.values.sum shouldBe 4
@@ -114,7 +163,13 @@ class AssignmentControllerISpec
     "respond with 400 status if the request is malformed" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(Json.obj("someJson" -> JsNumber(0xbad)))
-      val fnc = new AssignmentController(cc, wis, esp, appConfig)
+      val fnc =
+        new AssignmentController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.assignEnrolments(request)
       status(result) shouldBe 400
     }
@@ -124,7 +179,12 @@ class AssignmentControllerISpec
     "respond with 200 if the client is already in sync (already has exactly the given enrolments assigned)" in {
       val userId = "myUser"
       val enrolments = Seq(
-        Enrolment("HMRC-MTD-VAT", "Activated", "Friendly 1", Seq(Identifier("VRN", "123456789"))),
+        Enrolment(
+          "HMRC-MTD-VAT",
+          "Activated",
+          "Friendly 1",
+          Seq(Identifier("VRN", "123456789"))
+        ),
         Enrolment(
           "HMRC-PPT-ORG",
           "Activated",
@@ -139,7 +199,13 @@ class AssignmentControllerISpec
         .when(userId, *, *)
         .returns(Future.successful(enrolments))
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.fromEnrolment)))
-      val ac = new AssignmentController(cc, wis, stubEsp, appConfig)
+      val ac =
+        new AssignmentController(
+          cc,
+          wis,
+          stubEsp,
+          appConfig
+        )
       val result = ac.ensureAssignments(arn, "myUser")(request)
       status(result) shouldBe 200
       wis.collectStats.futureValue.values.sum shouldBe 0 // no work items should be created
@@ -148,12 +214,32 @@ class AssignmentControllerISpec
     "respond with 202 if changes are needed and add items in the queue to effect the desired change" in {
       val userId = "myUser"
       val storedEnrolments = Seq(
-        Enrolment("HMRC-MTD-VAT", "Activated", "Client1", Seq(Identifier("VRN", "123456789"))),
-        Enrolment("HMRC-PPT-ORG", "Activated", "Client2", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
+        Enrolment(
+          "HMRC-MTD-VAT",
+          "Activated",
+          "Client1",
+          Seq(Identifier("VRN", "123456789"))
+        ),
+        Enrolment(
+          "HMRC-PPT-ORG",
+          "Activated",
+          "Client2",
+          Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345"))
+        )
       )
       val wantedEnrolments = Seq(
-        Enrolment("HMRC-MTD-VAT", "Activated", "Client1", Seq(Identifier("VRN", "123456789"))),
-        Enrolment("HMRC-MTD-IT", "Activated", "Client3", Seq(Identifier("MTDITID", "NKZJ31383072521")))
+        Enrolment(
+          "HMRC-MTD-VAT",
+          "Activated",
+          "Client1",
+          Seq(Identifier("VRN", "123456789"))
+        ),
+        Enrolment(
+          "HMRC-MTD-IT",
+          "Activated",
+          "Client3",
+          Seq(Identifier("MTDITID", "NKZJ31383072521"))
+        )
       )
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val stubEsp = stub[EnrolmentStoreProxyConnector]
@@ -161,23 +247,48 @@ class AssignmentControllerISpec
         .getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(userId, *, *)
         .returns(Future.successful(storedEnrolments))
-      val request =
-        FakeRequest("POST", "").withBody(Json.toJson(wantedEnrolments.map(EnrolmentKey.fromEnrolment)))
-      val ac = new AssignmentController(cc, wis, stubEsp, appConfig)
+      val request = FakeRequest("POST", "").withBody(Json.toJson(wantedEnrolments.map(EnrolmentKey.fromEnrolment)))
+      val ac =
+        new AssignmentController(
+          cc,
+          wis,
+          stubEsp,
+          appConfig
+        )
       val result = ac.ensureAssignments(arn, "myUser")(request)
       status(result) shouldBe 202
       wis.collectStats.futureValue.values.sum shouldBe 2 // one add, one delete
       wir.collection.find(Filters.empty()).toFuture().futureValue.map(_.item).toSet shouldBe Set(
-        AssignmentWorkItem(Assign, "myUser", "HMRC-MTD-IT~MTDITID~NKZJ31383072521", arn.value),
-        AssignmentWorkItem(Unassign, "myUser", "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", arn.value)
+        AssignmentWorkItem(
+          Assign,
+          "myUser",
+          "HMRC-MTD-IT~MTDITID~NKZJ31383072521",
+          arn.value
+        ),
+        AssignmentWorkItem(
+          Unassign,
+          "myUser",
+          "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345",
+          arn.value
+        )
       )
     }
 
     "respond with 404 status if userId is unknown" in {
       val userId = "unknownUser"
       val enrolments = Seq(
-        Enrolment("HMRC-MTD-VAT", "Activated", "Client1", Seq(Identifier("VRN", "123456789"))),
-        Enrolment("HMRC-PPT-ORG", "Activated", "Client2", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
+        Enrolment(
+          "HMRC-MTD-VAT",
+          "Activated",
+          "Client1",
+          Seq(Identifier("VRN", "123456789"))
+        ),
+        Enrolment(
+          "HMRC-PPT-ORG",
+          "Activated",
+          "Client2",
+          Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345"))
+        )
       )
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val stubEsp = stub[EnrolmentStoreProxyConnector]
@@ -186,7 +297,13 @@ class AssignmentControllerISpec
         .when(userId, *, *)
         .returns(Future.failed(new NotFoundException("")))
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.fromEnrolment)))
-      val ac = new AssignmentController(cc, wis, stubEsp, appConfig)
+      val ac =
+        new AssignmentController(
+          cc,
+          wis,
+          stubEsp,
+          appConfig
+        )
       val result = ac.ensureAssignments(arn, "unknownUser")(request)
       status(result) shouldBe 404
       wis.collectStats.futureValue.values.sum shouldBe 0 // no work items should be created
@@ -196,9 +313,16 @@ class AssignmentControllerISpec
     "respond with 400 status if the request is malformed" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("POST", "").withBody(Json.obj("someJson" -> JsNumber(0xbad)))
-      val ac = new AssignmentController(cc, wis, esp, appConfig)
+      val ac =
+        new AssignmentController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = ac.ensureAssignments(arn, "myUser")(request)
       status(result) shouldBe 400
     }
   }
+
 }

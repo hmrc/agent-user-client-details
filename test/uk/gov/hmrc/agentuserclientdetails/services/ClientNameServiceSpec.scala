@@ -19,23 +19,31 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import org.scalatest.concurrent.ScalaFutures._
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
-import uk.gov.hmrc.agentuserclientdetails.support.{FakeCitizenDetailsConnector, FakeDesConnector, FakeHipConnector, FakeIfConnector, TestAppConfig}
+import uk.gov.hmrc.agentuserclientdetails.support.FakeCitizenDetailsConnector
+import uk.gov.hmrc.agentuserclientdetails.support.FakeDesConnector
+import uk.gov.hmrc.agentuserclientdetails.support.FakeHipConnector
+import uk.gov.hmrc.agentuserclientdetails.support.FakeIfConnector
+import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class ClientNameServiceSpec extends AnyWordSpec with Matchers {
+class ClientNameServiceSpec
+extends AnyWordSpec
+with Matchers {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
-  val cns = new ClientNameService(
-    FakeCitizenDetailsConnector,
-    FakeDesConnector,
-    FakeIfConnector,
-    FakeHipConnector,
-    new TestAppConfig {}
-  )
+  val cns =
+    new ClientNameService(
+      FakeCitizenDetailsConnector,
+      FakeDesConnector,
+      FakeIfConnector,
+      FakeHipConnector,
+      new TestAppConfig {}
+    )
 
   "retrieving the client's friendly name" should {
     "hit the correct endpoint for income tax MAIN" in {
@@ -81,4 +89,5 @@ class ClientNameServiceSpec extends AnyWordSpec with Matchers {
       caught shouldBe InvalidServiceIdException("potatoes")
     }
   }
+
 }

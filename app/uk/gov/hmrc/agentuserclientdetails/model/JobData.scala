@@ -16,26 +16,37 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Format, JsDefined, JsError, JsObject, JsResult, JsString, JsValue, Json, OFormat}
+import play.api.libs.json.Format
+import play.api.libs.json.JsDefined
+import play.api.libs.json.JsError
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsResult
+import play.api.libs.json.JsString
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 
 // Keeping it generic so our options are open in case we want to track other kind of jobs later (e.g. ES11/ES12 assignments, etc.)
 sealed trait JobData
 
 object JobData {
-  implicit val format: Format[JobData] = new Format[JobData] {
-    // Kludgy format unfortunately due to mongo codecs not generating correctly otherwise.
-    def writes(o: JobData): JsValue = o match {
-      case x: FriendlyNameJobData => Json.toJsObject(x)
-    }
-    def reads(json: JsValue): JsResult[JobData] = json match {
-      case x: JsObject =>
-        x \ "jobType" match {
-          case JsDefined(JsString(FriendlyNameJobData.jobType)) => Json.fromJson[FriendlyNameJobData](x)
-          case _                                                => JsError("Expected field 'jobType' was not present")
+  implicit val format: Format[JobData] =
+    new Format[JobData] {
+      // Kludgy format unfortunately due to mongo codecs not generating correctly otherwise.
+      def writes(o: JobData): JsValue =
+        o match {
+          case x: FriendlyNameJobData => Json.toJsObject(x)
         }
-      case _ => JsError("Expected JSON object")
+      def reads(json: JsValue): JsResult[JobData] =
+        json match {
+          case x: JsObject =>
+            x \ "jobType" match {
+              case JsDefined(JsString(FriendlyNameJobData.jobType)) => Json.fromJson[FriendlyNameJobData](x)
+              case _ => JsError("Expected field 'jobType' was not present")
+            }
+          case _ => JsError("Expected JSON object")
+        }
     }
-  }
 }
 
 case class FriendlyNameJobData(
@@ -45,12 +56,14 @@ case class FriendlyNameJobData(
   agencyName: Option[String],
   email: Option[String],
   emailLanguagePreference: Option[String], // "en" or "cy"
-  jobType: String =
-    FriendlyNameJobData.jobType, // do not change this. Must include it explicitly or the mongo codec will not generate correctly.
+  jobType: String = FriendlyNameJobData.jobType, // do not change this. Must include it explicitly or the mongo codec will not generate correctly.
   sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
-) extends JobData
+)
+extends JobData
 
 object FriendlyNameJobData {
+
   val jobType = "FriendlyNameJob"
   implicit val format: OFormat[FriendlyNameJobData] = Json.format[FriendlyNameJobData]
+
 }

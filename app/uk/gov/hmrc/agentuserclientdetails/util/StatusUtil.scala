@@ -21,15 +21,24 @@ import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServ
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 object StatusUtil {
-  val retryableStatuses: Seq[Int] =
-    Seq(UNAUTHORIZED, TOO_MANY_REQUESTS, INTERNAL_SERVER_ERROR, BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT)
+
+  val retryableStatuses: Seq[Int] = Seq(
+    UNAUTHORIZED,
+    TOO_MANY_REQUESTS,
+    INTERNAL_SERVER_ERROR,
+    BAD_GATEWAY,
+    SERVICE_UNAVAILABLE,
+    GATEWAY_TIMEOUT
+  )
   def isRetryable(status: Int): Boolean = retryableStatuses.contains(status)
-  def isRetryable(e: Throwable): Boolean = e match {
-    case uer: UpstreamErrorResponse   => isRetryable(uer.statusCode)
-    case _: InvalidServiceIdException => false
-    // Expand this list if we identify any other cases to be handled specifically
-    case _ => true
-    // Any other exception, when the future does not complete successfully and thus there isn't a status code
-    // is considered a temporary problem that is potentially retryable.
-  }
+  def isRetryable(e: Throwable): Boolean =
+    e match {
+      case uer: UpstreamErrorResponse => isRetryable(uer.statusCode)
+      case _: InvalidServiceIdException => false
+      // Expand this list if we identify any other cases to be handled specifically
+      case _ => true
+      // Any other exception, when the future does not complete successfully and thus there isn't a status code
+      // is considered a temporary problem that is potentially retryable.
+    }
+
 }

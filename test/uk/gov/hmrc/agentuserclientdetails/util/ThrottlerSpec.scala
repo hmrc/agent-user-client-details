@@ -20,13 +20,18 @@ import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Sink
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-import java.time.{Duration, Instant}
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import java.time.Duration
+import java.time.Instant
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.Future
 
-class ThrottlerSpec extends BaseSpec {
+class ThrottlerSpec
+extends BaseSpec {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val materializer: Materializer = Materializer(ActorSystem())

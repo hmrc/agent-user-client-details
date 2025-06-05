@@ -27,16 +27,24 @@ import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
 class AgentSizeRepositoryImplSpec
-    extends AnyWordSpecLike with Matchers with DefaultPlayMongoRepositorySupport[AgentSize] {
+extends AnyWordSpecLike
+with Matchers
+with DefaultPlayMongoRepositorySupport[AgentSize] {
 
   implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   trait TestScope {
+
     val arn: Arn = Arn("KARN1234567")
 
-    val agentSize: AgentSize = AgentSize(arn, 50, LocalDateTime.now())
+    val agentSize: AgentSize = AgentSize(
+      arn,
+      50,
+      LocalDateTime.now()
+    )
 
     val agentSizeRepository: AgentSizeRepositoryImpl = repository.asInstanceOf[AgentSizeRepositoryImpl]
+
   }
 
   "AgentSizeRepository" when {

@@ -18,10 +18,13 @@ package uk.gov.hmrc.agentuserclientdetails.support
 
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 
-import scala.concurrent.duration.{DAYS, Duration}
+import scala.concurrent.duration.DAYS
+import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 
-class TestAppConfig extends AppConfig {
+class TestAppConfig
+extends AppConfig {
+
   val citizenDetailsBaseUrl: String = ""
   val agentAssuranceBaseUrl: String = ""
   val enrolmentStoreProxyUrl: String = ""
@@ -67,8 +70,13 @@ class TestAppConfig extends AppConfig {
   val es3MaxRecordsFetchCount: Int = 1000
   val enableCbcFeature: Boolean = true
   val enablePillar2Feature: Boolean = true
-  val internalHostPatterns: Seq[Regex] = Seq("^.*\\.service$", "^.*\\.mdtp$", "^localhost$").map(_.r)
+  val internalHostPatterns: Seq[Regex] = Seq(
+    "^.*\\.service$",
+    "^.*\\.mdtp$",
+    "^localhost$"
+  ).map(_.r)
   val hipEnabled: Boolean = true
   val hipBaseUrl: String = ""
   val hipAuthToken: String = "hipToken"
+
 }

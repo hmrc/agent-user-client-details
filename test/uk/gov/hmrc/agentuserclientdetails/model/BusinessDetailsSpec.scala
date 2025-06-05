@@ -17,11 +17,13 @@
 package uk.gov.hmrc.agentuserclientdetails.model
 
 import BusinessDetails._
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class BusinessDetailsSpec extends BaseSpec {
+class BusinessDetailsSpec
+extends BaseSpec {
 
   val businessAddressDetailsModel: BusinessAddressDetails = BusinessAddressDetails("GB", Some("SK11AB"))
   val businessAddressDetailsJson: JsObject = Json.obj("countryCode" -> "GB", "postalCode" -> "SK11AB")
@@ -30,19 +32,19 @@ class BusinessDetailsSpec extends BaseSpec {
   val businessDataJson: JsObject = Json.obj("businessAddressDetails" -> businessAddressDetailsJson)
 
   "BusinessAddressDetails" should {
-    
+
     "read from JSON" in {
       businessAddressDetailsJson.as[BusinessAddressDetails] shouldBe businessAddressDetailsModel
     }
   }
-  
+
   "BusinessData" should {
 
     "read from JSON" in {
       businessDataJson.as[BusinessData] shouldBe businessDataModel
     }
   }
-  
+
   "BusinessDetails" should {
 
     val model: BusinessDetails = BusinessDetails(Seq(businessDataModel), Some(MtdItId("XAIT1234567890")))
@@ -52,4 +54,5 @@ class BusinessDetailsSpec extends BaseSpec {
       json.as[BusinessDetails] shouldBe model
     }
   }
+
 }

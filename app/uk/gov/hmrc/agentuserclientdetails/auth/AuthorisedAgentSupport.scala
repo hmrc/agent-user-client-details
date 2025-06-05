@@ -18,22 +18,27 @@ package uk.gov.hmrc.agentuserclientdetails.auth
 
 import play.api.Logging
 import play.api.mvc.Results.Forbidden
-import play.api.mvc.{Request, Result}
+import play.api.mvc.Request
+import play.api.mvc.Result
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-trait AuthorisedAgentSupport extends Logging {
+trait AuthorisedAgentSupport
+extends Logging {
 
   def withAuthorisedAgent[T](allowStandardUser: Boolean = false)(
     body: AuthorisedAgent => Future[Result]
-  )(implicit authAction: AuthAction, request: Request[T], ec: ExecutionContext): Future[Result] =
-    authAction
-      .getAuthorisedAgent(allowStandardUser)
-      .flatMap {
-        case None =>
-          logger.info("Could not identify authorised agent")
-          Future.successful(Forbidden)
-        case Some(authorisedAgent: AuthorisedAgent) =>
-          body(authorisedAgent)
-      }
+  )(implicit
+    authAction: AuthAction,
+    request: Request[T],
+    ec: ExecutionContext
+  ): Future[Result] = authAction
+    .getAuthorisedAgent(allowStandardUser)
+    .flatMap {
+      case None =>
+        logger.info("Could not identify authorised agent")
+        Future.successful(Forbidden)
+      case Some(authorisedAgent: AuthorisedAgent) => body(authorisedAgent)
+    }
 }

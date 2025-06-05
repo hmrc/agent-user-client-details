@@ -21,29 +21,35 @@ import org.mongodb.scala.model.Filters
 import org.mongodb.scala.SingleObservableFuture
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
+import uk.gov.hmrc.mongo.workitem.WorkItemFields
+import uk.gov.hmrc.mongo.workitem.WorkItemRepository
 
-import java.time.{Duration, Instant}
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case class AssignmentsWorkItemRepository @Inject() (config: Config, mongoComponent: MongoComponent)(implicit
+case class AssignmentsWorkItemRepository @Inject() (
+  config: Config,
+  mongoComponent: MongoComponent
+)(implicit
   ec: ExecutionContext
-) extends WorkItemRepository[AssignmentWorkItem](
-      collectionName = "assignments-work-items",
-      mongoComponent = mongoComponent,
-      itemFormat = AssignmentWorkItem.format,
-      workItemFields = WorkItemFields.default
-    ) {
+)
+extends WorkItemRepository[AssignmentWorkItem](
+  collectionName = "assignments-work-items",
+  mongoComponent = mongoComponent,
+  itemFormat = AssignmentWorkItem.format,
+  workItemFields = WorkItemFields.default
+) {
 
   override lazy val requiresTtlIndex = false
 
   override def now(): Instant = Instant.now()
 
-  override def inProgressRetryAfter: Duration =
-    config.getDuration("work-item-repository.assignments.retry-in-progress-after")
+  override def inProgressRetryAfter: Duration = config.getDuration("work-item-repository.assignments.retry-in-progress-after")
 
   // test-only to remove perf-test data.
-  def deleteWorkItems(arn: String): Future[Long] =
-    collection.deleteMany(Filters.equal("item.arn", arn)).toFuture().map(_.getDeletedCount)
+  def deleteWorkItems(arn: String): Future[Long] = collection.deleteMany(Filters.equal("item.arn", arn)).toFuture().map(_.getDeletedCount)
+
 }

@@ -30,16 +30,23 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnecto
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.support._
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, ResultStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
+import uk.gov.hmrc.mongo.workitem.ResultStatus
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.net.ConnectException
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
+class FriendlyNameWorkerSpec
+extends AnyWordSpec
+with Matchers
+with MockFactory {
 
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
 
@@ -55,13 +62,14 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
       new TestAppConfig
     )
   // Service that returns a failure with a HTTP status
-  def mockCnsFail(failStatus: Int): ClientNameService = new ClientNameService(
-    FailingCitizenDetailsConnector(failStatus),
-    FailingDesConnector(failStatus),
-    FailingIfConnector(failStatus),
-    FailingHipConnector(failStatus),
-    new TestAppConfig
-  )
+  def mockCnsFail(failStatus: Int): ClientNameService =
+    new ClientNameService(
+      FailingCitizenDetailsConnector(failStatus),
+      FailingDesConnector(failStatus),
+      FailingIfConnector(failStatus),
+      FailingHipConnector(failStatus),
+      new TestAppConfig
+    )
   // Service that returns a non-HTTP exception
   val mockCnsConnectFail: ClientNameService =
     new ClientNameService(
@@ -74,26 +82,30 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
       override def getClientName(enrolmentKey: String)(implicit
         hc: HeaderCarrier,
         ec: ExecutionContext
-      ): Future[Option[String]] =
-        Future.failed(new ConnectException("Weird error occurred."))
+      ): Future[Option[String]] = Future.failed(new ConnectException("Weird error occurred."))
     }
   // Service that returns a successful response but no name
-  val mockCnsNoName: ClientNameService = new ClientNameService(
-    NotFoundCitizenDetailsConnector,
-    NotFoundDesConnector,
-    NotFoundIfConnector,
-    NotFoundHipConnector,
-    new TestAppConfig
-  )
+  val mockCnsNoName: ClientNameService =
+    new ClientNameService(
+      NotFoundCitizenDetailsConnector,
+      NotFoundDesConnector,
+      NotFoundIfConnector,
+      NotFoundHipConnector,
+      new TestAppConfig
+    )
 
   val mockActorSystem: ActorSystem = stub[ActorSystem]
-  val appConfig: AppConfig = new TestAppConfig() {
-    override val enableThrottling: Boolean = false
-  }
+  val appConfig: AppConfig =
+    new TestAppConfig() {
+      override val enableThrottling: Boolean = false
+    }
 
   val materializer: Materializer = NoMaterializer
 
-  def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
+  def mkWorkItem[A](
+    item: A,
+    status: ProcessingStatus
+  ): WorkItem[A] = {
     val now = Instant.now()
     WorkItem(
       id = ObjectId.get(),
@@ -109,257 +121,596 @@ class FriendlyNameWorkerSpec extends AnyWordSpec with Matchers with MockFactory 
     "retrieve the friendly name and store it via ES19 and mark the item as succeeded when everything is successful" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsOK,
+          mockActorSystem,
+          appConfig,
+          materializer
+        )
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, argThat((_: String).nonEmpty), *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          argThat((_: String).nonEmpty),
+          *,
+          *
+        )
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, Succeeded, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          Succeeded,
+          *,
+          *
+        )
         .once()
     }
 
     "mark the work item as permanently failed if the call to DES/IF is successful but no name is available" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsNoName, mockActorSystem, appConfig, materializer)
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsNoName,
+          mockActorSystem,
+          appConfig,
+          materializer
+        )
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, PermanentlyFailed, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          PermanentlyFailed,
+          *,
+          *
+        )
         .once()
     }
 
     "mark the work item as permanently failed if the call to DES/IF fails with a non-retryable failure" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(400), mockActorSystem, appConfig, materializer)
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsFail(400),
+          mockActorSystem,
+          appConfig,
+          materializer
+        )
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, PermanentlyFailed, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          PermanentlyFailed,
+          *,
+          *
+        )
         .once()
     }
 
     "mark the work item as failed if the call to DES/IF fails with a retryable failure" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .when(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .returns(Future.successful(()))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig, materializer)
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsFail(429),
+          mockActorSystem,
+          appConfig,
+          materializer
+        )
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, Failed, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          Failed,
+          *,
+          *
+        )
         .once()
     }
 
     "mark the work item as failed (retryable) if the call to DES/IF fails with an unknown exception (that is not an upstream HTTP error status)" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .when(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .returns(Future.successful(()))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsConnectFail, mockActorSystem, appConfig, materializer)
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsConnectFail,
+          mockActorSystem,
+          appConfig,
+          materializer
+        )
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, Failed, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          Failed,
+          *,
+          *
+        )
         .once()
     }
 
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .when(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .returns(Future.successful(()))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsFail(429), mockActorSystem, appConfig, materializer)
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsFail(429),
+          mockActorSystem,
+          appConfig,
+          materializer
+        )
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
         .copy(receivedAt = Instant.now().minusSeconds(2 * 24 * 3600 /* 2 days */ ))
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          *,
+          *,
+          *
+        )
         .never()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, PermanentlyFailed, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          PermanentlyFailed,
+          *,
+          *
+        )
         .once()
     }
 
     "when the ES19 storage call fails mark the old item as duplicate and create a new item with the friendly name already populated" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       (stubWis
-        .pushNew(_: Seq[FriendlyNameWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
+        .pushNew(
+          _: Seq[FriendlyNameWorkItem],
+          _: Instant,
+          _: ProcessingStatus
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsOK,
+          mockActorSystem,
+          appConfig,
+          materializer
+        )
       val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, Duplicate, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          Duplicate,
+          *,
+          *
+        )
         .once()
       (stubWis
-        .pushNew(_: Seq[FriendlyNameWorkItem], _: Instant, _: ProcessingStatus)(_: ExecutionContext))
-        .verify(argThat((_: Seq[FriendlyNameWorkItem]).head.client.friendlyName.nonEmpty), *, ToDo, *)
+        .pushNew(
+          _: Seq[FriendlyNameWorkItem],
+          _: Instant,
+          _: ProcessingStatus
+        )(_: ExecutionContext))
+        .verify(
+          argThat((_: Seq[FriendlyNameWorkItem]).head.client.friendlyName.nonEmpty),
+          *,
+          ToDo,
+          *
+        )
         .once()
     }
 
     "when encountering a work item with an already populated friendly name, should store it via ES19 without querying the name again" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
-      val workItem =
-        mkWorkItem(
-          FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")),
-          ToDo
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsOK,
+          mockActorSystem,
+          appConfig,
+          materializer
         )
+      val workItem = mkWorkItem(
+        FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")),
+        ToDo
+      )
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, "Friendly+Name+%26+Cousin%27s+company", *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          "Friendly+Name+%26+Cousin%27s+company",
+          *,
+          *
+        )
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, Succeeded, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          Succeeded,
+          *,
+          *
+        )
         .once()
     }
 
     "when encountering a work item with an already populated friendly name and ES19 returns BAD_REQUEST, mark as permanently_failed" in {
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
-        .returns(Future.failed(UpstreamErrorResponse(s"Unexpected status on ES19 request: INVALID_JSON", 400, 400)))
+        .returns(Future.failed(UpstreamErrorResponse(
+          s"Unexpected status on ES19 request: INVALID_JSON",
+          400,
+          400
+        )))
 
       val fnWorker =
-        new FriendlyNameWorker(stubWis, mockEsp, mockSi, mockCnsOK, mockActorSystem, appConfig, materializer)
-      val workItem =
-        mkWorkItem(
-          FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")),
-          ToDo
+        new FriendlyNameWorker(
+          stubWis,
+          mockEsp,
+          mockSi,
+          mockCnsOK,
+          mockActorSystem,
+          appConfig,
+          materializer
         )
+      val workItem = mkWorkItem(
+        FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")),
+        ToDo
+      )
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .verify(testGroupId, *, "Friendly+Name+%26+Cousin%27s+company", *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .verify(
+          testGroupId,
+          *,
+          "Friendly+Name+%26+Cousin%27s+company",
+          *,
+          *
+        )
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus, _: Map[String, String])(_: ExecutionContext))
-        .verify(workItem.id, PermanentlyFailed, *, *)
+        .complete(
+          _: ObjectId,
+          _: ProcessingStatus & ResultStatus,
+          _: Map[String, String]
+        )(_: ExecutionContext))
+        .verify(
+          workItem.id,
+          PermanentlyFailed,
+          *,
+          *
+        )
         .once()
     }
   }
+
 }

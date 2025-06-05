@@ -16,16 +16,27 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{PaginatedList, PaginationMetaData}
+import uk.gov.hmrc.agentmtdidentifiers.model.PaginatedList
+import uk.gov.hmrc.agentmtdidentifiers.model.PaginationMetaData
 import uk.gov.hmrc.agents.accessgroups.Client
 
 object PaginatedClientsBuilder {
 
-  def build(page: Int, pageSize: Int, clients: Seq[Client]): PaginatedList[Client] = {
+  def build(
+    page: Int,
+    pageSize: Int,
+    clients: Seq[Client]
+  ): PaginatedList[Client] = {
     val pageStart = (page - 1) * pageSize
     val pageEnd = pageStart + pageSize
     val numberOfPages = Math.ceil(clients.length.toDouble / pageSize.toDouble).toInt
-    val pageSliceUntil = Math.min(pageEnd, if (numberOfPages == page) clients.length else clients.length - 1)
+    val pageSliceUntil = Math.min(
+      pageEnd,
+      if (numberOfPages == page)
+        clients.length
+      else
+        clients.length - 1
+    )
 
     val currentPageContent = clients.slice(pageStart, pageSliceUntil)
 

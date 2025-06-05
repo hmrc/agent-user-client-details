@@ -31,8 +31,7 @@ object PptSubscription {
         JsSuccess(PptSubscription(s"$firstName $lastName"))
 
       case "Organisation" =>
-        val organisationName =
-          (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
+        val organisationName = (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
         JsSuccess(PptSubscription(organisationName))
 
       case e => JsError(s"unknown customerType $e")

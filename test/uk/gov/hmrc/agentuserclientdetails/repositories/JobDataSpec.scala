@@ -18,9 +18,11 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, JobData}
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
+import uk.gov.hmrc.agentuserclientdetails.model.JobData
 
-class JobDataSpec extends BaseSpec {
+class JobDataSpec
+extends BaseSpec {
 
   "JobData" should {
 
@@ -36,8 +38,7 @@ class JobDataSpec extends BaseSpec {
 
       val json = Json.toJson(jobData)
       val parsed: JobData = Json.fromJson[JobData](json).get
-      parsed should matchPattern { case x: FriendlyNameJobData =>
-      }
+      parsed should matchPattern { case x: FriendlyNameJobData => }
       parsed shouldBe jobData
     }
 

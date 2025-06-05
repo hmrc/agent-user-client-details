@@ -19,10 +19,11 @@ package uk.gov.hmrc.agentuserclientdetails.model
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class CitizenSpec extends BaseSpec {
+class CitizenSpec
+extends BaseSpec {
 
   "Citizen" should {
-    
+
     "read from JSON" in {
       val model: Citizen = Citizen(Some("First"), Some("Last"))
       val json = Json.obj(
@@ -35,9 +36,9 @@ class CitizenSpec extends BaseSpec {
       )
       json.as[Citizen] shouldBe model
     }
-    
+
     "return a single name" when {
-      
+
       "citizen has only a first name" in {
         val model: Citizen = Citizen(Some("First"), None)
         model.name shouldBe Some("First")
@@ -53,7 +54,7 @@ class CitizenSpec extends BaseSpec {
         model.name shouldBe Some("First Last")
       }
     }
-    
+
     "fail to return a name when citizen does not have any names" in {
       val model: Citizen = Citizen(None, None)
       model.name shouldBe None

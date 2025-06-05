@@ -17,25 +17,35 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.ImplementedBy
-import com.mongodb.client.model.{IndexOptions, ReplaceOptions}
+import com.mongodb.client.model.IndexOptions
+import com.mongodb.client.model.ReplaceOptions
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.SingleObservableFuture
 import play.api.Logging
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 sealed trait UpsertType
-case object RecordInserted extends UpsertType
-case object RecordUpdated extends UpsertType
+case object RecordInserted
+extends UpsertType
+case object RecordUpdated
+extends UpsertType
 
-case class AgentSize(arn: Arn, clientCount: Int, refreshedDateTime: java.time.LocalDateTime)
+case class AgentSize(
+  arn: Arn,
+  clientCount: Int,
+  refreshedDateTime: java.time.LocalDateTime
+)
 
 object AgentSize {
   implicit val formatAgentSize: OFormat[AgentSize] = Json.format[AgentSize]
@@ -43,43 +53,50 @@ object AgentSize {
 
 @ImplementedBy(classOf[AgentSizeRepositoryImpl])
 trait AgentSizeRepository {
+
   def get(arn: Arn): Future[Option[AgentSize]]
   def upsert(agentSize: AgentSize): Future[Option[UpsertType]]
 
   def delete(arn: String): Future[Long]
+
 }
 
 @Singleton
 class AgentSizeRepositoryImpl @Inject() (
   mongoComponent: MongoComponent
 )(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[AgentSize](
-      collectionName = "agent-size",
-      domainFormat = AgentSize.formatAgentSize,
-      mongoComponent = mongoComponent,
-      indexes = Seq(
-        IndexModel(ascending("arn"), new IndexOptions().name("arnIdx").unique(true))
-      )
-    ) with AgentSizeRepository with Logging {
+extends PlayMongoRepository[AgentSize](
+  collectionName = "agent-size",
+  domainFormat = AgentSize.formatAgentSize,
+  mongoComponent = mongoComponent,
+  indexes = Seq(
+    IndexModel(ascending("arn"), new IndexOptions().name("arnIdx").unique(true))
+  )
+)
+with AgentSizeRepository
+with Logging {
 
   // TODO maybe rework this repo to include a TTL instead of a refresh duration.
   override lazy val requiresTtlIndex = false
 
   override def get(arn: Arn): Future[Option[AgentSize]] = collection.find(equal("arn", arn.value)).headOption()
 
-  override def upsert(agentSize: AgentSize): Future[Option[UpsertType]] =
-    collection
-      .replaceOne(equal("arn", agentSize.arn.value), agentSize, upsertOptions)
-      .headOption()
-      .map(_.map(_.getModifiedCount match {
-        case 0L => RecordInserted
-        case 1L => RecordUpdated
-        case x  => throw new RuntimeException(s"Update modified count should not have been $x")
-      }))
+  override def upsert(agentSize: AgentSize): Future[Option[UpsertType]] = collection
+    .replaceOne(
+      equal("arn", agentSize.arn.value),
+      agentSize,
+      upsertOptions
+    )
+    .headOption()
+    .map(_.map(_.getModifiedCount match {
+      case 0L => RecordInserted
+      case 1L => RecordUpdated
+      case x => throw new RuntimeException(s"Update modified count should not have been $x")
+    }))
 
   private def upsertOptions = new ReplaceOptions().upsert(true)
 
   // // test-only to remove perf-test data.
-  override def delete(arn: String): Future[Long] =
-    collection.deleteOne(equal("arn", arn)).toFuture().map(_.getDeletedCount)
+  override def delete(arn: String): Future[Long] = collection.deleteOne(equal("arn", arn)).toFuture().map(_.getDeletedCount)
+
 }

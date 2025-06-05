@@ -16,7 +16,13 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.JsError
+import play.api.libs.json.JsResult
+import play.api.libs.json.JsString
+import play.api.libs.json.JsSuccess
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 
 case class AssignmentWorkItem(
   operation: Operation,
@@ -31,19 +37,24 @@ object AssignmentWorkItem {
 }
 
 sealed trait Operation
-case object Assign extends Operation
-case object Unassign extends Operation
+case object Assign
+extends Operation
+case object Unassign
+extends Operation
 
 object Operation {
-  implicit val format: Format[Operation] = new Format[Operation] {
-    def writes(o: Operation): JsValue = o match {
-      case Assign   => JsString("assign")
-      case Unassign => JsString("unassign")
+  implicit val format: Format[Operation] =
+    new Format[Operation] {
+      def writes(o: Operation): JsValue =
+        o match {
+          case Assign => JsString("assign")
+          case Unassign => JsString("unassign")
+        }
+      def reads(json: JsValue): JsResult[Operation] =
+        json match {
+          case JsString("assign") => JsSuccess(Assign)
+          case JsString("unassign") => JsSuccess(Unassign)
+          case x => JsError("unexpected value for Operation: " + x.toString)
+        }
     }
-    def reads(json: JsValue): JsResult[Operation] = json match {
-      case JsString("assign")   => JsSuccess(Assign)
-      case JsString("unassign") => JsSuccess(Unassign)
-      case x                    => JsError("unexpected value for Operation: " + x.toString)
-    }
-  }
 }

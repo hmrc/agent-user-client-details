@@ -20,7 +20,8 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class FriendlyNameWorkItemSpec extends BaseSpec {
+class FriendlyNameWorkItemSpec
+extends BaseSpec {
 
   "FriendlyNameWorkItem" should {
 

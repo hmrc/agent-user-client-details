@@ -23,21 +23,36 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpErrorFunctions
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
-class UsersGroupsSearchConnector @Inject() (httpClient: HttpClientV2, val metrics: Metrics)(implicit
+class UsersGroupsSearchConnector @Inject() (
+  httpClient: HttpClientV2,
+  val metrics: Metrics
+)(implicit
   appConfig: AppConfig,
   val ec: ExecutionContext
-) extends HttpAPIMonitor with HttpErrorFunctions with Logging {
+)
+extends HttpAPIMonitor
+with HttpErrorFunctions
+with Logging {
 
   def getGroupUsers(
     groupId: String
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Seq[UserDetails]] = {
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Seq[UserDetails]] = {
     val url = url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users"
     monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
       httpClient
@@ -51,7 +66,11 @@ class UsersGroupsSearchConnector @Inject() (httpClient: HttpClientV2, val metric
               Seq.empty
             case other =>
               logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
-              throw UpstreamErrorResponse(response.body, other, other)
+              throw UpstreamErrorResponse(
+                response.body,
+                other,
+                other
+              )
           }
         }
     }

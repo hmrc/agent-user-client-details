@@ -16,12 +16,19 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class VatCustomerDetailsSpec extends BaseSpec {
+class VatCustomerDetailsSpec
+extends BaseSpec {
 
-  val vatIndividualModel: VatIndividual = VatIndividual(Some("Mr"), Some("First"), Some("Middle"), Some("Last"))
+  val vatIndividualModel: VatIndividual = VatIndividual(
+    Some("Mr"),
+    Some("First"),
+    Some("Middle"),
+    Some("Last")
+  )
   val vatIndividualJson: JsObject = Json.obj(
     "title" -> "0001",
     "firstName" -> "First",
@@ -44,7 +51,7 @@ class VatCustomerDetailsSpec extends BaseSpec {
     "write to JSON" in {
       Json.toJson(vatIndividualModel) shouldBe vatIndividualJsonWrites
     }
-    
+
     "return a single individual name comprising of all name fields" in {
       vatIndividualModel.name shouldBe "Mr First Middle Last"
     }
@@ -52,7 +59,11 @@ class VatCustomerDetailsSpec extends BaseSpec {
 
   "VatCustomerDetails" should {
 
-    val model: VatCustomerDetails = VatCustomerDetails(Some("Org Name"), Some(vatIndividualModel), Some("Trading Name"))
+    val model: VatCustomerDetails = VatCustomerDetails(
+      Some("Org Name"),
+      Some(vatIndividualModel),
+      Some("Trading Name")
+    )
     val json = Json.obj(
       "organisationName" -> "Org Name",
       "individual" -> vatIndividualJson,
@@ -72,4 +83,5 @@ class VatCustomerDetailsSpec extends BaseSpec {
       Json.toJson(model) shouldBe jsonWrites
     }
   }
+
 }

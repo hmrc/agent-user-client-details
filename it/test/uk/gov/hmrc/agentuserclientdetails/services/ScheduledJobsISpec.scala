@@ -21,15 +21,20 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.{Seconds, Span}
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.bind
 import play.api.test.PlayRunners
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
-import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, FriendlyNameJobData, FriendlyNameWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.model.Assign
+import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
@@ -39,11 +44,18 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class ScheduledJobsISpec
-    extends AnyWordSpec with Matchers with ScalaFutures with BeforeAndAfterEach with IntegrationPatience
-    with MongoSupport with MockFactory with PlayRunners {
+extends AnyWordSpec
+with Matchers
+with ScalaFutures
+with BeforeAndAfterEach
+with IntegrationPatience
+with MongoSupport
+with MockFactory
+with PlayRunners {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
@@ -57,21 +69,20 @@ class ScheduledJobsISpec
     dropDatabase()
   }
 
-  val configOverrides: Seq[(String, AnyVal)] =
-    Seq( // override config values to reduce delays required to test scheduled jobs
-      "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds"     -> 1,
-      "job-scheduling.friendly-name.restart-repo-queue.intervalSeconds"         -> 60,
-      "job-scheduling.service-job.initialDelaySeconds"                          -> 1,
-      "job-scheduling.service-job.intervalSeconds"                              -> 2,
-      "job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds"  -> 1,
-      "job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds"      -> 60,
-      "job-scheduling.job-monitoring.initialDelaySeconds"                       -> 1,
-      "job-scheduling.job-monitoring.intervalSeconds"                           -> 2,
-      "work-item-repository.friendly-name.delete-finished-items-after-seconds"  -> 0,
-      "work-item-repository.assignments.delete-finished-items-after-seconds"    -> 0,
-      "work-item-repository.job-monitoring.delete-finished-items-after-seconds" -> 0,
-      "agent.cache.enabled"                                                     -> false
-    )
+  val configOverrides: Seq[(String, AnyVal)] = Seq( // override config values to reduce delays required to test scheduled jobs
+    "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds" -> 1,
+    "job-scheduling.friendly-name.restart-repo-queue.intervalSeconds" -> 60,
+    "job-scheduling.service-job.initialDelaySeconds" -> 1,
+    "job-scheduling.service-job.intervalSeconds" -> 2,
+    "job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds" -> 1,
+    "job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds" -> 60,
+    "job-scheduling.job-monitoring.initialDelaySeconds" -> 1,
+    "job-scheduling.job-monitoring.intervalSeconds" -> 2,
+    "work-item-repository.friendly-name.delete-finished-items-after-seconds" -> 0,
+    "work-item-repository.assignments.delete-finished-items-after-seconds" -> 0,
+    "work-item-repository.job-monitoring.delete-finished-items-after-seconds" -> 0,
+    "agent.cache.enabled" -> false
+  )
 
   "'friendly name' repository cleanup job" should {
     "clean up the repository periodically" in {
@@ -84,7 +95,11 @@ class ScheduledJobsISpec
 
         val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         wis.removeAll().futureValue
-        wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded).futureValue
+        wis.pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, client1)),
+          Instant.now(),
+          Succeeded
+        ).futureValue
         wis.collectStats.futureValue.values.sum shouldBe 1
         // Wait for the scheduled job to be executed
         eventually(Timeout(Span(10, Seconds))) {
@@ -105,7 +120,16 @@ class ScheduledJobsISpec
 
         wis.removeAll().futureValue
         wis
-          .pushNew(Seq(AssignmentWorkItem(Assign, testGroupId, testEnrolmentKey, testArn)), Instant.now(), Succeeded)
+          .pushNew(
+            Seq(AssignmentWorkItem(
+              Assign,
+              testGroupId,
+              testEnrolmentKey,
+              testArn
+            )),
+            Instant.now(),
+            Succeeded
+          )
           .futureValue
         wis.collectStats.futureValue.values.sum shouldBe 1
 
@@ -160,18 +184,19 @@ class ScheduledJobsISpec
         lazy val jms = app.injector.instanceOf[JobMonitoringService]
 
         jmr.collection.drop().toFuture().futureValue
-        val objectId = jms
-          .createFriendlyNameFetchJobData(
-            FriendlyNameJobData(
-              groupId = "myGroupId",
-              enrolmentKeys = Seq("HMRC-MTD-VAT~VRN~123456789"),
-              sendEmailOnCompletion = false,
-              agencyName = None,
-              email = None,
-              emailLanguagePreference = Some("en")
+        val objectId =
+          jms
+            .createFriendlyNameFetchJobData(
+              FriendlyNameJobData(
+                groupId = "myGroupId",
+                enrolmentKeys = Seq("HMRC-MTD-VAT~VRN~123456789"),
+                sendEmailOnCompletion = false,
+                agencyName = None,
+                email = None,
+                emailLanguagePreference = Some("en")
+              )
             )
-          )
-          .futureValue
+            .futureValue
 
         jms.markAsFinished(objectId).futureValue
         jmr.metrics.futureValue.values.sum shouldBe 1

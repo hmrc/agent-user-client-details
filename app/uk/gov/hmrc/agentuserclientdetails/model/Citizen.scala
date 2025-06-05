@@ -16,12 +16,19 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{JsPath, Reads}
+import play.api.libs.json.JsPath
+import play.api.libs.json.Reads
 
-case class Citizen(firstName: Option[String], lastName: Option[String]) {
+case class Citizen(
+  firstName: Option[String],
+  lastName: Option[String]
+) {
   lazy val name: Option[String] = {
     val n = Seq(firstName, lastName).collect { case Some(x) => x }.mkString(" ")
-    if (n.isEmpty) None else Some(n)
+    if (n.isEmpty)
+      None
+    else
+      Some(n)
   }
 }
 

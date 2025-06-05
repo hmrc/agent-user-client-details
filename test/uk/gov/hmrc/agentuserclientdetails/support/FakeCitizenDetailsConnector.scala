@@ -19,21 +19,32 @@ package uk.gov.hmrc.agentuserclientdetails.support
 import uk.gov.hmrc.agentuserclientdetails.connectors.CitizenDetailsConnector
 import uk.gov.hmrc.agentuserclientdetails.model.Citizen
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case object FakeCitizenDetailsConnector extends CitizenDetailsConnector {
-  def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
-    Future.successful(Some(Citizen(Some("Tom"), Some("Client"))))
+case object FakeCitizenDetailsConnector
+extends CitizenDetailsConnector {
+  def getCitizenDetails(nino: Nino)(implicit
+    c: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[Citizen]] = Future.successful(Some(Citizen(Some("Tom"), Some("Client"))))
 }
 
-case class FailingCitizenDetailsConnector(status: Int) extends CitizenDetailsConnector {
-  def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
-    Future.failed(UpstreamErrorResponse("A fake exception", status))
+case class FailingCitizenDetailsConnector(status: Int)
+extends CitizenDetailsConnector {
+  def getCitizenDetails(nino: Nino)(implicit
+    c: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[Citizen]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
 }
 
-case object NotFoundCitizenDetailsConnector extends CitizenDetailsConnector {
-  def getCitizenDetails(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[Citizen]] =
-    Future.successful(None)
+case object NotFoundCitizenDetailsConnector
+extends CitizenDetailsConnector {
+  def getCitizenDetails(nino: Nino)(implicit
+    c: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[Citizen]] = Future.successful(None)
 }

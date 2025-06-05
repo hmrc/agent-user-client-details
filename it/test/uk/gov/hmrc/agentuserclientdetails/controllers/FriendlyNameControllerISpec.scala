@@ -20,7 +20,8 @@ import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import play.api.Configuration
 import play.api.libs.json._
-import play.api.mvc.{ControllerComponents, Request}
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.agentmtdidentifiers.model._
@@ -33,17 +34,20 @@ import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class FriendlyNameControllerISpec
-    extends BaseIntegrationSpec with DefaultPlayMongoRepositorySupport[WorkItem[FriendlyNameWorkItem]]
-    with AuthorisationMockSupport {
+extends BaseIntegrationSpec
+with DefaultPlayMongoRepositorySupport[WorkItem[FriendlyNameWorkItem]]
+with AuthorisationMockSupport {
 
   override protected val repository: PlayMongoRepository[WorkItem[FriendlyNameWorkItem]] = wir
 
@@ -69,12 +73,17 @@ class FriendlyNameControllerISpec
   val client2: Client = Client("HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", "Frank Wright")
   val client3: Client = Client("HMRC-CGT-PD~CgtRef~XMCGTP123456789", "George Candy")
   val client4: Client = Client("HMRC-MTD-VAT~VRN~101747642", "Ross Barker")
-  val clientsWithFriendlyNames: Seq[Client] = Seq(client1, client2, client3, client4)
+  val clientsWithFriendlyNames: Seq[Client] = Seq(
+    client1,
+    client2,
+    client3,
+    client4
+  )
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
-      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
-  }
+  override def moduleOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -90,11 +99,21 @@ class FriendlyNameControllerISpec
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
       status(result) shouldBe 200
       contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq.empty))
@@ -109,15 +128,35 @@ class FriendlyNameControllerISpec
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(*, client4.enrolmentKey, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .when(
+          *,
+          client4.enrolmentKey,
+          *,
+          *,
+          *
+        )
         .returns(Future.failed(UpstreamErrorResponse("", 404))) // a 404 from enrolment store is a non-retryable failure
       (esp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
       status(result) shouldBe 200
       contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq.empty))
@@ -134,15 +173,35 @@ class FriendlyNameControllerISpec
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(*, client2.enrolmentKey, *, *, *)
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
+        .when(
+          *,
+          client2.enrolmentKey,
+          *,
+          *,
+          *
+        )
         .returns(Future.failed(UpstreamErrorResponse("", 429))) // a 429 from enrolment store is a retryable failure
       (esp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
       status(result) shouldBe 202
       contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq(Json.toJson(client2))))
@@ -157,12 +216,21 @@ class FriendlyNameControllerISpec
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
-      val request =
-        FakeRequest("POST", "").withBody(Json.toJson(Seq.fill(100)(client1))) // 100 enrolments to process
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val request = FakeRequest("POST", "").withBody(Json.toJson(Seq.fill(100)(client1))) // 100 enrolments to process
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
       status(result) shouldBe 202
       contentAsJson(result) \ "delayed" shouldBe JsDefined(
@@ -179,7 +247,13 @@ class FriendlyNameControllerISpec
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       val request = FakeRequest("POST", "").withBody(Json.obj("someJson" -> JsNumber(0xbad)))
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateFriendlyName(testArn)(request)
       status(result) shouldBe 400
     }
@@ -191,7 +265,13 @@ class FriendlyNameControllerISpec
         .when(testArn, *, *)
         .returns(Future.successful(None))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateFriendlyName(testArn)(request)
       status(result) shouldBe 404
     }
@@ -208,11 +288,21 @@ class FriendlyNameControllerISpec
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
-        .updateEnrolmentFriendlyName(_: String, _: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .updateEnrolmentFriendlyName(
+          _: String,
+          _: String,
+          _: String
+        )(_: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("PUT", "").withBody(Json.parse(friendlyNameRequest))
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateOneFriendlyName(testArn)(request)
       status(result) shouldBe 204
     }
@@ -228,10 +318,17 @@ class FriendlyNameControllerISpec
         .returns(Future.successful(Some(testGroupId)))
 
       val request = FakeRequest("PUT", "").withBody(Json.parse(friendlyNameRequest))
-      val fnc = new FriendlyNameController(cc, wis, esp, appConfig)
+      val fnc =
+        new FriendlyNameController(
+          cc,
+          wis,
+          esp,
+          appConfig
+        )
       val result = fnc.updateOneFriendlyName(testArn)(request)
       status(result) shouldBe 400
 
     }
   }
+
 }

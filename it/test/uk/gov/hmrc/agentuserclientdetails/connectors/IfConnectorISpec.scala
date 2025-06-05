@@ -21,21 +21,32 @@ import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, PptRef, Urn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
+import uk.gov.hmrc.agentmtdidentifiers.model.Urn
+import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.client.RequestBuilder
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpReads
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
+class IfConnectorISpec
+extends BaseIntegrationSpec
+with MockFactory {
 
   lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
@@ -47,25 +58,39 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
   val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
   val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
 
-  val ifConnector = new IfConnectorImpl(appConfig, mockHttpClient, metrics, desIfHeaders)
+  val ifConnector =
+    new IfConnectorImpl(
+      appConfig,
+      mockHttpClient,
+      metrics,
+      desIfHeaders
+    )
   val testUrn: Urn = Urn("XXTRUST12345678")
   val testPptRef: PptRef = PptRef("XAPPT0000012345")
   val testMtdItId: MtdItId = MtdItId("12345678")
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
-      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
-  }
+  override def moduleOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
 
-  def mockHttpGet(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpGet(url: URL): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
     (mockHttpClient
       .get(_: URL)(_: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] = {
+  def mockRequestBuilderExecute[A](value: A): CallHandler2[
+    HttpReads[A],
+    ExecutionContext,
+    Future[A]
+  ] = {
     (mockRequestBuilder
-      .setHeader(_*))
+      .setHeader(_ *))
       .expects(*)
       .returning(mockRequestBuilder)
 
@@ -235,4 +260,5 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
       )
     }
   }
+
 }
