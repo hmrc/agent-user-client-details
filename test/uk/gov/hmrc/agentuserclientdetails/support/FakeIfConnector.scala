@@ -16,59 +16,92 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, PptRef}
-import uk.gov.hmrc.agentuserclientdetails.connectors.{IfConnector, TradingDetails}
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
+import uk.gov.hmrc.agentuserclientdetails.connectors.IfConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case object FakeIfConnector extends IfConnector {
+case object FakeIfConnector
+extends IfConnector {
+
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    Future.successful(Some("Trust Client"))
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = Future.successful(Some("Trust Client"))
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
-    Future.successful(Some(PptSubscription("PPT Client")))
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[PptSubscription]] = Future.successful(Some(PptSubscription("PPT Client")))
 
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[TradingDetails]] =
     mtdId match {
       case MtdItId("GK873907D") => Future.successful(Some(TradingDetails(Nino("GK873908D"), None)))
       case MtdItId("GK873908D") => Future.successful(Some(TradingDetails(Nino("GK873908D"), Some(""))))
-      case _                    => Future.successful(Some(TradingDetails(Nino("GK873908D"), Some("IT Client"))))
+      case _ => Future.successful(Some(TradingDetails(Nino("GK873908D"), Some("IT Client"))))
     }
+
 }
 
-case class FailingIfConnector(status: Int) extends IfConnector {
+case class FailingIfConnector(status: Int)
+extends IfConnector {
+
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    Future.failed(UpstreamErrorResponse("A fake exception", status))
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
-    Future.failed(UpstreamErrorResponse("A fake exception", status))
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[PptSubscription]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
-    Future.failed(UpstreamErrorResponse("A fake exception", status))
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[TradingDetails]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
+
 }
 
-case object NotFoundIfConnector extends IfConnector {
+case object NotFoundIfConnector
+extends IfConnector {
+
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    Future.successful(None)
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = Future.successful(None)
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[PptSubscription]] =
-    Future.successful(None)
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[PptSubscription]] = Future.successful(None)
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] = Future.successful(None)
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[TradingDetails]] = Future.successful(None)
+
 }

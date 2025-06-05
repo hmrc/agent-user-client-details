@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.binders
 
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class SimpleObjectBinderSpec extends BaseSpec {
+class SimpleObjectBinderSpec
+extends BaseSpec {
 
   case class Example(str: String)
 

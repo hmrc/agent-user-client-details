@@ -18,11 +18,13 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import play.api.http.Status.{NOT_FOUND, OK}
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
 import play.utils.UriEncoding
 import uk.gov.hmrc.agentmtdidentifiers.model._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{CgtSubscription, VatCustomerDetails}
+import uk.gov.hmrc.agentuserclientdetails.model.CgtSubscription
+import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
@@ -30,20 +32,33 @@ import uk.gov.hmrc.http._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case class TradingDetails(nino: Nino, tradingName: Option[String])
+case class TradingDetails(
+  nino: Nino,
+  tradingName: Option[String]
+)
 
 @ImplementedBy(classOf[DesConnectorImpl])
 trait DesConnector {
+
   def getCgtSubscription(
     cgtRef: CgtRef
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]]
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[CgtSubscription]]
 
   def getVatCustomerDetails(
     vrn: Vrn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]]
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[VatCustomerDetails]]
+
 }
 
 @Singleton
@@ -53,34 +68,46 @@ class DesConnectorImpl @Inject() (
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
 )(implicit val ec: ExecutionContext)
-    extends HttpAPIMonitor with DesConnector with HttpErrorFunctions with Logging {
+extends HttpAPIMonitor
+with DesConnector
+with HttpErrorFunctions
+with Logging {
 
   private val baseUrl: String = appConfig.desBaseUrl
 
   def getCgtSubscription(
     cgtRef: CgtRef
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[CgtSubscription]] = {
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[CgtSubscription]] = {
 
     val url = s"$baseUrl/subscriptions/CGT/ZCGT/${cgtRef.value}"
 
     getWithDesIfHeaders("getCgtSubscription", url).map { response =>
       response.status match {
-        case OK        => Some(response.json.as[CgtSubscription])
+        case OK => Some(response.json.as[CgtSubscription])
         case NOT_FOUND => None
         case other =>
-          throw UpstreamErrorResponse(s"unexpected error during 'getCgtSubscription': ${response.body}", other, other)
+          throw UpstreamErrorResponse(
+            s"unexpected error during 'getCgtSubscription': ${response.body}",
+            other,
+            other
+          )
       }
     }
   }
 
   def getVatCustomerDetails(
     vrn: Vrn
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[VatCustomerDetails]] = {
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[VatCustomerDetails]] = {
     val url = s"$baseUrl/vat/customer/vrn/${UriEncoding.encodePathSegment(vrn.value, "UTF-8")}/information"
     getWithDesIfHeaders("GetVatOrganisationNameByVrn", url).map { response =>
       response.status match {
-        case status if is2xx(status) =>
-          (response.json \ "approvedInformation" \ "customerDetails").asOpt[VatCustomerDetails]
+        case status if is2xx(status) => (response.json \ "approvedInformation" \ "customerDetails").asOpt[VatCustomerDetails]
         case NOT_FOUND => None
         case other =>
           throw UpstreamErrorResponse(
@@ -92,12 +119,19 @@ class DesConnectorImpl @Inject() (
     }
   }
 
-  private def getWithDesIfHeaders(apiName: String, url: String)(implicit
+  private def getWithDesIfHeaders(
+    apiName: String,
+    url: String
+  )(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[HttpResponse] = {
 
-    val headersConfig = desIfHeaders.headersConfig(viaIF = false, url, apiName)
+    val headersConfig = desIfHeaders.headersConfig(
+      viaIF = false,
+      url,
+      apiName
+    )
 
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
       httpClient
@@ -106,4 +140,5 @@ class DesConnectorImpl @Inject() (
         .execute[HttpResponse]
     }
   }
+
 }

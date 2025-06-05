@@ -16,14 +16,15 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
 
 case class PaginatedEnrolments(
-                                startRecord: Int,
-                                totalRecords: Int,
-                                enrolments: Seq[Enrolment]
-                              )
+  startRecord: Int,
+  totalRecords: Int,
+  enrolments: Seq[Enrolment]
+)
 
 object PaginatedEnrolments {
   implicit val format: OFormat[PaginatedEnrolments] = Json.format[PaginatedEnrolments]

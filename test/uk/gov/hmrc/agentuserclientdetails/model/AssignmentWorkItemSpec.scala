@@ -18,9 +18,12 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.libs.json.{JsError, Json}
+import play.api.libs.json.JsError
+import play.api.libs.json.Json
 
-class AssignmentWorkItemSpec extends AnyWordSpec with Matchers {
+class AssignmentWorkItemSpec
+extends AnyWordSpec
+with Matchers {
 
   val testUserId = "ABCEDEFGI1234568"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
@@ -28,10 +31,20 @@ class AssignmentWorkItemSpec extends AnyWordSpec with Matchers {
 
   "AssignmentWorkItemSpec" should {
     "serialise/deserialise correctly" in {
-      val assignWi =
-        AssignmentWorkItem(Assign, "ABCEDEFGI1234568", "HMRC-MTD-VAT~VRN~12345678", testArn, Some("testSessionId"))
-      val unassignWi =
-        AssignmentWorkItem(Unassign, "ABCEDEFGI1234568", "HMRC-MTD-VAT~VRN~12345678", testArn, Some("testSessionId"))
+      val assignWi = AssignmentWorkItem(
+        Assign,
+        "ABCEDEFGI1234568",
+        "HMRC-MTD-VAT~VRN~12345678",
+        testArn,
+        Some("testSessionId")
+      )
+      val unassignWi = AssignmentWorkItem(
+        Unassign,
+        "ABCEDEFGI1234568",
+        "HMRC-MTD-VAT~VRN~12345678",
+        testArn,
+        Some("testSessionId")
+      )
 
       Json.toJson(assignWi).as[AssignmentWorkItem] shouldBe assignWi
       Json.toJson(unassignWi).as[AssignmentWorkItem] shouldBe unassignWi
@@ -43,8 +56,8 @@ class AssignmentWorkItemSpec extends AnyWordSpec with Matchers {
                      |  "userId" : "myUserId",
                      |  "enrolmentKey" : "myEnrolmentKey"
                      |}""".stripMargin)
-      ) should matchPattern { case JsError(_) =>
-      }
+      ) should matchPattern { case JsError(_) => }
     }
   }
+
 }

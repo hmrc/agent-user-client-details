@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{JsResultException, Json}
+import play.api.libs.json.JsResultException
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class CgtSubscriptionSpec extends BaseSpec {
+class CgtSubscriptionSpec
+extends BaseSpec {
 
   "IndividualName" should {
 
@@ -54,7 +56,11 @@ class CgtSubscriptionSpec extends BaseSpec {
     "the person type is Individual" should {
 
       val model: TypeOfPersonDetails = TypeOfPersonDetails("Individual", Left(IndividualName("First", "Last")))
-      val json = Json.obj("typeOfPerson" -> "Individual", "firstName" -> "First", "lastName" -> "Last")
+      val json = Json.obj(
+        "typeOfPerson" -> "Individual",
+        "firstName" -> "First",
+        "lastName" -> "Last"
+      )
 
       "read from JSON" in {
         json.as[TypeOfPersonDetails] shouldBe model
@@ -117,4 +123,5 @@ class CgtSubscriptionSpec extends BaseSpec {
       Json.toJson(model) shouldBe json
     }
   }
+
 }

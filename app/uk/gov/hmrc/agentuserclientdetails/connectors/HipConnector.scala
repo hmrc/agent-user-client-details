@@ -16,25 +16,31 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import com.google.inject.{ImplementedBy, Inject}
+import com.google.inject.ImplementedBy
+import com.google.inject.Inject
 import play.api.Logging
-import play.api.http.{HeaderNames, Status}
+import play.api.http.HeaderNames
+import play.api.http.Status
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.time.{Clock, Instant}
+import java.time.Clock
+import java.time.Instant
 import java.util.UUID
 import javax.inject.Singleton
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[HipConnectorImpl])
 trait HipConnector {
@@ -48,16 +54,16 @@ class HipConnectorImpl @Inject() (
   val metrics: Metrics,
   clock: Clock
 )(implicit val ec: ExecutionContext)
-    extends HipConnector with HttpAPIMonitor with Logging {
+extends HipConnector
+with HttpAPIMonitor
+with Logging {
   httpMonitor: HttpAPIMonitor =>
 
-  /** API number: API#5266 Itsa Taxpayer Business Details
-    * https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd
+  /** API number: API#5266 Itsa Taxpayer Business Details https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd
     */
   def getTradingDetailsForMtdItId(mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] = {
 
-    val url: URL =
-      url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdItId.value}"
+    val url: URL = url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdItId.value}"
 
     val correlationId: String = makeCorrelationId()
     val headers = Seq(
@@ -110,7 +116,10 @@ class HipConnectorImpl @Inject() (
   protected def makeCorrelationId(): String = UUID.randomUUID().toString
 
   object ErrorCodes {
+
     val `Subscription data not found`: String = "006"
     val `ID not found`: String = "008"
+
   }
+
 }

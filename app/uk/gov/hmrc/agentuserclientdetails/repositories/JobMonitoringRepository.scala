@@ -19,10 +19,13 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.typesafe.config.Config
 import uk.gov.hmrc.agentuserclientdetails.model.JobData
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
+import uk.gov.hmrc.mongo.workitem.WorkItemFields
+import uk.gov.hmrc.mongo.workitem.WorkItemRepository
 
-import java.time.{Duration, Instant}
-import javax.inject.{Inject, Singleton}
+import java.time.Duration
+import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 // Notes:
@@ -36,17 +39,17 @@ class JobMonitoringRepository @Inject() (
   mongoComponent: MongoComponent,
   config: Config
 )(implicit ec: ExecutionContext)
-    extends WorkItemRepository[JobData](
-      collectionName = "job-monitoring-work-items",
-      mongoComponent = mongoComponent,
-      itemFormat = JobData.format,
-      workItemFields = WorkItemFields.default
-    ) {
+extends WorkItemRepository[JobData](
+  collectionName = "job-monitoring-work-items",
+  mongoComponent = mongoComponent,
+  itemFormat = JobData.format,
+  workItemFields = WorkItemFields.default
+) {
 
   override lazy val requiresTtlIndex = false
 
   override def now(): Instant = Instant.now
 
-  override def inProgressRetryAfter: Duration =
-    config.getDuration("work-item-repository.job-monitoring.retry-in-progress-after")
+  override def inProgressRetryAfter: Duration = config.getDuration("work-item-repository.job-monitoring.retry-in-progress-after")
+
 }

@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 
 case class ES19Request(friendlyName: String)
 

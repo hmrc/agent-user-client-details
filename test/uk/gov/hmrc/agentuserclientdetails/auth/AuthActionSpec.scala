@@ -19,21 +19,30 @@ package uk.gov.hmrc.agentuserclientdetails.auth
 import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.Results.NoContent
 import play.api.test.FakeRequest
-import play.api.{Configuration, Environment}
+import play.api.Configuration
+import play.api.Environment
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.auth.core._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class AuthActionSpec extends AuthorisationSupport {
+class AuthActionSpec
+extends AuthorisationSupport {
 
   trait TestScope {
+
     implicit val mockAuthConnector: AuthConnector = mock[AuthConnector]
     val mockEnvironment: Environment = mock[Environment]
     val mockConfiguration: Configuration = mock[Configuration]
 
-    val authAction = new AuthAction(mockAuthConnector, mockEnvironment, mockConfiguration)
+    val authAction =
+      new AuthAction(
+        mockAuthConnector,
+        mockEnvironment,
+        mockConfiguration
+      )
 
     implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
     implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()

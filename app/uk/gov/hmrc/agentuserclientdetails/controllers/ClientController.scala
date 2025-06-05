@@ -18,24 +18,36 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import org.mongodb.scala.bson.ObjectId
 import play.api.http.HttpEntity.NoEntity
-import play.api.libs.json.{JsNumber, Json}
+import play.api.libs.json.JsNumber
+import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
 import uk.gov.hmrc.agents.accessgroups.Client
-import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgentSupport
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{AgentAssuranceConnector, EnrolmentStoreProxyConnector}
-import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, FriendlyNameWorkItem, PaginatedClientsBuilder}
-import uk.gov.hmrc.agentuserclientdetails.services.{ES3CacheService, FriendlyNameWorkItemService, JobMonitoringService}
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.agentuserclientdetails.connectors.AgentAssuranceConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.PaginatedClientsBuilder
+import uk.gov.hmrc.agentuserclientdetails.services.ES3CacheService
+import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
+import uk.gov.hmrc.agentuserclientdetails.services.JobMonitoringService
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
 
 @Singleton()
 class ClientController @Inject() (
@@ -46,10 +58,17 @@ class ClientController @Inject() (
   jobMonitoringService: JobMonitoringService,
   agentAssuranceConnector: AgentAssuranceConnector,
   appConfig: AppConfig
-)(implicit authAction: AuthAction, ec: ExecutionContext)
-    extends BackendController(cc) with AuthorisedAgentSupport {
+)(implicit
+  authAction: AuthAction,
+  ec: ExecutionContext
+)
+extends BackendController(cc)
+with AuthorisedAgentSupport {
 
-  def getClient(arn: Arn, enrolmentKey: String): Action[AnyContent] = Action.async { implicit request =>
+  def getClient(
+    arn: Arn,
+    enrolmentKey: String
+  ): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheService
@@ -63,34 +82,39 @@ class ClientController @Inject() (
     }
   }
 
-  def getClients(arn: Arn, sendEmail: Option[Boolean] = None, lang: Option[String] = None): Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAgent(allowStandardUser = true) { _ =>
-        withGroupIdFor(arn) { groupId =>
-          getClientsFn(arn, groupId, sendEmail.getOrElse(false), lang)
-        }
+  def getClients(
+    arn: Arn,
+    sendEmail: Option[Boolean] = None,
+    lang: Option[String] = None
+  ): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent(allowStandardUser = true) { _ =>
+      withGroupIdFor(arn) { groupId =>
+        getClientsFn(
+          arn,
+          groupId,
+          sendEmail.getOrElse(false),
+          lang
+        )
       }
     }
+  }
 
   // returns client counts for all tax services to be used by agent-permissions backend
-  def getTaxServiceClientCount(arn: Arn): Action[AnyContent] =
-    Action.async { implicit request =>
-      withAuthorisedAgent(allowStandardUser = true) { _ =>
-        withGroupIdFor(arn) { groupId =>
-          es3CacheService
-            .getClients(groupId)
-            .map(clients =>
-              clients
-                .map(client => EnrolmentKey.serviceOf(client.enrolmentKey))
-                .groupBy((serviceId: String) => serviceId) // groups by service id
-                .map { case (serviceId, occurrences) =>
-                  serviceId -> occurrences.length
-                } // service id -> number of clients
-            )
-            .map(m => Ok(Json.toJson(m)))
-        }
+  def getTaxServiceClientCount(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withAuthorisedAgent(allowStandardUser = true) { _ =>
+      withGroupIdFor(arn) { groupId =>
+        es3CacheService
+          .getClients(groupId)
+          .map(clients =>
+            clients
+              .map(client => EnrolmentKey.serviceOf(client.enrolmentKey))
+              .groupBy((serviceId: String) => serviceId) // groups by service id
+              .map { case (serviceId, occurrences) => serviceId -> occurrences.length } // service id -> number of clients
+          )
+          .map(m => Ok(Json.toJson(m)))
       }
     }
+  }
 
   def getPaginatedClients(
     arn: Arn,
@@ -104,19 +128,27 @@ class ClientController @Inject() (
         es3CacheService
           .getClients(groupId)
           .map { clients =>
-            val clientsMatchingSearch = search.fold(clients) { searchTerm =>
-              clients.filter { c =>
-                val lowerSearchTerm = searchTerm.toLowerCase
-                c.friendlyName.toLowerCase.contains(lowerSearchTerm) ||
-                c.enrolmentKey.split("~")(2).toLowerCase.contains(lowerSearchTerm)
+            val clientsMatchingSearch =
+              search.fold(clients) { searchTerm =>
+                clients.filter { c =>
+                  val lowerSearchTerm = searchTerm.toLowerCase
+                  c.friendlyName.toLowerCase.contains(lowerSearchTerm) ||
+                  c.enrolmentKey.split("~")(2).toLowerCase.contains(lowerSearchTerm)
+                }
               }
-            }
-            val taxServiceFilteredClients = filter.fold(clientsMatchingSearch) { term =>
-              if (term == "TRUST") clientsMatchingSearch.filter(_.enrolmentKey.contains("HMRC-TERS"))
-              else clientsMatchingSearch.filter(_.enrolmentKey.contains(term))
-            }
+            val taxServiceFilteredClients =
+              filter.fold(clientsMatchingSearch) { term =>
+                if (term == "TRUST")
+                  clientsMatchingSearch.filter(_.enrolmentKey.contains("HMRC-TERS"))
+                else
+                  clientsMatchingSearch.filter(_.enrolmentKey.contains(term))
+              }
 
-            Ok(Json.toJson(PaginatedClientsBuilder.build(page, pageSize, taxServiceFilteredClients)))
+            Ok(Json.toJson(PaginatedClientsBuilder.build(
+              page,
+              pageSize,
+              taxServiceFilteredClients
+            )))
           }
       }
     }
@@ -125,10 +157,15 @@ class ClientController @Inject() (
   def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
-        getClientsFn(arn, groupId, false, None).map { result =>
+        getClientsFn(
+          arn,
+          groupId,
+          false,
+          None
+        ).map { result =>
           result.header.status match {
             case OK | ACCEPTED => result.copy(body = NoEntity)
-            case _             => result
+            case _ => result
           }
         }
       }
@@ -154,7 +191,7 @@ class ClientController @Inject() (
       withGroupIdFor(arn) { groupId =>
         es3CacheService.refresh(groupId).map {
           case Some(_) => NoContent
-          case None    => NotFound
+          case None => NotFound
         }
       }
     }
@@ -168,9 +205,15 @@ class ClientController @Inject() (
   )(implicit request: RequestHeader): Future[Result] = {
     def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
       val mSessionId: Option[String] =
-        if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
-        else None // only required for local testing against stubs
-      FriendlyNameWorkItem(groupId, client, mSessionId)
+        if (appConfig.stubsCompatibilityMode)
+          hc.sessionId.map(_.value)
+        else
+          None // only required for local testing against stubs
+      FriendlyNameWorkItem(
+        groupId,
+        client,
+        mSessionId
+      )
     }
 
     es3CacheService.getClients(groupId).transformWith {
@@ -190,13 +233,25 @@ class ClientController @Inject() (
           clientsWantingName = setDifference(clientsWithNoFriendlyName, clientsPermanentlyFailed)
           // We don't want to add to the work items anything that is already in it (whether to-do, failed, duplicate etc.)
           toBeAdded = setDifference(clientsWantingName, clientsAlreadyInRepo)
-          _ =
-            logger.info(
-              s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
-            )
-          _ <- if (toBeAdded.isEmpty) Future.successful(())
-               else workItemService.pushNew(toBeAdded.map(client => makeWorkItem(client)), Instant.now(), ToDo)
-          _ <- createFriendlyNameMonitoringJob(arn, groupId, clientsWantingName, sendEmail, lang.getOrElse("en"))
+          _ = logger.info(
+            s"Client list request for groupId $groupId. Found: ${clients.length}, of which ${clientsWithNoFriendlyName.length} without a friendly name. (${clientsAlreadyInRepo.length} work items already in repository, of which ${clientsPermanentlyFailed.length} permanently failed. ${toBeAdded.length} new work items to create.)"
+          )
+          _ <-
+            if (toBeAdded.isEmpty)
+              Future.successful(())
+            else
+              workItemService.pushNew(
+                toBeAdded.map(client => makeWorkItem(client)),
+                Instant.now(),
+                ToDo
+              )
+          _ <- createFriendlyNameMonitoringJob(
+            arn,
+            groupId,
+            clientsWantingName,
+            sendEmail,
+            lang.getOrElse("en")
+          )
           // ^ Note: we must put _all_ the clients that lack a name in the list of the monitoring job, not just those that we are _adding_ to the work repo now,
           // because there could be some work items created by a previous call that we still need to check for completion.
         } yield
@@ -204,7 +259,12 @@ class ClientController @Inject() (
             Ok(Json.toJson(clients))
           else
             Accepted(Json.toJson(clients))
-      case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
+      case Failure(UpstreamErrorResponse(
+            _,
+            NOT_FOUND,
+            _,
+            _
+          )) =>
         Future.successful(NotFound)
       case Failure(uer) =>
         logger.error(s"ES3 cache call for $arn failed due to: $uer")
@@ -212,14 +272,13 @@ class ClientController @Inject() (
     }
   }
 
-  def getOutstandingWorkItemsForGroupIdFn(groupId: String): Future[Result] =
-    workItemService.query(groupId, None).map { wis =>
-      Ok(
-        Json.toJson[Seq[Client]](
-          wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.client)
-        )
+  def getOutstandingWorkItemsForGroupIdFn(groupId: String): Future[Result] = workItemService.query(groupId, None).map { wis =>
+    Ok(
+      Json.toJson[Seq[Client]](
+        wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.client)
       )
-    }
+    )
+  }
 
   def getWorkItemStats: Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
@@ -241,7 +300,7 @@ class ClientController @Inject() (
     withAuthorisedAgent() { _ =>
       agentAssuranceConnector.getAgentDetails(arn).map(_.flatMap(_.agencyDetails)).map {
         case Some(agencyDetails) => Ok(Json.toJson(agencyDetails))
-        case None                => NotFound
+        case None => NotFound
       }
     }
   }
@@ -249,7 +308,10 @@ class ClientController @Inject() (
   /*
   Perform set difference based on enrolment keys.
    */
-  private def setDifference(c1s: Seq[Client], c2s: Seq[Client]): Seq[Client] = {
+  private def setDifference(
+    c1s: Seq[Client],
+    c2s: Seq[Client]
+  ): Seq[Client] = {
     val e2ek = c2s.map(_.enrolmentKey)
     c1s.filterNot(client => e2ek.contains(client.enrolmentKey))
   }
@@ -265,7 +327,7 @@ class ClientController @Inject() (
         case Success(None) =>
           logger.error(s"ARN $arn not found.")
           Future.successful(NotFound): Future[Result]
-        case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND    => Future.successful(NotFound)
+        case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND => Future.successful(NotFound)
         case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED => Future.successful(Unauthorized)
         case Failure(_) => Future.successful(InternalServerError)
       }
@@ -277,8 +339,12 @@ class ClientController @Inject() (
     toBeAdded: Seq[Client],
     sendEmail: Boolean,
     lang: String // 'en' or 'cy' -- defaults to 'en' if invalid
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[ObjectId]] =
-    if (toBeAdded.isEmpty) Future.successful(None)
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[ObjectId]] =
+    if (toBeAdded.isEmpty)
+      Future.successful(None)
     else {
       for {
         maybeAgentDetailsDesResponse <- agentAssuranceConnector.getAgentDetails(arn)
@@ -301,11 +367,15 @@ class ClientController @Inject() (
                     agencyName = agencyName,
                     email = agencyEmail,
                     emailLanguagePreference =
-                      if (List("cy", "en").contains(lang)) Some(lang)
-                      else Some("en"),
+                      if (List("cy", "en").contains(lang))
+                        Some(lang)
+                      else
+                        Some("en"),
                     sessionId =
-                      if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
-                      else None // only required for local testing against stubs
+                      if (appConfig.stubsCompatibilityMode)
+                        hc.sessionId.map(_.value)
+                      else
+                        None // only required for local testing against stubs
                   )
                 )
                 .map(Some(_))
@@ -313,4 +383,5 @@ class ClientController @Inject() (
       } yield maybeObjectId
 
     }
+
 }

@@ -16,28 +16,42 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import org.scalamock.handlers.{CallHandler2, CallHandler3}
-import play.api.libs.json.{JsArray, Json}
-import play.api.mvc.{ControllerComponents, Request, Result}
+import org.scalamock.handlers.CallHandler2
+import org.scalamock.handlers.CallHandler3
+import play.api.libs.json.JsArray
+import play.api.libs.json.Json
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
+import play.api.mvc.Result
 import play.api.test.Helpers._
-import play.api.test.{FakeRequest, Helpers}
+import play.api.test.FakeRequest
+import play.api.test.Helpers
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.{AgentUser, UserDetails}
+import uk.gov.hmrc.agents.accessgroups.AgentUser
+import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgent}
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgent
 import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSize
 import uk.gov.hmrc.agentuserclientdetails.services.AgentChecksService
-import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import java.time.LocalDateTime
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class AgentChecksControllerSpec extends BaseSpec {
+class AgentChecksControllerSpec
+extends BaseSpec {
 
   private val arn: Arn = Arn("TARN0000001")
   val user: AgentUser = AgentUser("userId", "userName")
   private val clientCount = 5
-  private val agentSize: AgentSize = AgentSize(arn, clientCount, LocalDateTime.now())
+  private val agentSize: AgentSize = AgentSize(
+    arn,
+    clientCount,
+    LocalDateTime.now()
+  )
 
   "Call to get agent size" when {
 
@@ -69,7 +83,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $NOT_FOUND" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceGetAgentSizeWithException(
-          UpstreamErrorResponse("not found message", NOT_FOUND, NOT_FOUND)
+          UpstreamErrorResponse(
+            "not found message",
+            NOT_FOUND,
+            NOT_FOUND
+          )
         )
 
         val result = agentChecksController.getAgentSize(arn)(FakeRequest())
@@ -81,7 +99,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $UNAUTHORIZED" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceGetAgentSizeWithException(
-          UpstreamErrorResponse("unauthorized message", UNAUTHORIZED, UNAUTHORIZED)
+          UpstreamErrorResponse(
+            "unauthorized message",
+            UNAUTHORIZED,
+            UNAUTHORIZED
+          )
         )
 
         val result = agentChecksController.getAgentSize(arn)(FakeRequest())
@@ -93,7 +115,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceGetAgentSizeWithException(
-          UpstreamErrorResponse("backend problem message", BAD_GATEWAY, BAD_GATEWAY)
+          UpstreamErrorResponse(
+            "backend problem message",
+            BAD_GATEWAY,
+            BAD_GATEWAY
+          )
         )
 
         val result = agentChecksController.getAgentSize(arn)(FakeRequest())
@@ -137,7 +163,11 @@ class AgentChecksControllerSpec extends BaseSpec {
     s"dependency service throws an upstream error having status $NOT_FOUND" should {
       s"return $NOT_FOUND" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
-        mockAgentChecksServiceUserCheckWithException(UpstreamErrorResponse("not found message", NOT_FOUND, NOT_FOUND))
+        mockAgentChecksServiceUserCheckWithException(UpstreamErrorResponse(
+          "not found message",
+          NOT_FOUND,
+          NOT_FOUND
+        ))
 
         val result = agentChecksController.userCheck(arn)(FakeRequest())
         status(result) shouldBe NOT_FOUND
@@ -148,7 +178,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $UNAUTHORIZED" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceUserCheckWithException(
-          UpstreamErrorResponse("unauthorized message", UNAUTHORIZED, UNAUTHORIZED)
+          UpstreamErrorResponse(
+            "unauthorized message",
+            UNAUTHORIZED,
+            UNAUTHORIZED
+          )
         )
 
         val result = agentChecksController.userCheck(arn)(FakeRequest())
@@ -160,7 +194,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceUserCheckWithException(
-          UpstreamErrorResponse("backend problem message", BAD_GATEWAY, BAD_GATEWAY)
+          UpstreamErrorResponse(
+            "backend problem message",
+            BAD_GATEWAY,
+            BAD_GATEWAY
+          )
         )
 
         val result = agentChecksController.userCheck(arn)(FakeRequest())
@@ -205,7 +243,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $NOT_FOUND" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(
-          UpstreamErrorResponse("not found message", NOT_FOUND, NOT_FOUND)
+          UpstreamErrorResponse(
+            "not found message",
+            NOT_FOUND,
+            NOT_FOUND
+          )
         )
 
         val result = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
@@ -217,7 +259,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $UNAUTHORIZED" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(
-          UpstreamErrorResponse("unauthorized message", UNAUTHORIZED, UNAUTHORIZED)
+          UpstreamErrorResponse(
+            "unauthorized message",
+            UNAUTHORIZED,
+            UNAUTHORIZED
+          )
         )
 
         val result = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
@@ -229,7 +275,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(
-          UpstreamErrorResponse("backend problem message", BAD_GATEWAY, BAD_GATEWAY)
+          UpstreamErrorResponse(
+            "backend problem message",
+            BAD_GATEWAY,
+            BAD_GATEWAY
+          )
         )
 
         val result = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
@@ -274,7 +324,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $NOT_FOUND" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
-          UpstreamErrorResponse("not found message", NOT_FOUND, NOT_FOUND)
+          UpstreamErrorResponse(
+            "not found message",
+            NOT_FOUND,
+            NOT_FOUND
+          )
         )
 
         val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
@@ -286,7 +340,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $UNAUTHORIZED" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
-          UpstreamErrorResponse("unauthorized message", UNAUTHORIZED, UNAUTHORIZED)
+          UpstreamErrorResponse(
+            "unauthorized message",
+            UNAUTHORIZED,
+            UNAUTHORIZED
+          )
         )
 
         val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
@@ -298,7 +356,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
-          UpstreamErrorResponse("backend problem message", BAD_GATEWAY, BAD_GATEWAY)
+          UpstreamErrorResponse(
+            "backend problem message",
+            BAD_GATEWAY,
+            BAD_GATEWAY
+          )
         )
 
         val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
@@ -348,7 +410,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $NOT_FOUND" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceGetTeamMembersWithException(
-          UpstreamErrorResponse("not found message", NOT_FOUND, NOT_FOUND)
+          UpstreamErrorResponse(
+            "not found message",
+            NOT_FOUND,
+            NOT_FOUND
+          )
         )
 
         val result = agentChecksController.getTeamMembers(arn)(FakeRequest())
@@ -360,7 +426,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $UNAUTHORIZED" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceGetTeamMembersWithException(
-          UpstreamErrorResponse("unauthorized message", UNAUTHORIZED, UNAUTHORIZED)
+          UpstreamErrorResponse(
+            "unauthorized message",
+            UNAUTHORIZED,
+            UNAUTHORIZED
+          )
         )
 
         val result = agentChecksController.getTeamMembers(arn)(FakeRequest())
@@ -372,7 +442,11 @@ class AgentChecksControllerSpec extends BaseSpec {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
         mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
         mockAgentChecksServiceGetTeamMembersWithException(
-          UpstreamErrorResponse("backend problem message", BAD_GATEWAY, BAD_GATEWAY)
+          UpstreamErrorResponse(
+            "backend problem message",
+            BAD_GATEWAY,
+            BAD_GATEWAY
+          )
         )
 
         val result = agentChecksController.getTeamMembers(arn)(FakeRequest())
@@ -404,7 +478,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceGetAgentSizeWithoutException(
       maybeAgentSize: Option[AgentSize]
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Option[AgentSize]]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Option[AgentSize]]
+    ] =
       (mockAgentChecksService
         .getAgentSize(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -412,7 +491,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceGetAgentSizeWithException(
       ex: Exception
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Option[AgentSize]]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Option[AgentSize]]
+    ] =
       (mockAgentChecksService
         .getAgentSize(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -420,7 +504,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceUserCheckWithoutException(
       countGroupUsers: Int
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Int]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Int]
+    ] =
       (mockAgentChecksService
         .userCheck(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -428,7 +517,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceUserCheckWithException(
       ex: Exception
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Int]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Int]
+    ] =
       (mockAgentChecksService
         .userCheck(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -436,7 +530,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceOutstandingWorkItemsExistWithoutException(
       exist: Boolean
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Boolean]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Boolean]
+    ] =
       (mockAgentChecksService
         .outstandingWorkItemsExist(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -444,7 +543,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceOutstandingWorkItemsExistWithException(
       ex: Exception
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Boolean]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Boolean]
+    ] =
       (mockAgentChecksService
         .outstandingWorkItemsExist(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -452,7 +556,11 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithoutException(
       exist: Boolean
-    ): CallHandler2[Arn, ExecutionContext, Future[Boolean]] =
+    ): CallHandler2[
+      Arn,
+      ExecutionContext,
+      Future[Boolean]
+    ] =
       (mockAgentChecksService
         .outstandingAssignmentsWorkItemsExist(_: Arn)(_: ExecutionContext))
         .expects(arn, *)
@@ -460,7 +568,11 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
       ex: Exception
-    ): CallHandler2[Arn, ExecutionContext, Future[Boolean]] =
+    ): CallHandler2[
+      Arn,
+      ExecutionContext,
+      Future[Boolean]
+    ] =
       (mockAgentChecksService
         .outstandingAssignmentsWorkItemsExist(_: Arn)(_: ExecutionContext))
         .expects(arn, *)
@@ -468,7 +580,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceGetTeamMembersWithoutException(
       teamMembers: Seq[UserDetails]
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Seq[UserDetails]]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Seq[UserDetails]]
+    ] =
       (mockAgentChecksService
         .getTeamMembers(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -476,7 +593,12 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAgentChecksServiceGetTeamMembersWithException(
       ex: Exception
-    ): CallHandler3[Arn, ExecutionContext, HeaderCarrier, Future[Seq[UserDetails]]] =
+    ): CallHandler3[
+      Arn,
+      ExecutionContext,
+      HeaderCarrier,
+      Future[Seq[UserDetails]]
+    ] =
       (mockAgentChecksService
         .getTeamMembers(_: Arn)(_: ExecutionContext, _: HeaderCarrier))
         .expects(arn, *, *)
@@ -484,11 +606,17 @@ class AgentChecksControllerSpec extends BaseSpec {
 
     def mockAuthActionGetAuthorisedAgent(
       maybeAuthorisedAgent: Option[AuthorisedAgent]
-    ): CallHandler3[Boolean, ExecutionContext, Request[?], Future[Option[AuthorisedAgent]]] =
+    ): CallHandler3[
+      Boolean,
+      ExecutionContext,
+      Request[?],
+      Future[Option[AuthorisedAgent]]
+    ] =
       (mockAuthAction
         .getAuthorisedAgent(_: Boolean)(_: ExecutionContext, _: Request[?]))
         .expects(*, *, *)
         .returning(Future.successful(maybeAuthorisedAgent))
+
   }
 
 }

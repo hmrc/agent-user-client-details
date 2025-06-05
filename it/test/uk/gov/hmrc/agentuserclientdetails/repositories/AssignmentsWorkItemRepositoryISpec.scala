@@ -24,18 +24,23 @@ import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem}
+import uk.gov.hmrc.agentuserclientdetails.model.Assign
+import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSupport with MockFactory {
+class AssignmentsWorkItemRepositoryISpec
+extends BaseIntegrationSpec
+with MongoSupport
+with MockFactory {
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
@@ -52,17 +57,20 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
 
   lazy val mockAuthConnector = mock[AuthConnector]
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
-      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
-  }
+  override def moduleOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     wir.collection.drop().toFuture().futureValue
   }
 
-  def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
+  def mkWorkItem[A](
+    item: A,
+    status: ProcessingStatus
+  ): WorkItem[A] = {
     val now = Instant.now()
     WorkItem(
       id = ObjectId.get(),
@@ -80,18 +88,46 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
       wis
         .pushNew(
           Seq(
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
+            AssignmentWorkItem(
+              Assign,
+              testUserId,
+              enrolmentKey1,
+              testArn.value
+            ),
+            AssignmentWorkItem(
+              Assign,
+              testUserId,
+              enrolmentKey2,
+              testArn.value
+            )
           ),
           Instant.now(),
           ToDo
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), Instant.now(), Succeeded)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey3,
+            testArn.value
+          )),
+          Instant.now(),
+          Succeeded
+        )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey4,
+            testArn.value
+          )),
+          Instant.now(),
+          Failed
+        )
         .futureValue
       val stats = wis.collectStats.futureValue
       stats.get(ToDo.name) shouldBe Some(2)
@@ -106,18 +142,46 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
       wis
         .pushNew(
           Seq(
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
+            AssignmentWorkItem(
+              Assign,
+              testUserId,
+              enrolmentKey1,
+              testArn.value
+            ),
+            AssignmentWorkItem(
+              Assign,
+              testUserId,
+              enrolmentKey2,
+              testArn.value
+            )
           ),
           Instant.now(),
           ToDo
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), Instant.now(), Succeeded)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey3,
+            testArn.value
+          )),
+          Instant.now(),
+          Succeeded
+        )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey4,
+            testArn.value
+          )),
+          Instant.now(),
+          Failed
+        )
         .futureValue
       wis.query(Seq(ToDo)).futureValue.length shouldBe 2
       wis.query(Seq(ToDo, Succeeded)).futureValue.length shouldBe 3
@@ -130,18 +194,46 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
       wis
         .pushNew(
           Seq(
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value),
-            AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)
+            AssignmentWorkItem(
+              Assign,
+              testUserId,
+              enrolmentKey1,
+              testArn.value
+            ),
+            AssignmentWorkItem(
+              Assign,
+              testUserId,
+              enrolmentKey2,
+              testArn.value
+            )
           ),
           Instant.now(),
           ToDo
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)), Instant.now(), Succeeded)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey3,
+            testArn.value
+          )),
+          Instant.now(),
+          Succeeded
+        )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey4,
+            testArn.value
+          )),
+          Instant.now(),
+          Failed
+        )
         .futureValue
 
       wis.queryBy(testArn).futureValue.length shouldBe 4
@@ -151,20 +243,52 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
   "cleanup" should {
     "remove any items that are either succeeded or duplicate (if they were last updated earlier than the given cutoff)" in {
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), Instant.now(), Succeeded)
-        .futureValue
-      wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey2, testArn.value)), Instant.now(), Duplicate)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey1,
+            testArn.value
+          )),
+          Instant.now(),
+          Succeeded
+        )
         .futureValue
       wis
         .pushNew(
-          Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey3, testArn.value)),
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey2,
+            testArn.value
+          )),
+          Instant.now(),
+          Duplicate
+        )
+        .futureValue
+      wis
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey3,
+            testArn.value
+          )),
           Instant.now(),
           PermanentlyFailed
         )
         .futureValue
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey4, testArn.value)), Instant.now(), Failed)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey4,
+            testArn.value
+          )),
+          Instant.now(),
+          Failed
+        )
         .futureValue
       wis.cleanup(Instant.now().plusSeconds(24 * 3600 /* 1 day */ )).futureValue
       wis.query(Seq(Succeeded)).futureValue.length shouldBe 0
@@ -174,7 +298,16 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
     }
     "not remove an item that was recently updated" in {
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), Instant.now(), Succeeded)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey1,
+            testArn.value
+          )),
+          Instant.now(),
+          Succeeded
+        )
         .futureValue
       wis
         .cleanup(Instant.now().plusSeconds(60))
@@ -186,7 +319,16 @@ class AssignmentsWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoS
   "deleteWorkItems" should {
     "delete all work items" in {
       wis
-        .pushNew(Seq(AssignmentWorkItem(Assign, testUserId, enrolmentKey1, testArn.value)), Instant.now(), Succeeded)
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey1,
+            testArn.value
+          )),
+          Instant.now(),
+          Succeeded
+        )
         .futureValue
       wir.deleteWorkItems(testArn.value).futureValue shouldBe 1L
     }

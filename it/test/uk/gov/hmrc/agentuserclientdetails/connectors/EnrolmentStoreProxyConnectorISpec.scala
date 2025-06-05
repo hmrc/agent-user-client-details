@@ -22,22 +22,33 @@ import org.apache.pekko.stream.Materializer
 import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status.*
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 import play.api.libs.ws.BodyWritable
 import uk.gov.hmrc.agentmtdidentifiers.model.*
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PaginatedEnrolments
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpException, HttpReads, HttpResponse, NotFoundException, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.client.RequestBuilder
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpException
+import uk.gov.hmrc.http.HttpReads
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.NotFoundException
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFactory {
+class EnrolmentStoreProxyConnectorISpec
+extends BaseIntegrationSpec
+with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -53,48 +64,85 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
 
   val mockErrorResponse: HttpResponse = HttpResponse(INTERNAL_SERVER_ERROR, "oops")
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
-      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
-  }
+  override def moduleOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
 
-  def mockHttpGet(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpGet(url: URL): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
     (mockHttpClient
       .get(_: URL)(_: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
-  def mockHttpPost(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpPost(url: URL): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
     (mockHttpClient
       .post(_: URL)(_: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
-  def mockHttpPut(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpPut(url: URL): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
     (mockHttpClient
       .put(_: URL)(_: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
-  def mockHttpDelete(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpDelete(url: URL): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
     (mockHttpClient
       .delete(_: URL)(_: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] =
+  def mockRequestBuilderExecute[A](value: A): CallHandler2[
+    HttpReads[A],
+    ExecutionContext,
+    Future[A]
+  ] =
     (mockRequestBuilder
       .execute(using _: HttpReads[A], _: ExecutionContext))
       .expects(*, *)
       .returning(Future successful value)
 
-  val mtdVatEnrolment: Enrolment =
-    Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-  val pptEnrolment: Enrolment =
-    Enrolment("HMRC-PPT-ORG", "Activated", "Frank Wright", Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345")))
-  val legacyVatEnrolment: Enrolment =
-    Enrolment("HMCE-VATDEC-ORG", "Activated", "George Candy", Seq(Identifier("VATRegNo", "101747641")))
-  val pirEnrolment: Enrolment = Enrolment("HMRC-NI", "Activated", "George Cando", Seq(Identifier("NINO", "QC373791C")))
+  val mtdVatEnrolment: Enrolment = Enrolment(
+    "HMRC-MTD-VAT",
+    "Activated",
+    "John Innes",
+    Seq(Identifier("VRN", "101747641"))
+  )
+  val pptEnrolment: Enrolment = Enrolment(
+    "HMRC-PPT-ORG",
+    "Activated",
+    "Frank Wright",
+    Seq(Identifier("EtmpRegistrationNumber", "XAPPT0000012345"))
+  )
+  val legacyVatEnrolment: Enrolment = Enrolment(
+    "HMCE-VATDEC-ORG",
+    "Activated",
+    "George Candy",
+    Seq(Identifier("VATRegNo", "101747641"))
+  )
+  val pirEnrolment: Enrolment = Enrolment(
+    "HMRC-NI",
+    "Activated",
+    "George Cando",
+    Seq(Identifier("NINO", "QC373791C"))
+  )
   val cbcEnrolment: Enrolment = Enrolment(
     "HMRC-CBC-ORG",
     "Activated",
@@ -124,12 +172,13 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
 
       val pricipalUserId1 = "ABCEDEFGI1234567"
       val pricipalUserId2 = "ABCEDEFGI1234568"
-      val principalUserIds: String = s"""{
-                                        |    "principalUserIds": [
-                                        |       "$pricipalUserId1",
-                                        |       "$pricipalUserId2"
-                                        |    ]
-                                        |}""".stripMargin
+      val principalUserIds: String =
+        s"""{
+           |    "principalUserIds": [
+           |       "$pricipalUserId1",
+           |       "$pricipalUserId2"
+           |    ]
+           |}""".stripMargin
 
       val mockResponse: HttpResponse = HttpResponse(OK, principalUserIds)
 
@@ -150,12 +199,13 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
 
       val delegatedUserId1 = "ABCEDEFGI1234565"
       val delegatedUserId2 = "ABCEDEFGI1234566"
-      val delegatedUserIds: String = s"""{
-                                        |    "delegatedUserIds": [
-                                        |       "$delegatedUserId1",
-                                        |       "$delegatedUserId2"
-                                        |    ]
-                                        |}""".stripMargin
+      val delegatedUserIds: String =
+        s"""{
+           |    "delegatedUserIds": [
+           |       "$delegatedUserId1",
+           |       "$delegatedUserId2"
+           |    ]
+           |}""".stripMargin
 
       val mockResponse: HttpResponse = HttpResponse(OK, delegatedUserIds)
 
@@ -178,16 +228,17 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
       val pricipalUserId2 = "ABCEDEFGI1234568"
       val delegatedUserId1 = "ABCEDEFGI1234565"
       val delegatedUserId2 = "ABCEDEFGI1234566"
-      val delegatedUserIds: String = s"""{
-                                        |    "principalUserIds": [
-                                        |       "$pricipalUserId1",
-                                        |       "$pricipalUserId2"
-                                        |    ],
-                                        |    "delegatedUserIds": [
-                                        |       "$delegatedUserId1",
-                                        |       "$delegatedUserId2"
-                                        |    ]
-                                        |}""".stripMargin
+      val delegatedUserIds: String =
+        s"""{
+           |    "principalUserIds": [
+           |       "$pricipalUserId1",
+           |       "$pricipalUserId2"
+           |    ],
+           |    "delegatedUserIds": [
+           |       "$delegatedUserId1",
+           |       "$delegatedUserId2"
+           |    ]
+           |}""".stripMargin
 
       val mockResponse: HttpResponse = HttpResponse(OK, delegatedUserIds)
 
@@ -267,28 +318,45 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
 
     "complete ES3 call successfully, discounting unsupported enrolments" in {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
-      def mockResponse(startRecord: Int, totalRecords: Int, enrolments: Seq[Enrolment]): HttpResponse =
-        HttpResponse(
-          OK,
-          Json
-            .obj(
-              "startRecord"  -> startRecord,
-              "totalRecords" -> totalRecords,
-              "enrolments"   -> Json.toJson(enrolments)
-            )
-            .toString
-        )
+      def mockResponse(
+        startRecord: Int,
+        totalRecords: Int,
+        enrolments: Seq[Enrolment]
+      ): HttpResponse = HttpResponse(
+        OK,
+        Json
+          .obj(
+            "startRecord" -> startRecord,
+            "totalRecords" -> totalRecords,
+            "enrolments" -> Json.toJson(enrolments)
+          )
+          .toString
+      )
       mockHttpGet(
         url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=1&max-records=${appConfig.es3MaxRecordsFetchCount}"
       )
       mockRequestBuilderExecute(
-        mockResponse(1, 5, Seq(mtdVatEnrolment, pptEnrolment, legacyVatEnrolment, cbcEnrolment, pirEnrolment))
+        mockResponse(
+          1,
+          5,
+          Seq(
+            mtdVatEnrolment,
+            pptEnrolment,
+            legacyVatEnrolment,
+            cbcEnrolment,
+            pirEnrolment
+          )
+        )
       )
 
       mockHttpGet(
         url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=${1 + appConfig.es3MaxRecordsFetchCount}&max-records=${appConfig.es3MaxRecordsFetchCount}"
       )
-      mockRequestBuilderExecute(mockResponse(1 + appConfig.es3MaxRecordsFetchCount, 0, Seq.empty))
+      mockRequestBuilderExecute(mockResponse(
+        1 + appConfig.es3MaxRecordsFetchCount,
+        0,
+        Seq.empty
+      ))
 
       esp.getEnrolmentsForGroupId(testGroupId).futureValue.toSet shouldBe Set(
         mtdVatEnrolment,
@@ -321,20 +389,28 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
 
     "complete ES19 call successfully" in {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
-      val mockResponse: HttpResponse =
-        HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(mtdVatEnrolment, pptEnrolment))).toString)
+      val mockResponse: HttpResponse = HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(mtdVatEnrolment, pptEnrolment))).toString)
       val enrolmentKey: String = EnrolmentKey.fromEnrolment(mtdVatEnrolment)
       mockHttpPut(
         url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name"
       )
       (mockRequestBuilder
-        .withBody(_: JsValue)(using _: BodyWritable[JsValue], _: Tag[JsValue], _: ExecutionContext))
+        .withBody(_: JsValue)(
+          using
+          _: BodyWritable[JsValue],
+          _: Tag[JsValue],
+          _: ExecutionContext
+        ))
         .expects(*, *, *, *)
         .returns(mockRequestBuilder)
       mockRequestBuilderExecute(mockResponse)
 
       esp
-        .updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name")
+        .updateEnrolmentFriendlyName(
+          testGroupId,
+          enrolmentKey,
+          "Friendly Name"
+        )
         .futureValue shouldBe Future.unit.futureValue
     }
 
@@ -345,13 +421,22 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
         url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name"
       )
       (mockRequestBuilder
-        .withBody(_: JsValue)(using _: BodyWritable[JsValue], _: Tag[JsValue], _: ExecutionContext))
+        .withBody(_: JsValue)(
+          using
+          _: BodyWritable[JsValue],
+          _: Tag[JsValue],
+          _: ExecutionContext
+        ))
         .expects(*, *, *, *)
         .returns(mockRequestBuilder)
       mockRequestBuilderExecute(mockErrorResponse)
 
       esp
-        .updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name")
+        .updateEnrolmentFriendlyName(
+          testGroupId,
+          enrolmentKey,
+          "Friendly Name"
+        )
         .failed
         .futureValue shouldBe UpstreamErrorResponse(
         "Unexpected status on ES19 request: oops",
@@ -426,9 +511,10 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
     s"handle ES21 call returning $OK" in {
       val groupId = "2K6H-N1C1-7M7V-O4A3"
 
-      val groupDelegatedEnrolments: String = s"""{
-                                                |    "clients": []
-                                                |}""".stripMargin
+      val groupDelegatedEnrolments: String =
+        s"""{
+           |    "clients": []
+           |}""".stripMargin
 
       val mockResponse: HttpResponse = HttpResponse(OK, groupDelegatedEnrolments)
       mockHttpGet(
@@ -442,11 +528,16 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
     "ES2 collate paginated results correctly" in {
       val userId = "myUser"
       val pageSize: Int = appConfig.es3MaxRecordsFetchCount
-      val totalNrEnrolments: Int =
-        (pageSize * 2.5).toInt // use two and a half pages of results for the sake of the test
-      val enrolments: Seq[Enrolment] = Seq.tabulate(totalNrEnrolments)(i =>
-        Enrolment("HMRC-MTD-VAT", "Activated", s"Client$i", Seq(Identifier("VRN", "%09d".format(i))))
-      )
+      val totalNrEnrolments: Int = (pageSize * 2.5).toInt // use two and a half pages of results for the sake of the test
+      val enrolments: Seq[Enrolment] =
+        Seq.tabulate(totalNrEnrolments)(i =>
+          Enrolment(
+            "HMRC-MTD-VAT",
+            "Activated",
+            s"Client$i",
+            Seq(Identifier("VRN", "%09d".format(i)))
+          )
+        )
       def urlForPage(page: Int): URL =
         url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&start-record=${(page - 1) * pageSize + 1}&max-records=$pageSize"
       def resultsForPage(page: Int): PaginatedEnrolments = PaginatedEnrolments(
@@ -499,4 +590,5 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
       result.getMessage shouldBe s"ES2 call for $userId returned status 500"
     }
   }
+
 }

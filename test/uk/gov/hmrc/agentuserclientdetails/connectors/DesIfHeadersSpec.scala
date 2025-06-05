@@ -20,11 +20,17 @@ import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, HeaderNames, RequestId, SessionId}
+import uk.gov.hmrc.http.Authorization
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.RequestId
+import uk.gov.hmrc.http.SessionId
 
 import java.util.UUID
 
-class DesIfHeadersSpec extends BaseSpec with MockFactory {
+class DesIfHeadersSpec
+extends BaseSpec
+with MockFactory {
 
   "headersConfig" should {
     "contain correct headers for DES" when {
@@ -32,13 +38,18 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
 
         val desUrl = "http://localhost:9009/registration/personal-details/arn/HARN000123"
 
-        implicit val hc: HeaderCarrier = new HeaderCarrier(
-          authorization = Some(Authorization("Bearer session-xyz")),
-          sessionId = Option(SessionId("testSession")),
-          requestId = Option(RequestId("testRequestId"))
-        )
+        implicit val hc: HeaderCarrier =
+          new HeaderCarrier(
+            authorization = Some(Authorization("Bearer session-xyz")),
+            sessionId = Option(SessionId("testSession")),
+            requestId = Option(RequestId("testRequestId"))
+          )
 
-        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = false, desUrl, "getAgencyDetails")
+        val headersConfig: HeadersConfig = underTest.headersConfig(
+          viaIF = false,
+          desUrl,
+          "getAgencyDetails"
+        )
 
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
@@ -59,13 +70,18 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
 
         val desUrl = "https://des.ws.ibt.hmrc.gov.uk/registration/personal-details/arn/HARN000123"
 
-        implicit val hc: HeaderCarrier = new HeaderCarrier(
-          authorization = Some(Authorization("Bearer session-xyz")),
-          sessionId = Option(SessionId("testSession")),
-          requestId = Option(RequestId("testRequestId"))
-        )
+        implicit val hc: HeaderCarrier =
+          new HeaderCarrier(
+            authorization = Some(Authorization("Bearer session-xyz")),
+            sessionId = Option(SessionId("testSession")),
+            requestId = Option(RequestId("testRequestId"))
+          )
 
-        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = false, desUrl, "getAgencyDetails")
+        val headersConfig: HeadersConfig = underTest.headersConfig(
+          viaIF = false,
+          desUrl,
+          "getAgencyDetails"
+        )
 
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
@@ -87,13 +103,18 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
 
         val ifUrl = "http://localhost:9009/trust-known-fact-check/UTR/1234567890"
 
-        implicit val hc: HeaderCarrier = new HeaderCarrier(
-          authorization = Some(Authorization("Bearer session-xyz")),
-          sessionId = Option(SessionId("testSession")),
-          requestId = Option(RequestId("testRequestId"))
-        )
+        implicit val hc: HeaderCarrier =
+          new HeaderCarrier(
+            authorization = Some(Authorization("Bearer session-xyz")),
+            sessionId = Option(SessionId("testSession")),
+            requestId = Option(RequestId("testRequestId"))
+          )
 
-        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = true, ifUrl, "getTrustName")
+        val headersConfig: HeadersConfig = underTest.headersConfig(
+          viaIF = true,
+          ifUrl,
+          "getTrustName"
+        )
 
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
@@ -114,13 +135,18 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
 
         val ifUrl = "https://ifs.ws.ibt.hmrc.gov.uk/trust-known-fact-check/UTR/1234567890"
 
-        implicit val hc: HeaderCarrier = new HeaderCarrier(
-          authorization = Some(Authorization("Bearer session-xyz")),
-          sessionId = Option(SessionId("testSession")),
-          requestId = Option(RequestId("testRequestId"))
-        )
+        implicit val hc: HeaderCarrier =
+          new HeaderCarrier(
+            authorization = Some(Authorization("Bearer session-xyz")),
+            sessionId = Option(SessionId("testSession")),
+            requestId = Option(RequestId("testRequestId"))
+          )
 
-        val headersConfig: HeadersConfig = underTest.headersConfig(viaIF = true, ifUrl, "getTrustName")
+        val headersConfig: HeadersConfig = underTest.headersConfig(
+          viaIF = true,
+          ifUrl,
+          "getTrustName"
+        )
 
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
@@ -146,14 +172,21 @@ class DesIfHeadersSpec extends BaseSpec with MockFactory {
         implicit val hc: HeaderCarrier = new HeaderCarrier()
 
         an[RuntimeException] shouldBe thrownBy {
-          underTest.headersConfig(viaIF = true, ifUrl, "unknown_API")
+          underTest.headersConfig(
+            viaIF = true,
+            ifUrl,
+            "unknown_API"
+          )
         }
       }
     }
   }
 
   trait TestScope {
+
     val appConfig: AppConfig = new TestAppConfig
     val underTest: DesIfHeaders = new DesIfHeaders(appConfig)
+
   }
+
 }

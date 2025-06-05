@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{JsError, Json}
+import play.api.libs.json.JsError
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class PptSubscriptionSpec extends BaseSpec {
+class PptSubscriptionSpec
+extends BaseSpec {
 
   "PptSubscription" should {
 

@@ -19,14 +19,16 @@ package uk.gov.hmrc.agentuserclientdetails.util
 import play.api.http.Status.*
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
-import uk.gov.hmrc.http.{HttpException, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HttpException
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
-class StatusUtilSpec extends BaseSpec {
+class StatusUtilSpec
+extends BaseSpec {
 
   "isRetryable" should {
-    
+
     "return true" when {
-      
+
       "a status code is provided that is on the list of retryable statuses" in {
         StatusUtil.isRetryable(UNAUTHORIZED) shouldBe true
         StatusUtil.isRetryable(TOO_MANY_REQUESTS) shouldBe true
@@ -35,16 +37,16 @@ class StatusUtilSpec extends BaseSpec {
         StatusUtil.isRetryable(SERVICE_UNAVAILABLE) shouldBe true
         StatusUtil.isRetryable(GATEWAY_TIMEOUT) shouldBe true
       }
-      
+
       "an UpstreamErrorResponse is provided that has a status code on the list of retryable statuses" in {
         StatusUtil.isRetryable(UpstreamErrorResponse("Too many requests!!", TOO_MANY_REQUESTS)) shouldBe true
       }
-      
+
       "an unrecognised exception is provided (assumed temporary issue)" in {
         StatusUtil.isRetryable(HttpException("Umm", INTERNAL_SERVER_ERROR)) shouldBe true
       }
     }
-    
+
     "return false" when {
 
       "a status code is provided that is not on the list of retryable statuses" in {
@@ -54,7 +56,7 @@ class StatusUtilSpec extends BaseSpec {
       "an UpstreamErrorResponse is provided that has a status code not on the list of retryable statuses" in {
         StatusUtil.isRetryable(UpstreamErrorResponse("Bad request", BAD_REQUEST)) shouldBe false
       }
-      
+
       "an InvalidServiceIdException is provided" in {
         StatusUtil.isRetryable(InvalidServiceIdException("ABC")) shouldBe false
       }

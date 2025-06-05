@@ -17,16 +17,21 @@
 package uk.gov.hmrc.agentuserclientdetails.auth
 
 import org.scalamock.handlers.CallHandler3
-import play.api.mvc.Results.{Forbidden, Ok}
-import play.api.mvc.{AnyContentAsEmpty, Request, Result}
+import play.api.mvc.Results.Forbidden
+import play.api.mvc.Results.Ok
+import play.api.mvc.AnyContentAsEmpty
+import play.api.mvc.Request
+import play.api.mvc.Result
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class AuthorisedAgentSupportSpec extends BaseSpec {
+class AuthorisedAgentSupportSpec
+extends BaseSpec {
 
   "Auth Action not returning authorised agent" should {
     s"return $Forbidden" in new TestScope {
@@ -45,6 +50,7 @@ class AuthorisedAgentSupportSpec extends BaseSpec {
   }
 
   trait TestScope {
+
     val body: AuthorisedAgent => Future[Result] = _ => Future successful Ok
 
     implicit val mockAuthAction: AuthAction = mock[AuthAction]
@@ -57,11 +63,17 @@ class AuthorisedAgentSupportSpec extends BaseSpec {
 
     def mockAuthActionGetAuthorisedAgent(
       maybeAuthorisedAgent: Option[AuthorisedAgent]
-    ): CallHandler3[Boolean, ExecutionContext, Request[?], Future[Option[AuthorisedAgent]]] =
+    ): CallHandler3[
+      Boolean,
+      ExecutionContext,
+      Request[?],
+      Future[Option[AuthorisedAgent]]
+    ] =
       (mockAuthAction
         .getAuthorisedAgent(_: Boolean)(_: ExecutionContext, _: Request[?]))
         .expects(*, *, *)
         .returning(Future.successful(maybeAuthorisedAgent))
+
   }
 
 }

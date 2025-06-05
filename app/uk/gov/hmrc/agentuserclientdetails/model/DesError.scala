@@ -16,9 +16,13 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 
-case class DesError(code: String, reason: String)
+case class DesError(
+  code: String,
+  reason: String
+)
 
 object DesError {
   implicit val format: Format[DesError] = Json.format[DesError]

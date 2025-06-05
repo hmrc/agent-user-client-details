@@ -16,9 +16,13 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
+import play.api.libs.json.OFormat
 
-case class UpdateFriendlyNameRequest(enrolmentKey: String, friendlyName: String)
+case class UpdateFriendlyNameRequest(
+  enrolmentKey: String,
+  friendlyName: String
+)
 
 object UpdateFriendlyNameRequest {
 

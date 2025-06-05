@@ -18,17 +18,27 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Service._
-import uk.gov.hmrc.agentmtdidentifiers.model.{CgtRef, EnrolmentKey, MtdItId, PptRef, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.CgtRef
+import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
+import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{CitizenDetailsConnector, DesConnector, HipConnector, IfConnector, TradingDetails}
+import uk.gov.hmrc.agentuserclientdetails.connectors.CitizenDetailsConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.HipConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.IfConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case class ClientNameNotFound() extends Exception
+case class ClientNameNotFound()
+extends Exception
 
 class ClientNameService @Inject() (
   citizenDetailsConnector: CitizenDetailsConnector,
@@ -36,7 +46,9 @@ class ClientNameService @Inject() (
   ifConnector: IfConnector,
   hipConnector: HipConnector,
   appConfig: AppConfig
-) extends AnyRef with Logging {
+)
+extends AnyRef
+with Logging {
 
   def getClientName(enrolmentKey: String)(implicit
     hc: HeaderCarrier,
@@ -54,63 +66,83 @@ class ClientNameService @Inject() (
             if (
               tradingName.isEmpty
                 | tradingName.contains("")
-            ) nino match {
-              case Some(nino) => getCitizenName(nino)
-              case None       => Future.successful(None)
-            }
-            else Future.successful(tradingName)
+            )
+              nino match {
+                case Some(nino) => getCitizenName(nino)
+                case None => Future.successful(None)
+              }
+            else
+              Future.successful(tradingName)
           }
-      case "HMRC-PT"     => getCitizenName(Nino(clientId))
-      case HMRCMTDVAT    => getVatName(Vrn(clientId))
-      case HMRCTERSORG   => getTrustName(clientId)
+      case "HMRC-PT" => getCitizenName(Nino(clientId))
+      case HMRCMTDVAT => getVatName(Vrn(clientId))
+      case HMRCTERSORG => getTrustName(clientId)
       case HMRCTERSNTORG => getTrustName(clientId)
-      case HMRCCGTPD     => getCgtName(CgtRef(clientId))
-      case HMRCPPTORG    => getPptCustomerName(PptRef(clientId))
-      case _             => Future.failed(ClientNameService.InvalidServiceIdException(service))
+      case HMRCCGTPD => getCgtName(CgtRef(clientId))
+      case HMRCPPTORG => getPptCustomerName(PptRef(clientId))
+      case _ => Future.failed(ClientNameService.InvalidServiceIdException(service))
     }
   }
 
   private def getItsaTradingDetails(
     mtdItId: MtdItId
-  )(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[TradingDetails]] =
+  )(implicit
+    c: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[TradingDetails]] =
     if (appConfig.hipEnabled)
       hipConnector.getTradingDetailsForMtdItId(mtdItId)
     else
       ifConnector.getTradingDetailsForMtdItId(mtdItId)
 
-  private def getCitizenName(nino: Nino)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    citizenDetailsConnector.getCitizenDetails(nino).map(_.flatMap(_.name))
+  private def getCitizenName(nino: Nino)(implicit
+    c: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = citizenDetailsConnector.getCitizenDetails(nino).map(_.flatMap(_.name))
 
-  private def getVatName(vrn: Vrn)(implicit c: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    desConnector
-      .getVatCustomerDetails(vrn)
-      .map { maybeCustomerDetails =>
-        val customerDetails = maybeCustomerDetails.getOrElse(VatCustomerDetails(None, None, None))
-        customerDetails.tradingName
-          .orElse(customerDetails.organisationName)
-          .orElse(customerDetails.individual.map(_.name))
-      }
+  private def getVatName(vrn: Vrn)(implicit
+    c: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = desConnector
+    .getVatCustomerDetails(vrn)
+    .map { maybeCustomerDetails =>
+      val customerDetails = maybeCustomerDetails.getOrElse(VatCustomerDetails(
+        None,
+        None,
+        None
+      ))
+      customerDetails.tradingName
+        .orElse(customerDetails.organisationName)
+        .orElse(customerDetails.individual.map(_.name))
+    }
 
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    ifConnector.getTrustName(trustTaxIdentifier)
+  )(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = ifConnector.getTrustName(trustTaxIdentifier)
 
-  def getCgtName(cgtRef: CgtRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    desConnector
-      .getCgtSubscription(cgtRef)
-      .map(_.map { cgtSubscription =>
-        cgtSubscription.subscriptionDetails.typeOfPersonDetails.name match {
-          case Right(trusteeName)   => trusteeName.name
-          case Left(individualName) => s"${individualName.firstName} ${individualName.lastName}"
-        }
-      })
+  def getCgtName(cgtRef: CgtRef)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = desConnector
+    .getCgtSubscription(cgtRef)
+    .map(_.map { cgtSubscription =>
+      cgtSubscription.subscriptionDetails.typeOfPersonDetails.name match {
+        case Right(trusteeName) => trusteeName.name
+        case Left(individualName) => s"${individualName.firstName} ${individualName.lastName}"
+      }
+    })
 
-  def getPptCustomerName(pptRef: PptRef)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] =
-    ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))
+  def getPptCustomerName(pptRef: PptRef)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))
 
 }
 
 object ClientNameService {
-  case class InvalidServiceIdException(serviceId: String) extends RuntimeException
+  case class InvalidServiceIdException(serviceId: String)
+  extends RuntimeException
 }

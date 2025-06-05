@@ -18,7 +18,10 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json._
 
-case class IndividualName(firstName: String, lastName: String)
+case class IndividualName(
+  firstName: String,
+  lastName: String
+)
 
 case object IndividualName {
   implicit val format: Format[IndividualName] = Json.format[IndividualName]
@@ -30,43 +33,46 @@ case object OrganisationName {
   implicit val format: Format[OrganisationName] = Json.format[OrganisationName]
 }
 
-case class TypeOfPersonDetails(typeOfPerson: String, name: Either[IndividualName, OrganisationName])
+case class TypeOfPersonDetails(
+  typeOfPerson: String,
+  name: Either[IndividualName, OrganisationName]
+)
 
 object TypeOfPersonDetails {
-  implicit val format: Format[TypeOfPersonDetails] = new Format[TypeOfPersonDetails] {
-    override def writes(tpd: TypeOfPersonDetails): JsValue = {
-      val namePart = tpd.name match {
-        case Left(individualName) =>
-          s""""firstName": "${individualName.firstName}", "lastName": "${individualName.lastName}""""
-        case Right(organisationName) =>
-          s""""organisationName": "${organisationName.name}""""
+  implicit val format: Format[TypeOfPersonDetails] =
+    new Format[TypeOfPersonDetails] {
+      override def writes(tpd: TypeOfPersonDetails): JsValue = {
+        val namePart =
+          tpd.name match {
+            case Left(individualName) => s""""firstName": "${individualName.firstName}", "lastName": "${individualName.lastName}""""
+            case Right(organisationName) => s""""organisationName": "${organisationName.name}""""
+          }
+
+        Json.parse(s"""{
+                      |"typeOfPerson": "${tpd.typeOfPerson}",
+                      |$namePart
+                      |}""".stripMargin)
       }
 
-      Json.parse(s"""{
-                    |"typeOfPerson": "${tpd.typeOfPerson}",
-                    |$namePart
-                    |}""".stripMargin)
-    }
+      override def reads(json: JsValue): JsResult[TypeOfPersonDetails] = {
+        val typeOfPerson = (json \ "typeOfPerson").as[String]
 
-    override def reads(json: JsValue): JsResult[TypeOfPersonDetails] = {
-      val typeOfPerson = (json \ "typeOfPerson").as[String]
+        typeOfPerson match {
 
-      typeOfPerson match {
+          case "Individual" =>
+            val firstName = (json \ "firstName").as[String]
+            val lastName = (json \ "lastName").as[String]
+            JsSuccess(TypeOfPersonDetails("Individual", Left(IndividualName(firstName, lastName))))
 
-        case "Individual" =>
-          val firstName = (json \ "firstName").as[String]
-          val lastName = (json \ "lastName").as[String]
-          JsSuccess(TypeOfPersonDetails("Individual", Left(IndividualName(firstName, lastName))))
+          case "Trustee" =>
+            val orgName = (json \ "organisationName").as[String]
+            JsSuccess(TypeOfPersonDetails("Trustee", Right(OrganisationName(orgName))))
 
-        case "Trustee" =>
-          val orgName = (json \ "organisationName").as[String]
-          JsSuccess(TypeOfPersonDetails("Trustee", Right(OrganisationName(orgName))))
+          case e => JsError(s"unexpected typeOfPerson from DES for CGT: $e")
+        }
 
-        case e => JsError(s"unexpected typeOfPerson from DES for CGT: $e")
       }
-
     }
-  }
 }
 
 case class SubscriptionDetails(typeOfPersonDetails: TypeOfPersonDetails)

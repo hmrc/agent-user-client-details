@@ -17,25 +17,30 @@
 package uk.gov.hmrc.agentuserclientdetails.support
 
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentuserclientdetails.connectors.{HipConnector, TradingDetails}
+import uk.gov.hmrc.agentuserclientdetails.connectors.HipConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
 
-object FakeHipConnector extends HipConnector {
+object FakeHipConnector
+extends HipConnector {
   def getTradingDetailsForMtdItId(mtdId: MtdItId)(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] =
     FakeIfConnector.getTradingDetailsForMtdItId(mtdId)(hc, null)
 }
 
-case class FailingHipConnector(status: Int) extends HipConnector {
+case class FailingHipConnector(status: Int)
+extends HipConnector {
+
   private val delegate = new FailingIfConnector(status)
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] =
-    delegate.getTradingDetailsForMtdItId(mtdId)(hc, null)
+  )(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] = delegate.getTradingDetailsForMtdItId(mtdId)(hc, null)
+
 }
 
-object NotFoundHipConnector extends HipConnector {
+object NotFoundHipConnector
+extends HipConnector {
   def getTradingDetailsForMtdItId(mtdId: MtdItId)(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] =
     NotFoundIfConnector.getTradingDetailsForMtdItId(mtdId)(hc, null)
 }

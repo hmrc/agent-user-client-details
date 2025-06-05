@@ -17,28 +17,38 @@
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import play.api.libs.json.Json
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Result}
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Result
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgentSupport
 import uk.gov.hmrc.agentuserclientdetails.services.AgentChecksService
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 @Singleton()
 class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(implicit
   authAction: AuthAction,
   cc: ControllerComponents,
   ec: ExecutionContext
-) extends BackendController(cc) with AuthorisedAgentSupport {
+)
+extends BackendController(cc)
+with AuthorisedAgentSupport {
 
   def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       agentChecksService.getAgentSize(arn).map {
-        case None            => NotFound
+        case None => NotFound
         case Some(agentSize) => Ok(Json.toJson(Json.obj("client-count" -> agentSize.clientCount)))
       }
     } transformWith failureHandler
@@ -47,8 +57,10 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   def userCheck(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       agentChecksService.userCheck(arn).map { count =>
-        if (count > 1) NoContent
-        else Forbidden
+        if (count > 1)
+          NoContent
+        else
+          Forbidden
       }
     } transformWith failureHandler
   }
@@ -56,8 +68,10 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   def outstandingWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       agentChecksService.outstandingWorkItemsExist(arn).map { workItemsExist =>
-        if (workItemsExist) Ok
-        else NoContent
+        if (workItemsExist)
+          Ok
+        else
+          NoContent
       }
     } transformWith failureHandler
   }
@@ -65,8 +79,10 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
   def outstandingAssignmentsWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       agentChecksService.outstandingAssignmentsWorkItemsExist(arn).map { workItemsExist =>
-        if (workItemsExist) Ok
-        else NoContent
+        if (workItemsExist)
+          Ok
+        else
+          NoContent
       }
     } transformWith failureHandler
   }
@@ -79,21 +95,21 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
     } transformWith failureHandler
   }
 
-  private def failureHandler(triedResult: Try[Result]): Future[Result] = triedResult match {
-    case Success(result) =>
-      Future.successful(result)
-    case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
-      logger.warn(s"Details for Arn not found: ${uer.message}")
-      Future.successful(NotFound)
-    case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED =>
-      logger.warn(s"Request was not authorized: ${uer.message}")
-      Future.successful(Unauthorized)
-    case Failure(uer: UpstreamErrorResponse) =>
-      logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
-      Future.successful(InternalServerError)
-    case Failure(ex: Throwable) =>
-      logger.warn(s"Error encountered: ${ex.getMessage}")
-      Future.successful(InternalServerError)
-  }
+  private def failureHandler(triedResult: Try[Result]): Future[Result] =
+    triedResult match {
+      case Success(result) => Future.successful(result)
+      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == NOT_FOUND =>
+        logger.warn(s"Details for Arn not found: ${uer.message}")
+        Future.successful(NotFound)
+      case Failure(uer: UpstreamErrorResponse) if uer.statusCode == UNAUTHORIZED =>
+        logger.warn(s"Request was not authorized: ${uer.message}")
+        Future.successful(Unauthorized)
+      case Failure(uer: UpstreamErrorResponse) =>
+        logger.warn(s"Error from backend: ${uer.statusCode}, ${uer.reportAs}, ${uer.message}")
+        Future.successful(InternalServerError)
+      case Failure(ex: Throwable) =>
+        logger.warn(s"Error encountered: ${ex.getMessage}")
+        Future.successful(InternalServerError)
+    }
 
 }

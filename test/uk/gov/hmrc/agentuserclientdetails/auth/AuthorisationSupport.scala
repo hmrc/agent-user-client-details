@@ -20,13 +20,19 @@ import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, Retrieval, ~}
+import uk.gov.hmrc.auth.core.retrieve.Credentials
+import uk.gov.hmrc.auth.core.retrieve.Name
+import uk.gov.hmrc.auth.core.retrieve.Retrieval
+import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-trait AuthorisationSupport extends BaseSpec with MockFactory {
+trait AuthorisationSupport
+extends BaseSpec
+with MockFactory {
 
   val arnStr = "KARN0762398"
   val agentReferenceNumberIdentifier = "AgentReferenceNumber"
@@ -40,7 +46,11 @@ trait AuthorisationSupport extends BaseSpec with MockFactory {
 
   val ggCredentials: Credentials = Credentials("user1", "GovernmentGateway")
 
-  val enrolments: Set[Enrolment] = Set(Enrolment(agentEnrolment, agentEnrolmentIdentifiers, "Activated"))
+  val enrolments: Set[Enrolment] = Set(Enrolment(
+    agentEnrolment,
+    agentEnrolmentIdentifiers,
+    "Activated"
+  ))
 
   def buildAuthorisedResponse: GrantAccess =
     Enrolments(enrolments) and

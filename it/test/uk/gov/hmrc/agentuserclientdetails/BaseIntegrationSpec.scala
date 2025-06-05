@@ -18,16 +18,23 @@ package uk.gov.hmrc.agentuserclientdetails
 
 import com.google.inject.AbstractModule
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.{Application, Configuration, Environment}
+import play.api.Application
+import play.api.Configuration
+import play.api.Environment
 
 abstract class BaseIntegrationSpec
-    extends AnyWordSpec with Matchers with ScalaFutures with IntegrationPatience with GuiceOneServerPerSuite
-    with BeforeAndAfterEach {
+extends AnyWordSpec
+with Matchers
+with ScalaFutures
+with IntegrationPatience
+with GuiceOneServerPerSuite
+with BeforeAndAfterEach {
 
   protected lazy val conf: Configuration = GuiceApplicationBuilder().configuration
   protected lazy val env: Environment = GuiceApplicationBuilder().environment
@@ -36,13 +43,12 @@ abstract class BaseIntegrationSpec
     */
   def moduleOverrides: AbstractModule = new AbstractModule {}
 
-  override def fakeApplication(): Application =
-    GuiceApplicationBuilder()
+  override def fakeApplication(): Application = GuiceApplicationBuilder()
 //      .disable[PlayModule]
-      .configure("metrics.enabled" -> false)
-      .configure("auditing.enabled" -> false)
-      .configure("agent.cache.enabled" -> false)
-      .overrides(moduleOverrides)
-      .build()
+    .configure("metrics.enabled" -> false)
+    .configure("auditing.enabled" -> false)
+    .configure("agent.cache.enabled" -> false)
+    .overrides(moduleOverrides)
+    .build()
 
 }

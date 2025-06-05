@@ -18,20 +18,30 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
-import play.api.http.Status.{BAD_GATEWAY, NOT_FOUND, OK}
+import play.api.http.Status.BAD_GATEWAY
+import play.api.http.Status.NOT_FOUND
+import play.api.http.Status.OK
 import play.api.libs.json.Json
 import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.client.RequestBuilder
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpReads
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class UserGroupsSearchConnectorISpec extends BaseIntegrationSpec with MockFactory {
+class UserGroupsSearchConnectorISpec
+extends BaseIntegrationSpec
+with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -44,16 +54,23 @@ class UserGroupsSearchConnectorISpec extends BaseIntegrationSpec with MockFactor
   val groupId = "2K6H-N1C1-7M7V-O4A3"
 
   lazy val urlUserGroupSearch = url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users"
-  lazy val ugsConnector: UsersGroupsSearchConnector =
-    new UsersGroupsSearchConnector(mockHttpClient, metrics)
+  lazy val ugsConnector: UsersGroupsSearchConnector = new UsersGroupsSearchConnector(mockHttpClient, metrics)
 
-  def mockHttpGet(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpGet(url: URL): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
     (mockHttpClient
       .get(_: URL)(_: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] =
+  def mockRequestBuilderExecute[A](value: A): CallHandler2[
+    HttpReads[A],
+    ExecutionContext,
+    Future[A]
+  ] =
     (mockRequestBuilder
       .execute(using _: HttpReads[A], _: ExecutionContext))
       .expects(*, *)
@@ -97,4 +114,5 @@ class UserGroupsSearchConnectorISpec extends BaseIntegrationSpec with MockFactor
       }
     }
   }
+
 }

@@ -21,29 +21,35 @@ import org.mongodb.scala.model.Filters
 import org.mongodb.scala.SingleObservableFuture
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.workitem.{WorkItemFields, WorkItemRepository}
+import uk.gov.hmrc.mongo.workitem.WorkItemFields
+import uk.gov.hmrc.mongo.workitem.WorkItemRepository
 
-import java.time.{Duration, Instant}
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-case class FriendlyNameWorkItemRepository @Inject() (config: Config, mongoComponent: MongoComponent)(implicit
+case class FriendlyNameWorkItemRepository @Inject() (
+  config: Config,
+  mongoComponent: MongoComponent
+)(implicit
   ec: ExecutionContext
-) extends WorkItemRepository[FriendlyNameWorkItem](
-      collectionName = "client-name-work-items",
-      mongoComponent = mongoComponent,
-      itemFormat = FriendlyNameWorkItem.format,
-      workItemFields = WorkItemFields.default
-    ) {
+)
+extends WorkItemRepository[FriendlyNameWorkItem](
+  collectionName = "client-name-work-items",
+  mongoComponent = mongoComponent,
+  itemFormat = FriendlyNameWorkItem.format,
+  workItemFields = WorkItemFields.default
+) {
 
   override lazy val requiresTtlIndex = false
 
   override def now(): Instant = Instant.now
 
-  override def inProgressRetryAfter: Duration =
-    config.getDuration("work-item-repository.friendly-name.retry-in-progress-after")
+  override def inProgressRetryAfter: Duration = config.getDuration("work-item-repository.friendly-name.retry-in-progress-after")
 
   // test-only to remove perf-test data.
-  def deleteWorkItems(groupId: String): Future[Long] =
-    collection.deleteMany(Filters.equal("item.groupId", groupId)).toFuture().map(_.getDeletedCount)
+  def deleteWorkItems(groupId: String): Future[Long] = collection.deleteMany(Filters.equal("item.groupId", groupId)).toFuture().map(_.getDeletedCount)
+
 }

@@ -23,17 +23,27 @@ import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.client.RequestBuilder
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpReads
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
 import java.time.format.DateTimeFormatter
-import java.time.{Clock, LocalDateTime, ZoneId, ZoneOffset}
+import java.time.Clock
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
+class HipConnectorISpec
+extends BaseIntegrationSpec
+with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
@@ -47,16 +57,21 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
   val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
   val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
 
-  val hipConnector: HipConnector = new HipConnectorImpl(
-    appConfig,
-    mockHttpClient,
-    metrics,
-    fixedClock
-  )
+  val hipConnector: HipConnector =
+    new HipConnectorImpl(
+      appConfig,
+      mockHttpClient,
+      metrics,
+      fixedClock
+    )
 
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] = {
+  def mockRequestBuilderExecute[A](value: A): CallHandler2[
+    HttpReads[A],
+    ExecutionContext,
+    Future[A]
+  ] = {
     (mockRequestBuilder
-      .setHeader(_*))
+      .setHeader(_ *))
       .expects(*)
       .returning(mockRequestBuilder)
 
@@ -66,7 +81,11 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
       .returning(Future successful value)
   }
 
-  def mockHttpGet(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+  def mockHttpGet(url: URL): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
     (mockHttpClient
       .get(_: URL)(_: HeaderCarrier))
       .expects(url, *)
@@ -120,11 +139,12 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
     val mockResponse = HttpResponse(Status.NOT_FOUND, "url not found")
     mockRequestBuilderExecute(mockResponse)
 
-    val result = hipConnector
-      .getTradingDetailsForMtdItId(mtdItId)
-      .failed
-      .futureValue
-      .getMessage
+    val result =
+      hipConnector
+        .getTradingDetailsForMtdItId(mtdItId)
+        .failed
+        .futureValue
+        .getMessage
     val correlationId = result.split("correlationId: ")(1).split("]")(0)
 
     result shouldBe s"Unexpected response from HIP API: [correlationId: $correlationId] [status: 404] [responseBody: url not found]"
@@ -393,4 +413,5 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
     LocalDateTime.parse("2059-11-25T16:33:51.880", DateTimeFormatter.ISO_DATE_TIME).toInstant(ZoneOffset.UTC),
     ZoneId.of("UTC")
   )
+
 }

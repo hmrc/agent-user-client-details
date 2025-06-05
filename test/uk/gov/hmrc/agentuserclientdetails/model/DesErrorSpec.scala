@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentuserclientdetails.model
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class DesErrorSpec extends BaseSpec {
+class DesErrorSpec
+extends BaseSpec {
 
   "DesError" should {
 

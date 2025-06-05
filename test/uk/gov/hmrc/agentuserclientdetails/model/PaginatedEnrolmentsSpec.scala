@@ -17,16 +17,26 @@
 package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment, Identifier}
+import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class PaginatedEnrolmentsSpec extends BaseSpec {
+class PaginatedEnrolmentsSpec
+extends BaseSpec {
 
   "PaginatedEnrolments" should {
 
-    val mtdVatEnrolment: Enrolment =
-      Enrolment("HMRC-MTD-VAT", "Activated", "John Innes", Seq(Identifier("VRN", "101747641")))
-    val model: PaginatedEnrolments = PaginatedEnrolments(1, 2, Seq(mtdVatEnrolment))
+    val mtdVatEnrolment: Enrolment = Enrolment(
+      "HMRC-MTD-VAT",
+      "Activated",
+      "John Innes",
+      Seq(Identifier("VRN", "101747641"))
+    )
+    val model: PaginatedEnrolments = PaginatedEnrolments(
+      1,
+      2,
+      Seq(mtdVatEnrolment)
+    )
     val json = Json.obj(
       "startRecord" -> 1,
       "totalRecords" -> 2,
@@ -37,7 +47,8 @@ class PaginatedEnrolmentsSpec extends BaseSpec {
           "friendlyName" -> "John Innes",
           "identifiers" -> Json.arr(Json.obj("key" -> "VRN", "value" -> "101747641"))
         )
-      ))
+      )
+    )
 
     "read from JSON" in {
       json.as[PaginatedEnrolments] shouldBe model

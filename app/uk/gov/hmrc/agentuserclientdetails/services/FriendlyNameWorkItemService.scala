@@ -17,8 +17,11 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.google.inject.ImplementedBy
-import org.mongodb.scala.bson.{BsonValue, ObjectId}
-import org.mongodb.scala.model.{Accumulators, Aggregates, Filters}
+import org.mongodb.scala.bson.BsonValue
+import org.mongodb.scala.bson.ObjectId
+import org.mongodb.scala.model.Accumulators
+import org.mongodb.scala.model.Aggregates
+import org.mongodb.scala.model.Filters
 import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.SingleObservableFuture
@@ -27,19 +30,26 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus.{Duplicate, Succeeded}
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, ResultStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.Duplicate
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.Succeeded
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
+import uk.gov.hmrc.mongo.workitem.ResultStatus
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[FriendlyNameWorkItemServiceImpl])
 trait FriendlyNameWorkItemService {
 
   /** Query by groupId and optionally by status (leave status as None to include all statuses)
     */
-  def query(groupId: String, status: Option[Seq[ProcessingStatus]])(implicit
+  def query(
+    groupId: String,
+    status: Option[Seq[ProcessingStatus]]
+  )(implicit
     ec: ExecutionContext
   ): Future[Seq[WorkItem[FriendlyNameWorkItem]]]
 
@@ -51,11 +61,19 @@ trait FriendlyNameWorkItemService {
     */
   def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]]
 
-  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: Instant, initialState: ProcessingStatus)(implicit
+  def pushNew(
+    items: Seq[FriendlyNameWorkItem],
+    receivedAt: Instant,
+    initialState: ProcessingStatus
+  )(implicit
     ec: ExecutionContext
   ): Future[Unit]
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus & ResultStatus, context: Map[String, String] = Map.empty)(
+  def complete(
+    id: ObjectId,
+    newStatus: ProcessingStatus & ResultStatus,
+    context: Map[String, String] = Map.empty
+  )(
     implicit ec: ExecutionContext
   ): Future[Boolean]
 
@@ -63,79 +81,111 @@ trait FriendlyNameWorkItemService {
 
   def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[DeleteResult]
 
-  def pullOutstanding(failedBefore: Instant, availableBefore: Instant)(implicit
+  def pullOutstanding(
+    failedBefore: Instant,
+    availableBefore: Instant
+  )(implicit
     ec: ExecutionContext
   ): Future[Option[WorkItem[FriendlyNameWorkItem]]]
+
 }
 
-class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkItemRepository, appConfig: AppConfig)
-    extends FriendlyNameWorkItemService with Logging {
+class FriendlyNameWorkItemServiceImpl @Inject() (
+  workItemRepo: FriendlyNameWorkItemRepository,
+  appConfig: AppConfig
+)
+extends FriendlyNameWorkItemService
+with Logging {
 
   /** Query by groupId and optionally by status (leave status as None to include all statuses)
     */
-  def query(groupId: String, status: Option[Seq[ProcessingStatus]])(implicit
+  def query(
+    groupId: String,
+    status: Option[Seq[ProcessingStatus]]
+  )(implicit
     ec: ExecutionContext
   ): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
-    val selector = status match {
-      case Some(statuses) =>
-        Filters.and(Filters.equal("item.groupId", groupId), Filters.in("status", statuses.map(_.name) *))
-      case None => Filters.equal("item.groupId", groupId)
-    }
+    val selector =
+      status match {
+        case Some(statuses) => Filters.and(Filters.equal("item.groupId", groupId), Filters.in("status", statuses.map(_.name) *))
+        case None => Filters.equal("item.groupId", groupId)
+      }
     workItemRepo.collection.find[WorkItem[FriendlyNameWorkItem]](selector).toFuture()
   }
 
   /** Removes any items that have been marked as successful or duplicated.
     */
   def cleanup(now: Instant)(implicit ec: ExecutionContext): Future[DeleteResult] = {
-    val cutoff: Instant =
-      now.minusSeconds(appConfig.friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds)
+    val cutoff: Instant = now.minusSeconds(appConfig.friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds)
     workItemRepo.collection
       .deleteMany(
-        Filters.and(Filters.in("status", Succeeded.name, Duplicate.name), Filters.lte("updatedAt", cutoff))
+        Filters.and(
+          Filters.in(
+            "status",
+            Succeeded.name,
+            Duplicate.name
+          ),
+          Filters.lte("updatedAt", cutoff)
+        )
       )
       .toFuture()
   }
 
   /** Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
     */
-  def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] =
-    workItemRepo.collection
-      .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
-      .collect()
-      .toFuture()
-      .map { (xs: Seq[BsonValue]) =>
-        val elems = xs.map { x =>
-          val document = x.asDocument()
-          document.getString("_id").getValue -> document.getNumber("count").intValue()
-        }
-        Map(elems *)
+  def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] = workItemRepo.collection
+    .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
+    .collect()
+    .toFuture()
+    .map { (xs: Seq[BsonValue]) =>
+      val elems = xs.map { x =>
+        val document = x.asDocument()
+        document.getString("_id").getValue -> document.getNumber("count").intValue()
       }
+      Map(elems *)
+    }
 
-  def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: Instant, initialState: ProcessingStatus)(implicit
+  def pushNew(
+    items: Seq[FriendlyNameWorkItem],
+    receivedAt: Instant,
+    initialState: ProcessingStatus
+  )(implicit
     ec: ExecutionContext
   ): Future[Unit] =
     if (items.nonEmpty)
-      workItemRepo.pushNewBatch(items, receivedAt, _ => initialState).map(_ => ())
-    else Future.successful(())
+      workItemRepo.pushNewBatch(
+        items,
+        receivedAt,
+        _ => initialState
+      ).map(_ => ())
+    else
+      Future.successful(())
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus & ResultStatus, context: Map[String, String] = Map.empty)(
+  def complete(
+    id: ObjectId,
+    newStatus: ProcessingStatus & ResultStatus,
+    context: Map[String, String] = Map.empty
+  )(
     implicit ec: ExecutionContext
-  ): Future[Boolean] =
-    workItemRepo.complete(id, newStatus).map { wasThisSuccessful =>
-      if (!wasThisSuccessful) {
-        logger.warn(s"Could not set in WIR ${newStatus.name} for ${Json.toJson(context)}")
-      }
-      wasThisSuccessful
+  ): Future[Boolean] = workItemRepo.complete(id, newStatus).map { wasThisSuccessful =>
+    if (!wasThisSuccessful) {
+      logger.warn(s"Could not set in WIR ${newStatus.name} for ${Json.toJson(context)}")
     }
+    wasThisSuccessful
+  }
 
-  def removeAll(): Future[DeleteResult] =
-    workItemRepo.collection.deleteMany(Filters.empty()).toFuture()
+  def removeAll(): Future[DeleteResult] = workItemRepo.collection.deleteMany(Filters.empty()).toFuture()
 
-  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[DeleteResult] =
-    workItemRepo.collection.deleteMany(Filters.equal("item.groupId", groupId)).toFuture()
+  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[DeleteResult] = workItemRepo.collection.deleteMany(Filters.equal(
+    "item.groupId",
+    groupId
+  )).toFuture()
 
-  def pullOutstanding(failedBefore: Instant, availableBefore: Instant)(implicit
+  def pullOutstanding(
+    failedBefore: Instant,
+    availableBefore: Instant
+  )(implicit
     ec: ExecutionContext
-  ): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
-    workItemRepo.pullOutstanding(failedBefore, availableBefore)
+  ): Future[Option[WorkItem[FriendlyNameWorkItem]]] = workItemRepo.pullOutstanding(failedBefore, availableBefore)
+
 }

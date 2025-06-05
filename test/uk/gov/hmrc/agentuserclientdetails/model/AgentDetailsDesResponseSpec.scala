@@ -16,20 +16,22 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class AgentDetailsDesResponseSpec extends BaseSpec {
+class AgentDetailsDesResponseSpec
+extends BaseSpec {
 
   val agencyDetailsModel: AgencyDetails = AgencyDetails(Some("ABC Agents"), Some("abc@agents.com"))
   val agencyDetailsJson: JsObject = Json.obj("agencyName" -> "ABC Agents", "agencyEmail" -> "abc@agents.com")
-  
+
   "AgencyDetails" should {
 
     "read from JSON" in {
       agencyDetailsJson.as[AgencyDetails] shouldBe agencyDetailsModel
     }
-    
+
     "write to JSON" in {
       Json.toJson(agencyDetailsModel) shouldBe agencyDetailsJson
     }
@@ -48,4 +50,5 @@ class AgentDetailsDesResponseSpec extends BaseSpec {
       Json.toJson(model) shouldBe json
     }
   }
+
 }

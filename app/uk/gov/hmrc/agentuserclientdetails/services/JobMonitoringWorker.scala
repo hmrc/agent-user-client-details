@@ -18,17 +18,23 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{EmailInformation, FriendlyNameJobData, FriendlyNameWorkItem, JobData}
-import uk.gov.hmrc.http.{HeaderCarrier, SessionId}
+import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
+import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.JobData
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.SessionId
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class JobMonitoringWorker @Inject() (
   jobMonitoringService: JobMonitoringService,
@@ -37,7 +43,8 @@ class JobMonitoringWorker @Inject() (
   es3CacheService: ES3CacheService,
   mat: Materializer
 )(implicit ec: ExecutionContext)
-    extends Logging {
+extends Logging {
+
   private val running = new AtomicBoolean(false)
   def isRunning: Boolean = running.get()
 
@@ -53,11 +60,8 @@ class JobMonitoringWorker @Inject() (
       case false =>
         logger.debug("Job monitoring triggered. Starting...")
         running.set(true)
-        val workItems: Source[WorkItem[JobData], NotUsed] =
-          Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
-        val processWorkItems: Sink[WorkItem[JobData], Future[Unit]] = Sink.foldAsync(()) { case ((), item) =>
-          processItem(item)
-        }
+        val workItems: Source[WorkItem[JobData], NotUsed] = Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
+        val processWorkItems: Sink[WorkItem[JobData], Future[Unit]] = Sink.foldAsync(()) { case ((), item) => processItem(item) }
         val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
         result.onComplete { _ =>
           logger.debug("Job monitoring finished.")
@@ -71,7 +75,8 @@ class JobMonitoringWorker @Inject() (
   )(implicit ec: ExecutionContext): Future[Option[WorkItem[JobData]]] =
     if (continue) {
       jobMonitoringService.getNextJobToCheck
-    } else {
+    }
+    else {
       Future.successful(None)
     }
 
@@ -93,45 +98,50 @@ class JobMonitoringWorker @Inject() (
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)
               _ <- es3CacheService.refresh(job.groupId)
-              _ <- if (job.sendEmailOnCompletion) {
-                     failuresFor(job).flatMap { failures =>
-                       val emailTemplateName =
-                         (if (failures.isEmpty) "agent_permissions_success"
-                          else "agent_permissions_some_failed") + (if (job.emailLanguagePreference.contains("cy"))
-                                                                     "_cy"
-                                                                   else "")
-                       logger.debug(
-                         s"Sending email $emailTemplateName to ${job.email.getOrElse("")} for agent ${job.agencyName}"
-                       )
-                       implicit val hc: HeaderCarrier = HeaderCarrier()
-                       emailConnector
-                         .sendEmail(
-                           EmailInformation(
-                             job.email.toSeq,
-                             emailTemplateName,
-                             Map("agencyName" -> job.agencyName.getOrElse(""))
-                           )
-                         )
-                         .recover { case e =>
-                           logger.error("Error during sending email", e)
-                         }
-                     }
-                   } else Future.successful(false)
+              _ <-
+                if (job.sendEmailOnCompletion) {
+                  failuresFor(job).flatMap { failures =>
+                    val emailTemplateName =
+                      (if (failures.isEmpty)
+                         "agent_permissions_success"
+                       else
+                         "agent_permissions_some_failed") + (if (job.emailLanguagePreference.contains("cy"))
+                                                               "_cy"
+                                                             else
+                                                               "")
+                    logger.debug(
+                      s"Sending email $emailTemplateName to ${job.email.getOrElse("")} for agent ${job.agencyName}"
+                    )
+                    implicit val hc: HeaderCarrier = HeaderCarrier()
+                    emailConnector
+                      .sendEmail(
+                        EmailInformation(
+                          job.email.toSeq,
+                          emailTemplateName,
+                          Map("agencyName" -> job.agencyName.getOrElse(""))
+                        )
+                      )
+                      .recover { case e => logger.error("Error during sending email", e) }
+                  }
+                }
+                else
+                  Future.successful(false)
             } yield ()
         }
     }
 
-  def hasCompleted(jobData: FriendlyNameJobData): Future[Boolean] = for {
-    outstandingItems: Seq[WorkItem[FriendlyNameWorkItem]] <-
-      friendlyNameWorkItemService.query(jobData.groupId, status = Some(Seq(Failed, ToDo)))
-    outstandingEnrolmentKeys = outstandingItems.map(_.item.client.enrolmentKey)
-    isCompleted = outstandingEnrolmentKeys.toSet.intersect(jobData.enrolmentKeys.toSet).isEmpty
-  } yield isCompleted
+  def hasCompleted(jobData: FriendlyNameJobData): Future[Boolean] =
+    for {
+      outstandingItems: Seq[WorkItem[FriendlyNameWorkItem]] <- friendlyNameWorkItemService.query(jobData.groupId, status = Some(Seq(Failed, ToDo)))
+      outstandingEnrolmentKeys = outstandingItems.map(_.item.client.enrolmentKey)
+      isCompleted = outstandingEnrolmentKeys.toSet.intersect(jobData.enrolmentKeys.toSet).isEmpty
+    } yield isCompleted
 
-  def failuresFor(jobData: FriendlyNameJobData): Future[Set[String]] = for {
-    permanentlyFailedItems: Seq[WorkItem[FriendlyNameWorkItem]] <-
-      friendlyNameWorkItemService.query(jobData.groupId, status = Some(Seq(PermanentlyFailed)))
-    permanentlyFailedEnrolmentKeys = permanentlyFailedItems.map(_.item.client.enrolmentKey)
-    failures = permanentlyFailedEnrolmentKeys.toSet.intersect(jobData.enrolmentKeys.toSet)
-  } yield failures
+  def failuresFor(jobData: FriendlyNameJobData): Future[Set[String]] =
+    for {
+      permanentlyFailedItems: Seq[WorkItem[FriendlyNameWorkItem]] <- friendlyNameWorkItemService.query(jobData.groupId, status = Some(Seq(PermanentlyFailed)))
+      permanentlyFailedEnrolmentKeys = permanentlyFailedItems.map(_.item.client.enrolmentKey)
+      failures = permanentlyFailedEnrolmentKeys.toSet.intersect(jobData.enrolmentKeys.toSet)
+    } yield failures
+
 }

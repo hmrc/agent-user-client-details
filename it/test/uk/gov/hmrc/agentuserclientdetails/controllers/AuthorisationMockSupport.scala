@@ -20,13 +20,19 @@ import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, Retrieval, ~}
+import uk.gov.hmrc.auth.core.retrieve.Credentials
+import uk.gov.hmrc.auth.core.retrieve.Name
+import uk.gov.hmrc.auth.core.retrieve.Retrieval
+import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-trait AuthorisationMockSupport extends BaseIntegrationSpec with MockFactory {
+trait AuthorisationMockSupport
+extends BaseIntegrationSpec
+with MockFactory {
 
   val arnStr = "KARN0762398"
   val agentReferenceNumberIdentifier = "AgentReferenceNumber"
@@ -36,7 +42,11 @@ trait AuthorisationMockSupport extends BaseIntegrationSpec with MockFactory {
   val agentEnrolment = "HMRC-AS-AGENT"
   val name: Name = Name(Some("Jane"), Some("Doe"))
   val ggCredentials: Credentials = Credentials("user1", "GovernmentGateway")
-  val enrolments: Set[Enrolment] = Set(Enrolment(agentEnrolment, agentEnrolmentIdentifiers, "Activated"))
+  val enrolments: Set[Enrolment] = Set(Enrolment(
+    agentEnrolment,
+    agentEnrolmentIdentifiers,
+    "Activated"
+  ))
 
   type GrantAccess = Enrolments ~ Option[CredentialRole] ~ Option[Name] ~ Option[Credentials]
 

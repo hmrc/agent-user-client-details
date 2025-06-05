@@ -20,15 +20,19 @@ import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
-import uk.gov.hmrc.agentuserclientdetails.repositories.{AgentSize, AgentSizeRepository}
+import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
+import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSize
+import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSizeRepository
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 
 import java.time.LocalDateTime
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
 class AgentChecksService @Inject() (
@@ -39,48 +43,59 @@ class AgentChecksService @Inject() (
   usersGroupsSearchConnector: UsersGroupsSearchConnector,
   workItemService: FriendlyNameWorkItemService,
   assignmentsWorkItemService: AssignmentsWorkItemService
-) extends Logging {
+)
+extends Logging {
 
-  private val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(ToDo, InProgress, Failed, Deferred)
+  private val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(
+    ToDo,
+    InProgress,
+    Failed,
+    Deferred
+  )
 
-  def getAgentSize(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Option[AgentSize]] =
+  def getAgentSize(arn: Arn)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Option[AgentSize]] =
     agentSizeRepository.get(arn) flatMap {
-      case Some(agentSize) if withinRefreshDuration(agentSize.refreshedDateTime) =>
-        Future.successful(Option(agentSize))
+      case Some(agentSize) if withinRefreshDuration(agentSize.refreshedDateTime) => Future.successful(Option(agentSize))
       case _ =>
         for {
           maybeClientCount <- fetchClientCount(arn)
-          maybeAgentSize <- maybeClientCount match {
-                              case None =>
-                                Future.successful(None)
-                              case Some(clientCount) =>
-                                saveAgentSize(arn, clientCount)
-                            }
+          maybeAgentSize <-
+            maybeClientCount match {
+              case None => Future.successful(None)
+              case Some(clientCount) => saveAgentSize(arn, clientCount)
+            }
         } yield maybeAgentSize
     }
-  def userCheck(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Int] =
+  def userCheck(arn: Arn)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Int] =
     for {
       maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
-      groupUsers <- maybeGroupId match {
-                      case None =>
-                        Future.successful(Seq.empty)
-                      case Some(groupId) =>
-                        usersGroupsSearchConnector.getGroupUsers(groupId)
-                    }
+      groupUsers <-
+        maybeGroupId match {
+          case None => Future.successful(Seq.empty)
+          case Some(groupId) => usersGroupsSearchConnector.getGroupUsers(groupId)
+        }
     } yield groupUsers.size
 
-  def outstandingWorkItemsExist(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Boolean] =
+  def outstandingWorkItemsExist(arn: Arn)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Boolean] =
     for {
       maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
-      workItems <- maybeGroupId match {
-                     case None =>
-                       Future.successful(Seq.empty)
-                     case Some(groupId) =>
-                       workItemService.query(groupId, None)
-                   }
+      workItems <-
+        maybeGroupId match {
+          case None => Future.successful(Seq.empty)
+          case Some(groupId) => workItemService.query(groupId, None)
+        }
     } yield workItems match {
       case items if items.exists(item => outstandingProcessingStatuses.contains(item.status)) => true
-      case _                                                                                  => false
+      case _ => false
     }
 
   def outstandingAssignmentsWorkItemsExist(
@@ -90,38 +105,51 @@ class AgentChecksService @Inject() (
       workItems <- assignmentsWorkItemService.queryBy(arn)
     } yield workItems match {
       case items if items.exists(item => outstandingProcessingStatuses.contains(item.status)) => true
-      case _                                                                                  => false
+      case _ => false
     }
 
-  def getTeamMembers(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Seq[UserDetails]] =
+  def getTeamMembers(arn: Arn)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Seq[UserDetails]] =
     for {
       maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
-      groupUsers <- maybeGroupId match {
-                      case None =>
-                        Future.successful(Seq.empty)
-                      case Some(groupId) =>
-                        usersGroupsSearchConnector.getGroupUsers(groupId)
-                    }
+      groupUsers <-
+        maybeGroupId match {
+          case None => Future.successful(Seq.empty)
+          case Some(groupId) => usersGroupsSearchConnector.getGroupUsers(groupId)
+        }
     } yield groupUsers
 
-  private def withinRefreshDuration(refreshedDateTime: LocalDateTime): Boolean =
-    refreshedDateTime.isAfter(LocalDateTime.now().minusSeconds(appConfig.agentsizeRefreshDuration.toSeconds))
+  private def withinRefreshDuration(
+    refreshedDateTime: LocalDateTime
+  ): Boolean = refreshedDateTime.isAfter(LocalDateTime.now().minusSeconds(appConfig.agentsizeRefreshDuration.toSeconds))
 
-  private def fetchClientCount(arn: Arn)(implicit ec: ExecutionContext, hc: HeaderCarrier): Future[Option[Int]] =
+  private def fetchClientCount(arn: Arn)(implicit
+    ec: ExecutionContext,
+    hc: HeaderCarrier
+  ): Future[Option[Int]] =
     for {
       maybeGroupId <- enrolmentStoreProxyConnector.getPrincipalGroupIdFor(arn)
-      clientCount <- maybeGroupId match {
-                       case None =>
-                         Future.successful(None)
-                       case Some(groupId) =>
-                         es3CacheService
-                           .getClients(groupId)
-                           .map(clients => Option(clients.size))
-                     }
+      clientCount <-
+        maybeGroupId match {
+          case None => Future.successful(None)
+          case Some(groupId) =>
+            es3CacheService
+              .getClients(groupId)
+              .map(clients => Option(clients.size))
+        }
     } yield clientCount
 
-  private def saveAgentSize(arn: Arn, clientCount: Int)(implicit ec: ExecutionContext): Future[Option[AgentSize]] = {
-    val agentSize = AgentSize(arn, clientCount, LocalDateTime.now())
+  private def saveAgentSize(
+    arn: Arn,
+    clientCount: Int
+  )(implicit ec: ExecutionContext): Future[Option[AgentSize]] = {
+    val agentSize = AgentSize(
+      arn,
+      clientCount,
+      LocalDateTime.now()
+    )
 
     for {
       maybeUpsertType <- agentSizeRepository.upsert(agentSize)
@@ -130,4 +158,5 @@ class AgentChecksService @Inject() (
       agentSize
     }
   }
+
 }

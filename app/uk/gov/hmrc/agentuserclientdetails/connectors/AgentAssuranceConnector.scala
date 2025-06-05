@@ -23,26 +23,33 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @Singleton
-class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClientV2)(implicit ec: ExecutionContext) {
+class AgentAssuranceConnector @Inject() (
+  appConfig: AppConfig,
+  httpV2: HttpClientV2
+)(implicit ec: ExecutionContext) {
 
   private lazy val baseUrl = appConfig.agentAssuranceBaseUrl
 
-  def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] =
-    httpV2
-      .get(url"$baseUrl/agent-assurance/agent/agency-details/arn/${arn.value}")
-      .execute[HttpResponse]
-      .map(response =>
-        response.status match {
-          case OK         => Json.parse(response.body).asOpt[AgentDetailsDesResponse]
-          case NO_CONTENT => None
-          case other =>
-            throw UpstreamErrorResponse(s"agent details unavailable: agent assurance response code: $other", 500)
-        }
-      )
+  def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] = httpV2
+    .get(url"$baseUrl/agent-assurance/agent/agency-details/arn/${arn.value}")
+    .execute[HttpResponse]
+    .map(response =>
+      response.status match {
+        case OK => Json.parse(response.body).asOpt[AgentDetailsDesResponse]
+        case NO_CONTENT => None
+        case other => throw UpstreamErrorResponse(s"agent details unavailable: agent assurance response code: $other", 500)
+      }
+    )
+
 }

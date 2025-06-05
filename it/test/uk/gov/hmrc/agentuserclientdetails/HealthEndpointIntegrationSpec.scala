@@ -23,21 +23,22 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import uk.gov.hmrc.auth.core.AuthConnector
 
-class HealthEndpointIntegrationSpec extends BaseIntegrationSpec with MockFactory {
+class HealthEndpointIntegrationSpec
+extends BaseIntegrationSpec
+with MockFactory {
 
   private val wsClient = app.injector.instanceOf[WSClient]
   private val baseUrl = s"http://localhost:$port"
   lazy val mockAuthConnector = mock[AuthConnector]
 
-  override def fakeApplication(): Application =
-    GuiceApplicationBuilder()
-      .configure("metrics.enabled" -> false)
-      .build()
+  override def fakeApplication(): Application = GuiceApplicationBuilder()
+    .configure("metrics.enabled" -> false)
+    .build()
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
-      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
-  }
+  override def moduleOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
 
   "service health endpoint" should {
     "respond with 200 status" in {
@@ -50,4 +51,5 @@ class HealthEndpointIntegrationSpec extends BaseIntegrationSpec with MockFactory
       response.status shouldBe 200
     }
   }
+
 }

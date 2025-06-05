@@ -16,23 +16,33 @@
 
 package uk.gov.hmrc.agentuserclientdetails.controllers
 
-import play.api.libs.json.{Format, JsValue, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
 import play.api.mvc._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, EnrolmentKey}
-import uk.gov.hmrc.agentuserclientdetails.auth.{AuthAction, AuthorisedAgentSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
+import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgentSupport
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.{Assign, AssignmentWorkItem, Unassign}
+import uk.gov.hmrc.agentuserclientdetails.model.Assign
+import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.Unassign
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemService
 import uk.gov.hmrc.http.NotFoundException
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
-case class UserEnrolment(userId: String, enrolmentKey: String) {
+case class UserEnrolment(
+  userId: String,
+  enrolmentKey: String
+) {
   override def toString: String = s"$userId:$enrolmentKey"
 }
 
@@ -46,7 +56,11 @@ object UserEnrolment {
   * @param unassign
   *   combinations to unassign using ES12 API
   */
-case class UserEnrolmentAssignments(assign: Set[UserEnrolment], unassign: Set[UserEnrolment], arn: Arn)
+case class UserEnrolmentAssignments(
+  assign: Set[UserEnrolment],
+  unassign: Set[UserEnrolment],
+  arn: Arn
+)
 
 object UserEnrolmentAssignments {
   implicit val formats: Format[UserEnrolmentAssignments] = Json.format
@@ -58,67 +72,115 @@ class AssignmentController @Inject() (
   workItemService: AssignmentsWorkItemService,
   enrolmentStore: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-)(implicit authAction: AuthAction, ec: ExecutionContext)
-    extends BackendController(cc) with AuthorisedAgentSupport {
+)(implicit
+  authAction: AuthAction,
+  ec: ExecutionContext
+)
+extends BackendController(cc)
+with AuthorisedAgentSupport {
 
-  def assignEnrolments: Action[JsValue] = Action.async(parse.json) { implicit request =>
-    lazy val mSessionId: Option[String] =
-      if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
-      else None // only required for local testing against stubs
+  def assignEnrolments: Action[JsValue] =
+    Action.async(parse.json) { implicit request =>
+      lazy val mSessionId: Option[String] =
+        if (appConfig.stubsCompatibilityMode)
+          hc.sessionId.map(_.value)
+        else
+          None // only required for local testing against stubs
 
-    withAuthorisedAgent() { _ =>
-      withJsonBody[UserEnrolmentAssignments] { aer =>
-        val assignWorkItems = aer.assign.map { case UserEnrolment(userId, enrolmentKey) =>
-          AssignmentWorkItem(Assign, userId, enrolmentKey, aer.arn.value, mSessionId)
+      withAuthorisedAgent() { _ =>
+        withJsonBody[UserEnrolmentAssignments] { aer =>
+          val assignWorkItems = aer.assign.map { case UserEnrolment(userId, enrolmentKey) =>
+            AssignmentWorkItem(
+              Assign,
+              userId,
+              enrolmentKey,
+              aer.arn.value,
+              mSessionId
+            )
+          }
+          val unassignWorkItems = aer.unassign.map { case UserEnrolment(userId, enrolmentKey) =>
+            AssignmentWorkItem(
+              Unassign,
+              userId,
+              enrolmentKey,
+              aer.arn.value,
+              mSessionId
+            )
+          }
+          for {
+            _ <- workItemService.pushNew(
+              unassignWorkItems.toSeq ++ assignWorkItems.toSeq,
+              Instant.now(),
+              ToDo
+            )
+          } yield Accepted
         }
-        val unassignWorkItems = aer.unassign.map { case UserEnrolment(userId, enrolmentKey) =>
-          AssignmentWorkItem(Unassign, userId, enrolmentKey, aer.arn.value, mSessionId)
-        }
-        for {
-          _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, Instant.now(), ToDo)
-        } yield Accepted
       }
     }
-  }
 
-  /** Check that a given agent user has an expected list of assigned enrolments, and if not, generate work items so that
-    * the user's assigned enrolment will match those provided. Note: This is meant to be called occasionally to
-    * synchronise a given user with agent-permissions, with the expectation that most of the time there will be no
-    * changes to do. It must be used with care and certainly should not be the routine way to manage assignments, as it
-    * is a powerful and possibly expensive operation.
+  /** Check that a given agent user has an expected list of assigned enrolments, and if not, generate work items so that the user's assigned enrolment will
+    * match those provided. Note: This is meant to be called occasionally to synchronise a given user with agent-permissions, with the expectation that most of
+    * the time there will be no changes to do. It must be used with care and certainly should not be the routine way to manage assignments, as it is a powerful
+    * and possibly expensive operation.
     */
-  def ensureAssignments(arn: Arn, userId: String): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    lazy val mSessionId: Option[String] =
-      if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
-      else None // only required for local testing against stubs
+  def ensureAssignments(
+    arn: Arn,
+    userId: String
+  ): Action[JsValue] =
+    Action.async(parse.json) { implicit request =>
+      lazy val mSessionId: Option[String] =
+        if (appConfig.stubsCompatibilityMode)
+          hc.sessionId.map(_.value)
+        else
+          None // only required for local testing against stubs
 
-    // TODO In order to avoid additional EACD calls we are not validating the ARN nor checking whether the userId
-    // is really associated with the ARN. But should we?
-    withAuthorisedAgent() { _ =>
-      withJsonBody[Set[String]] { desiredEnrolmentKeys =>
-        for {
-          currentEnrolments <- enrolmentStore.getEnrolmentsAssignedToUser(userId)
-          currentEnrolmentKeys = currentEnrolments.map(enr => EnrolmentKey.fromEnrolment(enr)).toSet
-          toAdd = desiredEnrolmentKeys.diff(currentEnrolmentKeys)
-          toRemove = currentEnrolmentKeys.diff(desiredEnrolmentKeys)
-          isAlreadyInSync = toAdd.isEmpty && toRemove.isEmpty
-          _ = if (isAlreadyInSync) logger.info(s"Assignment sync: userId $userId of $arn is already in sync")
+      // TODO In order to avoid additional EACD calls we are not validating the ARN nor checking whether the userId
+      // is really associated with the ARN. But should we?
+      withAuthorisedAgent() { _ =>
+        withJsonBody[Set[String]] { desiredEnrolmentKeys =>
+          for {
+            currentEnrolments <- enrolmentStore.getEnrolmentsAssignedToUser(userId)
+            currentEnrolmentKeys = currentEnrolments.map(enr => EnrolmentKey.fromEnrolment(enr)).toSet
+            toAdd = desiredEnrolmentKeys.diff(currentEnrolmentKeys)
+            toRemove = currentEnrolmentKeys.diff(desiredEnrolmentKeys)
+            isAlreadyInSync = toAdd.isEmpty && toRemove.isEmpty
+            _ =
+              if (isAlreadyInSync)
+                logger.info(s"Assignment sync: userId $userId of $arn is already in sync")
               else
                 logger.info(
                   s"Syncing assigned enrolments for userId $userId of $arn. To assign: $toAdd, to unassign: $toRemove"
                 )
-          assignWorkItems = toAdd.map { enrolmentKey =>
-                              AssignmentWorkItem(Assign, userId, enrolmentKey, arn.value, mSessionId)
-                            }
-          unassignWorkItems = toRemove.map { enrolmentKey =>
-                                AssignmentWorkItem(Unassign, userId, enrolmentKey, arn.value, mSessionId)
-                              }
-          _ <- workItemService.pushNew(unassignWorkItems.toSeq ++ assignWorkItems.toSeq, Instant.now(), ToDo)
-        } yield if (isAlreadyInSync) Ok else Accepted
-      }.recover { case _: NotFoundException =>
-        NotFound
+            assignWorkItems = toAdd.map { enrolmentKey =>
+              AssignmentWorkItem(
+                Assign,
+                userId,
+                enrolmentKey,
+                arn.value,
+                mSessionId
+              )
+            }
+            unassignWorkItems = toRemove.map { enrolmentKey =>
+              AssignmentWorkItem(
+                Unassign,
+                userId,
+                enrolmentKey,
+                arn.value,
+                mSessionId
+              )
+            }
+            _ <- workItemService.pushNew(
+              unassignWorkItems.toSeq ++ assignWorkItems.toSeq,
+              Instant.now(),
+              ToDo
+            )
+          } yield
+            if (isAlreadyInSync)
+              Ok
+            else
+              Accepted
+        }.recover { case _: NotFoundException => NotFound }
       }
     }
-  }
 
 }

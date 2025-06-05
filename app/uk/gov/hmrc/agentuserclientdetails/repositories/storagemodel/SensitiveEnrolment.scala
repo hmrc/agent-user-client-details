@@ -16,9 +16,13 @@
 
 package uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel
 
-import play.api.libs.json.{Format, Json}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Enrolment, Identifier}
-import uk.gov.hmrc.crypto.{Decrypter, Encrypter, Sensitive}
+import play.api.libs.json.Format
+import play.api.libs.json.Json
+import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.Sensitive
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 import uk.gov.hmrc.crypto.json.JsonEncryption
 
@@ -29,7 +33,8 @@ case class SensitiveEnrolment(
   identifiers: Seq[SensitiveIdentifier],
   activationDate: Option[String] = None,
   enrolmentDate: Option[String] = None
-) extends Sensitive[Enrolment] {
+)
+extends Sensitive[Enrolment] {
   def decryptedValue: Enrolment = Enrolment(
     service = service,
     state = state,
@@ -41,6 +46,7 @@ case class SensitiveEnrolment(
 }
 
 object SensitiveEnrolment {
+
   def apply(enrolment: Enrolment): SensitiveEnrolment = SensitiveEnrolment(
     service = enrolment.service,
     state = enrolment.state,
@@ -50,26 +56,31 @@ object SensitiveEnrolment {
     enrolmentDate = enrolment.enrolmentDate
   )
   implicit def format(implicit crypto: Encrypter & Decrypter): Format[SensitiveEnrolment] = {
-    implicit val sensitiveStringFormat: Format[SensitiveString] =
-      JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
+    implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveEnrolment]
   }
+
 }
 
-case class SensitiveIdentifier(key: String, value: SensitiveString) extends Sensitive[Identifier] {
+case class SensitiveIdentifier(
+  key: String,
+  value: SensitiveString
+)
+extends Sensitive[Identifier] {
   def decryptedValue: Identifier = Identifier(key = key, value = value.decryptedValue)
 }
 
 object SensitiveIdentifier {
+
   def apply(identifier: Identifier): SensitiveIdentifier = SensitiveIdentifier(
     key = identifier.key,
     value = SensitiveString(identifier.value)
   )
   implicit def format(implicit crypto: Encrypter & Decrypter): Format[SensitiveIdentifier] = {
-    implicit val sensitiveStringFormat: Format[SensitiveString] =
-      JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
+    implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
     Json.format[SensitiveIdentifier]
   }
 
   implicit val ordering: Ordering[SensitiveIdentifier] = Ordering.by(_.key)
+
 }

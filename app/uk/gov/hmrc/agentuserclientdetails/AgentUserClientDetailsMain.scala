@@ -23,12 +23,18 @@ import play.api.inject.ApplicationLifecycle
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.services.{AssignmentsWorkItemService, AssignmentsWorker, FriendlyNameWorkItemService, FriendlyNameWorker, JobMonitoringService, JobMonitoringWorker}
+import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemService
+import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorker
+import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
+import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorker
+import uk.gov.hmrc.agentuserclientdetails.services.JobMonitoringService
+import uk.gov.hmrc.agentuserclientdetails.services.JobMonitoringWorker
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 
 import java.time.Instant
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class AgentUserClientDetailsMain @Inject() (
   actorSystem: ActorSystem,
@@ -42,7 +48,7 @@ class AgentUserClientDetailsMain @Inject() (
   serviceInstances: ServiceInstances,
   appConfig: AppConfig
 )(implicit val ec: ExecutionContext)
-    extends Logging {
+extends Logging {
 
   lifecycle.addStopHook(() =>
     Future {
@@ -55,8 +61,7 @@ class AgentUserClientDetailsMain @Inject() (
     interval = appConfig.friendlyNameJobRestartRepoQueueIntervalSeconds.second
   ) { () =>
     friendlyNameWorker.isRunning match {
-      case true =>
-        logger.debug("[Friendly name job] Was already running, so I did not trigger it again.")
+      case true => logger.debug("[Friendly name job] Was already running, so I did not trigger it again.")
       case false =>
         logger.debug("[Friendly name job] Triggered")
         friendlyNameWorker.start()
@@ -68,8 +73,7 @@ class AgentUserClientDetailsMain @Inject() (
     interval = appConfig.assignEnrolmentJobRestartRepoQueueIntervalSeconds.second
   ) { () =>
     assignmentsWorker.isRunning match {
-      case true =>
-        logger.debug("[Assign enrolment job] Was already running, so I did not trigger it again.")
+      case true => logger.debug("[Assign enrolment job] Was already running, so I did not trigger it again.")
       case false =>
         logger.debug("[Assign enrolment job] Triggered")
         assignmentsWorker.start()
@@ -82,8 +86,7 @@ class AgentUserClientDetailsMain @Inject() (
     interval = appConfig.jobMonitoringWorkerIntervalSeconds.seconds
   ) { () =>
     jobMonitoringWorker.isRunning match {
-      case true =>
-        logger.debug("[Job monitor] Was already running, so I did not trigger it again.")
+      case true => logger.debug("[Job monitor] Was already running, so I did not trigger it again.")
       case false =>
         logger.debug("[Job monitor] Triggered")
         jobMonitoringWorker.start()
@@ -100,23 +103,26 @@ class AgentUserClientDetailsMain @Inject() (
       .map { nrInstances =>
         logger.info(s"[ServiceInstances] $nrInstances running instance(s) detected.")
       }
-      .recover { case e =>
-        logger.error(s"[ServiceInstance] Heartbeat failed: $e")
-      }
+      .recover { case e => logger.error(s"[ServiceInstance] Heartbeat failed: $e") }
 
     // Print repo stats.
     def friendlyNameRepoStats(): Future[Unit] = friendlyNameWorkItemService.collectStats
       .map { stats =>
         logger.info(
-          s"[Friendly name job] Work item stats: ${if (stats.isEmpty) "No work items" else Json.toJson(stats).toString}"
+          s"[Friendly name job] Work item stats: ${if (stats.isEmpty)
+              "No work items"
+            else
+              Json.toJson(stats).toString}"
         )
       }
       .recover { case _ => () }
     def assignmentsRepoStats(): Future[Unit] = assignmentsWorkItemService.collectStats
       .map { stats =>
         logger.info(
-          s"[Assign enrolment job] Work item stats: ${if (stats.isEmpty) "No work items"
-            else Json.toJson(stats).toString}"
+          s"[Assign enrolment job] Work item stats: ${if (stats.isEmpty)
+              "No work items"
+            else
+              Json.toJson(stats).toString}"
         )
       }
       .recover { case _ => () }
@@ -124,8 +130,8 @@ class AgentUserClientDetailsMain @Inject() (
     // Perform cleanup of completed items.
     val cleanupJobs = Seq(
       "Assign enrolment job" -> (() => assignmentsWorkItemService.cleanup(Instant.now())),
-      "Friendly name job"    -> (() => friendlyNameWorkItemService.cleanup(Instant.now())),
-      "Job monitor"          -> (() => jobMonitoringService.cleanup(Instant.now()))
+      "Friendly name job" -> (() => friendlyNameWorkItemService.cleanup(Instant.now())),
+      "Job monitor" -> (() => jobMonitoringService.cleanup(Instant.now()))
     )
     def cleanup(): Future[Unit] = Future
       .traverse(cleanupJobs) { case (name, f) =>
@@ -151,4 +157,5 @@ class AgentUserClientDetailsMain @Inject() (
         _ = logger.info("Service job finished.")
       } yield ()
   }
+
 }

@@ -25,24 +25,42 @@ import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HttpErrorFunctions
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 @ImplementedBy(classOf[EmailConnectorImpl])
 trait EmailConnector {
-  def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean]
+  def sendEmail(emailInformation: EmailInformation)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean]
 }
 
-class EmailConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClientV2, val metrics: Metrics)(implicit
+class EmailConnectorImpl @Inject() (
+  appConfig: AppConfig,
+  http: HttpClientV2,
+  val metrics: Metrics
+)(implicit
   val ec: ExecutionContext
-) extends EmailConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
+)
+extends EmailConnector
+with HttpAPIMonitor
+with HttpErrorFunctions
+with Logging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 
-  def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] =
+  def sendEmail(emailInformation: EmailInformation)(implicit
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Boolean] =
     monitor(s"Send-Email-${emailInformation.templateId}") {
       http
         .post(url"$baseUrl/hmrc/email")
@@ -57,4 +75,5 @@ class EmailConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClientV2, va
           }
         }
     }
+
 }

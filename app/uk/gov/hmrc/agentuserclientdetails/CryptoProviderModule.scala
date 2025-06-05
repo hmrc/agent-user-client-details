@@ -16,34 +16,52 @@
 
 package uk.gov.hmrc.agentuserclientdetails
 
-import play.api.inject.{Binding, Module}
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.crypto.{Crypted, Decrypter, Encrypter, PlainBytes, PlainContent, PlainText, SymmetricCryptoFactory}
+import play.api.inject.Binding
+import play.api.inject.Module
+import play.api.Configuration
+import play.api.Environment
+import uk.gov.hmrc.crypto.Crypted
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainBytes
+import uk.gov.hmrc.crypto.PlainContent
+import uk.gov.hmrc.crypto.PlainText
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
-class CryptoProviderModule extends Module {
+class CryptoProviderModule
+extends Module {
 
-  override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[?]] =
-    Seq(bind[Encrypter & Decrypter].toInstance(cryptoInstance(configuration)))
+  override def bindings(
+    environment: Environment,
+    configuration: Configuration
+  ): Seq[Binding[?]] = Seq(bind[Encrypter & Decrypter].toInstance(cryptoInstance(configuration)))
 
   def cryptoInstance(configuration: Configuration): Encrypter & Decrypter =
     if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
       SymmetricCryptoFactory.aesCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
     else
       NoCrypto
+
 }
 
 /** Encrypter/decrypter that does nothing (i.e. leaves content in plaintext). Only to be used for debugging.
   */
-trait NoCrypto extends Encrypter with Decrypter {
-  def encrypt(plain: PlainContent): Crypted = plain match {
-    case PlainText(text)   => Crypted(text)
-    case PlainBytes(bytes) => Crypted(new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8))
-  }
+trait NoCrypto
+extends Encrypter
+with Decrypter {
+
+  def encrypt(plain: PlainContent): Crypted =
+    plain match {
+      case PlainText(text) => Crypted(text)
+      case PlainBytes(bytes) => Crypted(new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8))
+    }
   def decrypt(notEncrypted: Crypted): PlainText = PlainText(notEncrypted.value)
   def decryptAsBytes(nullEncrypted: Crypted): PlainBytes = PlainBytes(Base64.getDecoder.decode(nullEncrypted.value))
+
 }
 
-object NoCrypto extends NoCrypto
+object NoCrypto
+extends NoCrypto

@@ -19,7 +19,8 @@ package uk.gov.hmrc.agentuserclientdetails.model
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-class ES19RequestSpec extends BaseSpec {
+class ES19RequestSpec
+extends BaseSpec {
 
   "ES19Request" should {
 

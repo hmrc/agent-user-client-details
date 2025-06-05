@@ -18,14 +18,18 @@ package uk.gov.hmrc.agentuserclientdetails.util
 
 import org.apache.pekko.NotUsed
 import org.apache.pekko.stream.ThrottleMode
-import org.apache.pekko.stream.scaladsl.{Flow, Source}
+import org.apache.pekko.stream.scaladsl.Flow
+import org.apache.pekko.stream.scaladsl.Source
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 object Throttler {
 
-  def process[A, B](itemsToThrottle: Seq[A], maxItemsPerSecond: Int)(
+  def process[A, B](
+    itemsToThrottle: Seq[A],
+    maxItemsPerSecond: Int
+  )(
     operation: A => Future[Seq[B]]
   ): Source[Seq[B], NotUsed] = {
 

@@ -20,7 +20,9 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.agents.accessgroups.Client
 
-class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
+class PaginatedClientsBuilderSpec
+extends AnyWordSpec
+with Matchers {
 
   val clients: Seq[Client] = (1 to 29) map (index => Client(s"EK$index", s"name$index"))
   val pageSize = 10
@@ -30,7 +32,11 @@ class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
     "build first page correctly" in {
       val page = 1
 
-      val paginatedClients = PaginatedClientsBuilder.build(page, pageSize, clients)
+      val paginatedClients = PaginatedClientsBuilder.build(
+        page,
+        pageSize,
+        clients
+      )
       val paginationMetaData = paginatedClients.paginationMetaData
 
       paginationMetaData.lastPage shouldBe false
@@ -47,7 +53,11 @@ class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
     "build middle page correctly" in {
       val page = 2
 
-      val paginatedClients = PaginatedClientsBuilder.build(page, pageSize, clients)
+      val paginatedClients = PaginatedClientsBuilder.build(
+        page,
+        pageSize,
+        clients
+      )
       val paginationMetaData = paginatedClients.paginationMetaData
 
       paginationMetaData.lastPage shouldBe false
@@ -64,7 +74,11 @@ class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
     "build last page correctly" in {
       val page = 3
 
-      val paginatedClients = PaginatedClientsBuilder.build(page, pageSize, clients)
+      val paginatedClients = PaginatedClientsBuilder.build(
+        page,
+        pageSize,
+        clients
+      )
       val paginationMetaData = paginatedClients.paginationMetaData
 
       paginationMetaData.lastPage shouldBe true
@@ -81,7 +95,11 @@ class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
     "build zeroth page correctly" in {
       val page = 0
 
-      val paginatedClients = PaginatedClientsBuilder.build(page, pageSize, clients)
+      val paginatedClients = PaginatedClientsBuilder.build(
+        page,
+        pageSize,
+        clients
+      )
       val paginationMetaData = paginatedClients.paginationMetaData
 
       paginationMetaData.lastPage shouldBe false
@@ -98,7 +116,11 @@ class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
     "build last+1 page correctly" in {
       val page = 4
 
-      val paginatedClients = PaginatedClientsBuilder.build(page, pageSize, clients)
+      val paginatedClients = PaginatedClientsBuilder.build(
+        page,
+        pageSize,
+        clients
+      )
       val paginationMetaData = paginatedClients.paginationMetaData
 
       paginationMetaData.lastPage shouldBe false
@@ -117,7 +139,11 @@ class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
 
       val emptyClients = Seq.empty[Client]
 
-      val paginatedClients = PaginatedClientsBuilder.build(page, pageSize, emptyClients)
+      val paginatedClients = PaginatedClientsBuilder.build(
+        page,
+        pageSize,
+        emptyClients
+      )
       val paginationMetaData = paginatedClients.paginationMetaData
 
       paginationMetaData.lastPage shouldBe false
@@ -131,4 +157,5 @@ class PaginatedClientsBuilderSpec extends AnyWordSpec with Matchers {
       paginatedClients.pageContent.size shouldBe 0
     }
   }
+
 }

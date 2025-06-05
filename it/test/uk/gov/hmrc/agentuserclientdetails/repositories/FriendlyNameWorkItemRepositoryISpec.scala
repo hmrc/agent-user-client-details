@@ -30,12 +30,16 @@ import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
-import uk.gov.hmrc.mongo.workitem.{ProcessingStatus, WorkItem}
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus
+import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with MongoSupport with MockFactory {
+class FriendlyNameWorkItemRepositoryISpec
+extends BaseIntegrationSpec
+with MongoSupport
+with MockFactory {
 
   lazy val config = app.injector.instanceOf[Config]
   lazy val appConfig = app.injector.instanceOf[AppConfig]
@@ -52,17 +56,20 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   lazy val mockAuthConnector = mock[AuthConnector]
 
-  override def moduleOverrides: AbstractModule = new AbstractModule {
-    override def configure(): Unit =
-      bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
-  }
+  override def moduleOverrides: AbstractModule =
+    new AbstractModule {
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+    }
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     wir.collection.drop().toFuture().futureValue
   }
 
-  def mkWorkItem[A](item: A, status: ProcessingStatus): WorkItem[A] = {
+  def mkWorkItem[A](
+    item: A,
+    status: ProcessingStatus
+  ): WorkItem[A] = {
     val now = Instant.now()
     WorkItem(
       id = ObjectId.get(),
@@ -84,8 +91,16 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
           ToDo
         )
         .futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), Instant.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), Instant.now(), Failed).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client3)),
+        Instant.now(),
+        Succeeded
+      ).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client4)),
+        Instant.now(),
+        Failed
+      ).futureValue
       val stats = wis.collectStats.futureValue
       stats.get(ToDo.name) shouldBe Some(2)
       stats.get(Succeeded.name) shouldBe Some(1)
@@ -103,8 +118,16 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
           ToDo
         )
         .futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), Instant.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), Instant.now(), Failed).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client3)),
+        Instant.now(),
+        Succeeded
+      ).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client4)),
+        Instant.now(),
+        Failed
+      ).futureValue
       wis.query(testGroupId, Some(Seq(ToDo))).futureValue.length shouldBe 2
       wis.query(testGroupId, Some(Seq(ToDo, Succeeded))).futureValue.length shouldBe 3
       wis.query(testGroupId, Some(Seq(Duplicate, PermanentlyFailed))).futureValue.length shouldBe 0
@@ -115,10 +138,26 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   "cleanup" should {
     "remove any items that are either succeeded or duplicate (if they were last updated earlier than the given cutoff)" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client2)), Instant.now(), Duplicate).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client3)), Instant.now(), PermanentlyFailed).futureValue
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client4)), Instant.now(), Failed).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client1)),
+        Instant.now(),
+        Succeeded
+      ).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client2)),
+        Instant.now(),
+        Duplicate
+      ).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client3)),
+        Instant.now(),
+        PermanentlyFailed
+      ).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client4)),
+        Instant.now(),
+        Failed
+      ).futureValue
       wis.cleanup(Instant.now().plusSeconds(24 * 3600 /* 1 day */ )).futureValue
       wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length shouldBe 0
       wis.query(testGroupId, Some(Seq(Duplicate))).futureValue.length shouldBe 0
@@ -127,7 +166,11 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
     }
     "not remove an item that was recently updated" in {
       wis
-        .pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded)
+        .pushNew(
+          Seq(FriendlyNameWorkItem(testGroupId, client1)),
+          Instant.now(),
+          Succeeded
+        )
         .futureValue
       wis
         .cleanup(Instant.now().plusSeconds(60))
@@ -139,7 +182,11 @@ class FriendlyNameWorkItemRepositoryISpec extends BaseIntegrationSpec with Mongo
 
   "deleteWorkItems" should {
     "delete all work items" in {
-      wis.pushNew(Seq(FriendlyNameWorkItem(testGroupId, client1)), Instant.now(), Succeeded).futureValue
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, client1)),
+        Instant.now(),
+        Succeeded
+      ).futureValue
       wir.deleteWorkItems(testGroupId).futureValue shouldBe 1L
     }
   }
