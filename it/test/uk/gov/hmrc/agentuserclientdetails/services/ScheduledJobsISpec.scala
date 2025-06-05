@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.services
 
+import org.mongodb.scala.SingleObservableFuture
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.concurrent.Eventually.eventually
@@ -48,33 +49,34 @@ class ScheduledJobsISpec
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~101747641"
   val testArn = "BARN9706518"
-  val client1 = Client(testEnrolmentKey, "John Innes")
-  lazy val mockAuthConnector = mock[AuthConnector]
+  val client1: Client = Client(testEnrolmentKey, "John Innes")
+  lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   override def beforeEach(): Unit = {
     super.beforeEach()
     dropDatabase()
   }
 
-  val configOverrides = Seq( // override config values to reduce delays required to test scheduled jobs
-    "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds"     -> 0,
-    "job-scheduling.friendly-name.restart-repo-queue.intervalSeconds"         -> 60,
-    "job-scheduling.service-job.initialDelaySeconds"                          -> 0,
-    "job-scheduling.service-job.intervalSeconds"                              -> 2,
-    "job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds"  -> 0,
-    "job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds"      -> 60,
-    "job-scheduling.job-monitoring.initialDelaySeconds"                       -> 0,
-    "job-scheduling.job-monitoring.intervalSeconds"                           -> 1,
-    "work-item-repository.friendly-name.delete-finished-items-after-seconds"  -> 0,
-    "work-item-repository.assignments.delete-finished-items-after-seconds"    -> 0,
-    "work-item-repository.job-monitoring.delete-finished-items-after-seconds" -> 0,
-    "agent.cache.enabled"                                                     -> false
-  )
+  val configOverrides: Seq[(String, AnyVal)] =
+    Seq( // override config values to reduce delays required to test scheduled jobs
+      "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds"     -> 1,
+      "job-scheduling.friendly-name.restart-repo-queue.intervalSeconds"         -> 60,
+      "job-scheduling.service-job.initialDelaySeconds"                          -> 1,
+      "job-scheduling.service-job.intervalSeconds"                              -> 2,
+      "job-scheduling.assign-enrolment.restart-repo-queue.initialDelaySeconds"  -> 1,
+      "job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds"      -> 60,
+      "job-scheduling.job-monitoring.initialDelaySeconds"                       -> 1,
+      "job-scheduling.job-monitoring.intervalSeconds"                           -> 2,
+      "work-item-repository.friendly-name.delete-finished-items-after-seconds"  -> 0,
+      "work-item-repository.assignments.delete-finished-items-after-seconds"    -> 0,
+      "work-item-repository.job-monitoring.delete-finished-items-after-seconds" -> 0,
+      "agent.cache.enabled"                                                     -> false
+    )
 
   "'friendly name' repository cleanup job" should {
     "clean up the repository periodically" in {
       running(
-        _.configure(configOverrides: _*)
+        _.configure(configOverrides *)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -95,7 +97,7 @@ class ScheduledJobsISpec
   "'assign enrolment' repository cleanup job" should {
     "clean up the repository periodically" in {
       running(
-        _.configure(configOverrides: _*)
+        _.configure(configOverrides *)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -119,7 +121,7 @@ class ScheduledJobsISpec
   "job monitoring job" should {
     "check job completion periodically and mark as complete accordingly" in {
       running(
-        _.configure(configOverrides: _*)
+        _.configure(configOverrides *)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -141,17 +143,16 @@ class ScheduledJobsISpec
           )
           .futureValue
 
-        Thread.sleep(5000) // Wait for the scheduled job to be executed
-
         // The scheduled job should be marked as complete (since there are no outstanding items in the repo that belong to it)
-
-        jms.getNextJobToCheck.futureValue shouldBe empty
+        eventually(Timeout(Span(10, Seconds))) {
+          jms.getNextJobToCheck.futureValue shouldBe empty
+        }
       }
     }
 
     "clean up the repository periodically" in {
       running(
-        _.configure(configOverrides: _*)
+        _.configure(configOverrides *)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -195,7 +196,7 @@ class ScheduledJobsISpec
       (stubFwis.collectStats(_: ExecutionContext)).when(*).returns(Future.failed(new RuntimeException("bar")))
       (stubFwis.cleanup(_: Instant)(_: ExecutionContext)).when(*, *).returns(Future.failed(new RuntimeException("bar")))
       running(
-        _.configure(configOverrides: _*)
+        _.configure(configOverrides *)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
           .overrides(bind[AssignmentsWorkItemService].toInstance(stubAwis))
@@ -216,12 +217,12 @@ class ScheduledJobsISpec
     "not be triggered again" in {
       val stubAw = stub[AssignmentsWorker]
       (() => stubAw.isRunning).when().returns(true)
-      (stubAw.start _).when().returns(Future.successful(()))
+      (() => stubAw.start()).when().returns(Future.successful(()))
       val stubFnw = stub[FriendlyNameWorker]
       (() => stubFnw.isRunning).when().returns(true)
-      (stubFnw.start _).when().returns(Future.successful(()))
+      (() => stubFnw.start()).when().returns(Future.successful(()))
       running(
-        _.configure(configOverrides: _*)
+        _.configure(configOverrides *)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
           .overrides(bind[AssignmentsWorker].toInstance(stubAw))
@@ -229,8 +230,8 @@ class ScheduledJobsISpec
       ) { app =>
         val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         Thread.sleep(5000)
-        (stubAw.start _).verify().never()
-        (stubFnw.start _).verify().never()
+        (() => stubAw.start()).verify().never()
+        (() => stubFnw.start()).verify().never()
       }
     }
   }

@@ -18,11 +18,14 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
+import play.api.libs.json.Json
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpErrorFunctions, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpErrorFunctions, HttpResponse, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.Inject
@@ -33,7 +36,7 @@ trait EmailConnector {
   def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean]
 }
 
-class EmailConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClient, val metrics: Metrics)(implicit
+class EmailConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClientV2, val metrics: Metrics)(implicit
   val ec: ExecutionContext
 ) extends EmailConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
 
@@ -42,7 +45,9 @@ class EmailConnectorImpl @Inject() (appConfig: AppConfig, http: HttpClient, val 
   def sendEmail(emailInformation: EmailInformation)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Boolean] =
     monitor(s"Send-Email-${emailInformation.templateId}") {
       http
-        .POST[EmailInformation, HttpResponse](s"$baseUrl/hmrc/email", emailInformation)
+        .post(url"$baseUrl/hmrc/email")
+        .withBody(Json.toJson(emailInformation))
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case status if is2xx(status) => true

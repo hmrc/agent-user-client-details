@@ -81,7 +81,7 @@ class FriendlyNameWorker @Inject() (
             processItem(item)
         }
         val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
-        result.onComplete { case _ =>
+        result.onComplete { _ =>
           logger.info("Friendly name processing finished.")
           running.set(false)
         }
@@ -104,95 +104,94 @@ class FriendlyNameWorker @Inject() (
    Main logic
    */
   def processItem(workItem: WorkItem[FriendlyNameWorkItem]): Future[Unit] = {
-    implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId))
+    implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId.apply))
     val groupId = workItem.item.groupId
     val enrolmentKey = workItem.item.client.enrolmentKey
     // TODO handle case when identifier is empty and/or there is more than one identifier
     // TODO handle case where the service ID provided is not valid.
 
-    workItem match {
-      case wi if wi.item.client.friendlyName.nonEmpty =>
-        // There is already a friendlyName populated. All we need to do is store the enrolment.
-        throttledUpdateFriendlyName(groupId, enrolmentKey, wi.item.client.friendlyName).transformWith {
-          case Success(_) =>
-            logger.info(s"Previously fetched friendly name for $enrolmentKey updated via ES19 successfully.")
-            workItemService
-              .complete(workItem.id, Succeeded, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
-              .map(_ => ())
-          case Failure(upstreamError) =>
-            val workItemStatus = upstreamError match {
-              case e: UpstreamErrorResponse if e.statusCode == 400 =>
-                logger.warn(
-                  s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19 due to BAD_REQUEST with message: ${e.getMessage()}. No retry."
-                )
-                PermanentlyFailed
-              case _ =>
-                logger.warn(
-                  s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19. This will be retried."
-                )
-                Failed
-            }
-            workItemService
-              .complete(workItem.id, workItemStatus, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
-              .map(_ => ())
-        }
-      case wi if wi.item.client.friendlyName.isEmpty =>
-        // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
-        clientNameService.getClientName(enrolmentKey).transformWith {
-          case Success(None) =>
-            // A successful call returning None means the lookup succeeded but there is no name available.
-            // There is no point in retrying; we set the status as permanently failed.
-            logger.info(s"No friendly name is available for $enrolmentKey: marking enrolment as permanently failed.")
-            workItemService
-              .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
-              .map(_ => ())
-          case Success(Some(friendlyName)) =>
-            throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
-              case Success(_) =>
-                workItemService
-                  .complete(workItem.id, Succeeded, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
-                  .map(_ => ())
-              case Failure(_) =>
-                for {
-                  // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
-                  _ <- workItemService.pushNew(
-                         Seq(wi.item.copy(client = wi.item.client.copy(friendlyName = friendlyName))),
-                         Instant.now(),
-                         ToDo
-                       )
-                  // mark the old work item as duplicate
-                  _ <-
-                    workItemService
-                      .complete(workItem.id, Duplicate, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
-                  _ = logger.info(
-                        s"Friendly name for $enrolmentKey retrieved but could not be updated via ES19: scheduling retry"
-                      )
-                } yield ()
-            }
-          case Failure(e) if StatusUtil.isRetryable(e) =>
-            if (giveUp(wi)) {
-              logger.info(
-                s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. Giving up."
+    if (workItem.item.client.friendlyName.nonEmpty) {
+      // There is already a friendlyName populated. All we need to do is store the enrolment.
+      throttledUpdateFriendlyName(groupId, enrolmentKey, workItem.item.client.friendlyName).transformWith {
+        case Success(_) =>
+          logger.info(s"Previously fetched friendly name for $enrolmentKey updated via ES19 successfully.")
+          workItemService
+            .complete(workItem.id, Succeeded, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+            .map(_ => ())
+        case Failure(upstreamError) =>
+          val workItemStatus = upstreamError match {
+            case e: UpstreamErrorResponse if e.statusCode == 400 =>
+              logger.warn(
+                s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19 due to BAD_REQUEST with message: ${e.getMessage}. No retry."
               )
-              workItemService
-                .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
-                .map(_ => ())
-            } else {
-              logger.info(
-                s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. This will be retried."
+              PermanentlyFailed
+            case _ =>
+              logger.warn(
+                s"Previously fetched friendly name for $enrolmentKey could not be updated via ES19. This will be retried."
               )
+              Failed
+          }
+          workItemService
+            .complete(workItem.id, workItemStatus, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+            .map(_ => ())
+      }
+    } else {
+      // The friendlyName is not populated; we need to fetch it, insert it in the enrolment and store the enrolment.
+      clientNameService.getClientName(enrolmentKey).transformWith {
+        case Success(None) =>
+          // A successful call returning None means the lookup succeeded but there is no name available.
+          // There is no point in retrying; we set the status as permanently failed.
+          logger.info(s"No friendly name is available for $enrolmentKey: marking enrolment as permanently failed.")
+          workItemService
+            .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+            .map(_ => ())
+        case Success(Some(friendlyName)) =>
+          throttledUpdateFriendlyName(groupId, enrolmentKey, friendlyName).transformWith {
+            case Success(_) =>
               workItemService
-                .complete(workItem.id, Failed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+                .complete(workItem.id, Succeeded, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
                 .map(_ => ())
-            }
-          case Failure(e) => // non-retryable failure
+            case Failure(_) =>
+              for {
+                // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
+                _ <- workItemService.pushNew(
+                       Seq(workItem.item.copy(client = workItem.item.client.copy(friendlyName = friendlyName))),
+                       Instant.now(),
+                       ToDo
+                     )
+                // mark the old work item as duplicate
+                _ <-
+                  workItemService
+                    .complete(workItem.id, Duplicate, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+                _ = logger.info(
+                      s"Friendly name for $enrolmentKey retrieved but could not be updated via ES19: scheduling retry"
+                    )
+              } yield ()
+          }
+        case Failure(e) if StatusUtil.isRetryable(e) =>
+          if (giveUp(workItem)) {
             logger.info(
-              s"Fetch of friendly name permanently failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}."
+              s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. Giving up."
             )
             workItemService
               .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
               .map(_ => ())
-        }
+          } else {
+            logger.info(
+              s"Fetch of friendly name failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}. This will be retried."
+            )
+            workItemService
+              .complete(workItem.id, Failed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+              .map(_ => ())
+          }
+        case Failure(e) => // non-retryable failure
+          logger.info(
+            s"Fetch of friendly name permanently failed for $enrolmentKey. Reason: ${logFriendlyMessage(e)}."
+          )
+          workItemService
+            .complete(workItem.id, PermanentlyFailed, Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey))
+            .map(_ => ())
+      }
     }
   }
 

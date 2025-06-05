@@ -18,6 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.binders
 
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
+import scala.reflect.ClassTag
+
 object Binders {
 
   implicit object ArnBinder extends SimpleObjectBinder[Arn](Arn.apply, _.value)

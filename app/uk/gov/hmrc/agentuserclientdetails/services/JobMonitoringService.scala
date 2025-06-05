@@ -20,6 +20,7 @@ import com.google.inject.ImplementedBy
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.result.DeleteResult
+import org.mongodb.scala.SingleObservableFuture
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.{FriendlyNameJobData, JobData}
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository

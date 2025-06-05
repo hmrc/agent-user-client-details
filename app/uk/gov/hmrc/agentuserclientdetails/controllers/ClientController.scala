@@ -135,14 +135,6 @@ class ClientController @Inject() (
     }
   }
 
-  def forceRefreshFriendlyNames(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withAuthorisedAgent() { _ =>
-      withGroupIdFor(arn) { groupId =>
-        forceRefreshFriendlyNamesForGroupIdFn(groupId)
-      }
-    }
-  }
-
   def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
       getOutstandingWorkItemsForGroupIdFn(groupId)
@@ -217,36 +209,6 @@ class ClientController @Inject() (
       case Failure(uer) =>
         logger.error(s"ES3 cache call for $arn failed due to: $uer")
         Future.failed(uer)
-    }
-  }
-
-  protected def forceRefreshFriendlyNamesForGroupIdFn(
-    groupId: String
-  )(implicit request: RequestHeader): Future[Result] = {
-    def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
-      val mSessionId: Option[String] =
-        if (appConfig.stubsCompatibilityMode) hc.sessionId.map(_.value)
-        else None // only required for local testing against stubs
-      FriendlyNameWorkItem(groupId, client, mSessionId)
-    }
-
-    es3CacheService.getClients(groupId).transformWith {
-      case Success(clients) =>
-        for {
-          _ <- workItemService.removeByGroupId(groupId)
-          _ =
-            logger.info(
-              s"FORCED client list request for groupId $groupId. All work items for this groupId have been deleted and ${clients.length} new work items will be created."
-            )
-          clientsWithoutName = clients.map(_.copy(friendlyName = ""))
-          _ <- workItemService.pushNew(clientsWithoutName.map(client => makeWorkItem(client)), Instant.now(), ToDo)
-        } yield Accepted
-      case Failure(UpstreamErrorResponse(_, NOT_FOUND, _, _)) =>
-        Future.successful(NotFound)
-      case Failure(uer: UpstreamErrorResponse) =>
-        Future.failed(uer)
-      case Failure(exception: Throwable) =>
-        Future.failed(exception)
     }
   }
 

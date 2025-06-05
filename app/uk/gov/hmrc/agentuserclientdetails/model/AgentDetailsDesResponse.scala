@@ -27,9 +27,5 @@ object AgencyDetails {
 }
 
 object AgentDetailsDesResponse {
-  implicit val agencyDetailsRead: Reads[AgencyDetails] = Json.reads
-
-  implicit val agentRecordDetailsRead: Reads[AgentDetailsDesResponse] = Json.reads
-
   implicit val agencyDetailsFormat: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
 }

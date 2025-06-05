@@ -19,7 +19,9 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import com.google.inject.ImplementedBy
 import org.mongodb.scala.bson.{BsonValue, ObjectId}
 import org.mongodb.scala.model.{Accumulators, Aggregates, Filters}
+import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.result.DeleteResult
+import org.mongodb.scala.SingleObservableFuture
 import play.api.Logging
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
@@ -53,7 +55,7 @@ trait FriendlyNameWorkItemService {
     ec: ExecutionContext
   ): Future[Unit]
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus, context: Map[String, String] = Map.empty)(
+  def complete(id: ObjectId, newStatus: ProcessingStatus & ResultStatus, context: Map[String, String] = Map.empty)(
     implicit ec: ExecutionContext
   ): Future[Boolean]
 
@@ -76,7 +78,7 @@ class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkI
   ): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
     val selector = status match {
       case Some(statuses) =>
-        Filters.and(Filters.equal("item.groupId", groupId), Filters.in("status", statuses.map(_.name): _*))
+        Filters.and(Filters.equal("item.groupId", groupId), Filters.in("status", statuses.map(_.name) *))
       case None => Filters.equal("item.groupId", groupId)
     }
     workItemRepo.collection.find[WorkItem[FriendlyNameWorkItem]](selector).toFuture()
@@ -101,12 +103,12 @@ class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkI
       .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
       .collect()
       .toFuture()
-      .map { xs: Seq[BsonValue] =>
+      .map { (xs: Seq[BsonValue]) =>
         val elems = xs.map { x =>
           val document = x.asDocument()
-          (document.getString("_id").getValue -> document.getNumber("count").intValue())
+          document.getString("_id").getValue -> document.getNumber("count").intValue()
         }
-        Map(elems: _*)
+        Map(elems *)
       }
 
   def pushNew(items: Seq[FriendlyNameWorkItem], receivedAt: Instant, initialState: ProcessingStatus)(implicit
@@ -116,7 +118,7 @@ class FriendlyNameWorkItemServiceImpl @Inject() (workItemRepo: FriendlyNameWorkI
       workItemRepo.pushNewBatch(items, receivedAt, _ => initialState).map(_ => ())
     else Future.successful(())
 
-  def complete(id: ObjectId, newStatus: ProcessingStatus with ResultStatus, context: Map[String, String] = Map.empty)(
+  def complete(id: ObjectId, newStatus: ProcessingStatus & ResultStatus, context: Map[String, String] = Map.empty)(
     implicit ec: ExecutionContext
   ): Future[Boolean] =
     workItemRepo.complete(id, newStatus).map { wasThisSuccessful =>

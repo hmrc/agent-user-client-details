@@ -27,6 +27,7 @@ import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
@@ -48,7 +49,7 @@ trait DesConnector {
 @Singleton
 class DesConnectorImpl @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
 )(implicit val ec: ExecutionContext)
@@ -99,11 +100,10 @@ class DesConnectorImpl @Inject() (
     val headersConfig = desIfHeaders.headersConfig(viaIF = false, url, apiName)
 
     monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient.GET[HttpResponse](url = url, headers = headersConfig.explicitHeaders)(
-        implicitly[HttpReads[HttpResponse]],
-        headersConfig.hc,
-        ec
-      )
+      httpClient
+        .get(url"$url")
+        .setHeader(headersConfig.explicitHeaders *)
+        .execute[HttpResponse]
     }
   }
 }

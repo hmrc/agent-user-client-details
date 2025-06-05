@@ -21,11 +21,10 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, UpstreamErrorResponse}
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps, UpstreamErrorResponse}
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,7 +35,7 @@ class AgentAssuranceConnector @Inject() (appConfig: AppConfig, httpV2: HttpClien
 
   def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] =
     httpV2
-      .get(new URL(s"$baseUrl/agent-assurance/agent/agency-details/arn/${arn.value}"))
+      .get(url"$baseUrl/agent-assurance/agent/agency-details/arn/${arn.value}")
       .execute[HttpResponse]
       .map(response =>
         response.status match {

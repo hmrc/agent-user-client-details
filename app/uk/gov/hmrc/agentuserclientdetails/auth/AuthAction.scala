@@ -20,9 +20,8 @@ import play.api.mvc.{Request, Result}
 import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.AgentUser
-import uk.gov.hmrc.agentuserclientdetails.util.AuthRedirects
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentialRole, credentials, name}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, ~}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -37,14 +36,14 @@ class AuthAction @Inject() (
   val authConnector: AuthConnector,
   val env: Environment,
   val config: Configuration
-) extends AuthRedirects with AuthorisedFunctions with Logging {
+) extends AuthorisedFunctions with Logging {
 
   private val agentEnrolment = "HMRC-AS-AGENT"
   private val agentReferenceNumberIdentifier = "AgentReferenceNumber"
 
   def getAuthorisedAgent(allowStandardUser: Boolean = false)(implicit
     ec: ExecutionContext,
-    request: Request[_]
+    request: Request[?]
   ): Future[Option[AuthorisedAgent]] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
@@ -56,9 +55,9 @@ class AuthAction @Inject() (
             case Some(authorisedAgent) =>
               if (
                 credRole.contains(User) | credRole.contains(Admin) | (credRole.contains(Assistant) & allowStandardUser)
-              )
-                Future successful Option(authorisedAgent)
-              else {
+              ) {
+                Future.successful(Option(authorisedAgent))
+              } else {
                 logger.warn(
                   s"Either invalid credential role $credRole or the endpoint is not allowed for standard users (allowStandardUser:$allowStandardUser)"
                 )
@@ -71,7 +70,7 @@ class AuthAction @Inject() (
       } transformWith failureHandler
   }
 
-  def simpleAuth(body: => Future[Result])(implicit request: Request[_], ec: ExecutionContext) = {
+  def simpleAuth(body: => Future[Result])(implicit request: Request[?], ec: ExecutionContext): Future[Result] = {
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
     authorised() {
       body
@@ -90,7 +89,10 @@ class AuthAction @Inject() (
       name        <- maybeName
     } yield AuthorisedAgent(
       Arn(identifier.value),
-      AgentUser(credentials.providerId, (name.name.getOrElse("") + " " + name.lastName.getOrElse("")).trim)
+      AgentUser(
+        credentials.providerId,
+        (name.name.getOrElse("") + " " + name.lastName.getOrElse("")).trim
+      )
     )
 
   private def failureHandler(triedResult: Try[Option[AuthorisedAgent]]): Future[Option[AuthorisedAgent]] =

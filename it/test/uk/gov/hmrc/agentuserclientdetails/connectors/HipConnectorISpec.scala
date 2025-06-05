@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
+import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
-import play.api.http.{HeaderNames, Status}
+import play.api.http.Status
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -35,12 +37,40 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  final case class TestCaseHappyPath(
+  case class TestCaseHappyPath(
     responseStatus: Int,
     responseBody: String,
     expectedReturn: Option[TradingDetails],
     testCaseName: String
   )
+
+  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
+  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
+
+  val hipConnector: HipConnector = new HipConnectorImpl(
+    appConfig,
+    mockHttpClient,
+    metrics,
+    fixedClock
+  )
+
+  def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] = {
+    (mockRequestBuilder
+      .setHeader(_*))
+      .expects(*)
+      .returning(mockRequestBuilder)
+
+    (mockRequestBuilder
+      .execute(using _: HttpReads[A], _: ExecutionContext))
+      .expects(*, *)
+      .returning(Future successful value)
+  }
+
+  def mockHttpGet(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
+    (mockHttpClient
+      .get(_: URL)(_: HeaderCarrier))
+      .expects(url, *)
+      .returning(mockRequestBuilder)
 
   "HipConnector.getTradingDetailsForMtdItId calls API endpoint and return TradingDetails" when {
     List(
@@ -76,42 +106,28 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
       )
     ).foreach { tc =>
       tc.testCaseName in {
-        val httpClient: HttpClient =
-          makeMockedHttpClient(
-            url = url,
-            responseHttpStatus = tc.responseStatus,
-            responseBody = tc.responseBody
-          )
-        val hipConnector: HipConnector = new HipConnectorImpl(
-          appConfig,
-          httpClient,
-          metrics,
-          fixedClock
-        ) {
-          protected override def makeCorrelationId(): String = correlationId
-        }
+        mockHttpGet(url"$url")
+        val mockResponse = HttpResponse(tc.responseStatus, tc.responseBody)
+        mockRequestBuilderExecute(mockResponse)
         hipConnector.getTradingDetailsForMtdItId(mtdItId).futureValue shouldBe tc.expectedReturn
       }
     }
   }
 
   "HipConnector.getTradingDetailsForMtdItId fails for any other response codes" in {
-    val httpClient: HttpClient = makeMockedHttpClient(url, Status.NOT_FOUND, "url not found")
 
-    val hipConnector: HipConnector = new HipConnectorImpl(
-      appConfig,
-      httpClient,
-      metrics,
-      fixedClock
-    ) {
-      protected override def makeCorrelationId(): String = correlationId
-    }
+    mockHttpGet(url"$url")
+    val mockResponse = HttpResponse(Status.NOT_FOUND, "url not found")
+    mockRequestBuilderExecute(mockResponse)
 
-    hipConnector
+    val result = hipConnector
       .getTradingDetailsForMtdItId(mtdItId)
       .failed
       .futureValue
-      .getMessage shouldBe "Unexpected response from HIP API: [correlationId: 5c290341-2d37-4e3c-a348-06724b2cf1c0] [status: 404] [responseBody: url not found]"
+      .getMessage
+    val correlationId = result.split("correlationId: ")(1).split("]")(0)
+
+    result shouldBe s"Unexpected response from HIP API: [correlationId: $correlationId] [status: 404] [responseBody: url not found]"
   }
 
   lazy val responseBodySuccess: String =
@@ -367,41 +383,13 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
       }
     }"""
 
-  def makeMockedHttpClient(url: String, responseHttpStatus: Int, responseBody: String) = {
-    val httpClient: HttpClient = mock[HttpClient]
-    val mockResponse: HttpResponse = HttpResponse(
-      status = responseHttpStatus,
-      body = responseBody
-    )
-
-    val headers = Seq(
-      (HeaderNames.AUTHORIZATION, s"Basic hip-secret"),
-      ("correlationId", correlationId),
-      ("X-Message-Type", "TaxpayerDisplay"),
-      ("X-Originating-System", "MDTP"),
-      ("X-Receipt-Date", "2059-11-25T16:33:51Z"),
-      ("X-Regime-Type", "ITSA"),
-      ("X-Transmitting-System", "HIP")
-    )
-    (httpClient
-      .GET[HttpResponse](_: URL, _: Seq[(String, String)])(
-        _: HttpReads[HttpResponse],
-        _: HeaderCarrier,
-        _: ExecutionContext
-      ))
-      .expects(new URL(url), headers, *, *, *)
-      .returning(Future.successful(mockResponse))
-      .once()
-    httpClient
-  }
-
-  lazy val appConfig = app.injector.instanceOf[AppConfig]
-  lazy val metrics = app.injector.instanceOf[Metrics]
+  lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
   lazy val correlationId: String = "5c290341-2d37-4e3c-a348-06724b2cf1c0"
   lazy val mtdItId: MtdItId = MtdItId("XNIT00000068707")
   lazy val url = "http://localhost:9009/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=XNIT00000068707"
 
-  lazy val fixedClock = Clock.fixed(
+  lazy val fixedClock: Clock = Clock.fixed(
     LocalDateTime.parse("2059-11-25T16:33:51.880", DateTimeFormatter.ISO_DATE_TIME).toInstant(ZoneOffset.UTC),
     ZoneId.of("UTC")
   )

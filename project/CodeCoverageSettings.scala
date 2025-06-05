@@ -6,13 +6,14 @@ object CodeCoverageSettings {
   private val excludedPackages: Seq[String] = Seq(
     "<empty>",
     "Reverse.*",
+    ".*\\$anon.*",
     "uk.gov.hmrc.BuildInfo",
     ".*UserEnrolment.*",
     ".*AppConfigImpl.*",
     ".*DoNotCache.*",
     ".*DesIfHeaders.*",
     ".*FriendlyNameWorker.*",
-    ".*LocalCaffeineCache.*",
+    "Module.*",
     "app.*",
     "prod.*",
     ".*Routes.*",
@@ -21,7 +22,7 @@ object CodeCoverageSettings {
     ".*TestOnlyController.*"
   )
 
-  val settings: Seq[Setting[_]] = Seq(
+  val settings: Seq[Setting[?]] = Seq(
     ScoverageKeys.coverageExcludedPackages := excludedPackages.mkString(";"),
     ScoverageKeys.coverageMinimumStmtTotal := 90.00,
     ScoverageKeys.coverageMinimumBranchTotal:= 78,

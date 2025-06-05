@@ -17,68 +17,81 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
+import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.{PptRef, Urn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.{MtdItId, PptRef, Urn, Utr}
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.domain.Nino
+import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
+import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
 
-  lazy val appConfig = app.injector.instanceOf[AppConfig]
-  lazy val metrics = app.injector.instanceOf[Metrics]
-  lazy val desIfHeaders = app.injector.instanceOf[DesIfHeaders]
+  lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
+  lazy val desIfHeaders: DesIfHeaders = app.injector.instanceOf[DesIfHeaders]
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
-  lazy val mockAuthConnector = mock[AuthConnector]
+  lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
+
+  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
+  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
+
+  val ifConnector = new IfConnectorImpl(appConfig, mockHttpClient, metrics, desIfHeaders)
+  val testUrn: Urn = Urn("XXTRUST12345678")
+  val testPptRef: PptRef = PptRef("XAPPT0000012345")
+  val testMtdItId: MtdItId = MtdItId("12345678")
 
   override def moduleOverrides: AbstractModule = new AbstractModule {
     override def configure(): Unit =
       bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
   }
 
-  def mockHttpGet[A](url: String, response: A)(mockHttpClient: HttpClient): Unit =
+  def mockHttpGet(url: URL): CallHandler2[URL, HeaderCarrier, RequestBuilder] =
     (mockHttpClient
-      .GET[A](_: String, _: Seq[(String, String)], _: Seq[(String, String)])(
-        _: HttpReads[A],
-        _: HeaderCarrier,
-        _: ExecutionContext
-      ))
-      .when(url, *, *, *, *, *)
-      .returns(Future.successful(response))
+      .get(_: URL)(_: HeaderCarrier))
+      .expects(url, *)
+      .returning(mockRequestBuilder)
+
+  def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] = {
+    (mockRequestBuilder
+      .setHeader(_*))
+      .expects(*)
+      .returning(mockRequestBuilder)
+
+    (mockRequestBuilder
+      .execute(using _: HttpReads[A], _: ExecutionContext))
+      .expects(*, *)
+      .returning(Future successful value)
+  }
 
   "IfConnector" should {
     "getTrustName (URN)" in {
-      val testUrn = Urn("XXTRUST12345678")
-      val httpClient = stub[HttpClient]
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
-      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}", mockResponse)(
-        httpClient
-      )
-      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
+      mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
+      mockRequestBuilderExecute(mockResponse)
       ifConnector.getTrustName(testUrn.value).futureValue shouldBe Some("Friendly Trust")
     }
+
     "getTrustName (UTR)" in {
       val testUtr = Utr("4937455253")
-      val httpClient = stub[HttpClient]
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
-      mockHttpGet(s"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}", mockResponse)(
-        httpClient
-      )
-      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
+      mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}")
+      mockRequestBuilderExecute(mockResponse)
       ifConnector.getTrustName(testUtr.value).futureValue shouldBe Some("Friendly Trust")
     }
+
     "getPptSubscription (individual)" in {
-      val testPptRef = PptRef("XAPPT0000012345")
-      val httpClient = stub[HttpClient]
       val responseJson = Json.parse(s"""{
                                        |"legalEntityDetails": {
                                        |  "dateOfApplication": "2021-10-12",
@@ -93,15 +106,13 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
       mockHttpGet(
-        s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display",
-        mockResponse
-      )(httpClient)
-      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
+        url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
+      )
+      mockRequestBuilderExecute(mockResponse)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Bill Sikes"))
     }
+
     "getPptSubscription (organisation)" in {
-      val testPptRef = PptRef("XAPPT0000012346")
-      val httpClient = stub[HttpClient]
       val responseJson = Json.parse(s"""{
                                        |"legalEntityDetails": {
                                        |  "dateOfApplication": "2021-10-12",
@@ -115,11 +126,113 @@ class IfConnectorISpec extends BaseIntegrationSpec with MockFactory {
                                        |}""".stripMargin)
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
       mockHttpGet(
-        s"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display",
-        mockResponse
-      )(httpClient)
-      val ifConnector = new IfConnectorImpl(appConfig, httpClient, metrics, desIfHeaders)
+        url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
+      )
+      mockRequestBuilderExecute(mockResponse)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Friendly Organisation"))
+    }
+
+    "getTradingDetailsForMtdItId" in {
+      val responseJson = Json.parse(s"""{"taxPayerDisplayResponse":{
+                                       |  "safeId": "XV0000100093327",
+                                       |  "nino": "ZR987654C",
+                                       |  "propertyIncome": false,
+                                       |  "businessData": [
+                                       |    {
+                                       |      "incomeSourceId": "XWIS00000000219",
+                                       |      "accountingPeriodStartDate": "2017-05-06",
+                                       |      "accountingPeriodEndDate": "2018-05-05",
+                                       |      "tradingName": "Surname DADTN",
+                                       |      "businessAddressDetails": {
+                                       |        "addressLine1": "100 Sutton Street",
+                                       |        "addressLine2": "Wokingham",
+                                       |        "addressLine3": "Surrey",
+                                       |        "addressLine4": "London",
+                                       |        "postalCode": "WC11AA",
+                                       |        "countryCode": "GB"
+                                       |      },
+                                       |      "businessContactDetails": {
+                                       |        "phoneNumber": "01111222333",
+                                       |        "mobileNumber": "04444555666",
+                                       |        "faxNumber": "07777888999",
+                                       |        "emailAddress": "aaa@aaa.com"
+                                       |      },
+                                       |      "tradingStartDate": "2016-05-06",
+                                       |      "cashOrAccruals": "cash",
+                                       |      "seasonal": true
+                                       |    }
+                                       |  ]
+                                       |  }
+                                       |}""".stripMargin)
+      val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(responseJson).toString)
+
+      mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
+      mockRequestBuilderExecute(mockResponse)
+
+      ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue should matchPattern {
+        case Some(TradingDetails(Nino("ZR987654C"), Some("Surname DADTN"))) =>
+      }
+    }
+  }
+
+  "return None" when {
+
+    "a 404 is received for getTrustName" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
+      mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
+      mockRequestBuilderExecute(mockResponse)
+      ifConnector.getTrustName(testUrn.value).futureValue shouldBe None
+    }
+
+    "a 404 is received for getPptSubscription" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
+      mockHttpGet(
+        url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
+      )
+      mockRequestBuilderExecute(mockResponse)
+      ifConnector.getPptSubscription(testPptRef).futureValue shouldBe None
+    }
+
+    "a 404 is received for getTradingNameForMtdItId" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
+      mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
+      mockRequestBuilderExecute(mockResponse)
+      ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue shouldBe None
+    }
+  }
+
+  "throw an exception" when {
+
+    "an unexpected status is received for getTrustName" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR, "oops")
+      mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
+      mockRequestBuilderExecute(mockResponse)
+      ifConnector.getTrustName(testUrn.value).failed.futureValue shouldBe UpstreamErrorResponse(
+        "unexpected status during retrieving TrustName, error=oops",
+        500
+      )
+    }
+
+    "an unexpected status is received for getPptSubscription" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR, "oops")
+      mockHttpGet(
+        url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
+      )
+      mockRequestBuilderExecute(mockResponse)
+      ifConnector.getPptSubscription(testPptRef).failed.futureValue shouldBe UpstreamErrorResponse(
+        "unexpected error from getPptSubscriptionDisplay: oops",
+        500
+      )
+    }
+
+    "an unexpected status is received for getTradingNameForMtdItId" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR)
+      mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
+      mockRequestBuilderExecute(mockResponse)
+      ifConnector.getTradingDetailsForMtdItId(testMtdItId).failed.futureValue shouldBe UpstreamErrorResponse(
+        "unexpected error during 'getTradingNameForMtdItId', statusCode=500",
+        500
+      )
     }
   }
 }

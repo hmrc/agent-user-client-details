@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import javax.inject.{Inject, Singleton}
@@ -49,11 +50,11 @@ trait IfConnector {
 @Singleton
 class IfConnectorImpl @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
 )(implicit val ec: ExecutionContext)
-    extends HttpAPIMonitor with IfConnector with HttpErrorFunctions with Logging {
+    extends IfConnector with HttpAPIMonitor with HttpErrorFunctions with Logging {
 
   private val baseUrl: String = appConfig.ifPlatformBaseUrl
 
@@ -131,11 +132,10 @@ class IfConnectorImpl @Inject() (
     val headersConfig = desIfHeaders.headersConfig(viaIF = true, url, apiName)
 
     monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient.GET[HttpResponse](url, headers = headersConfig.explicitHeaders)(
-        implicitly[HttpReads[HttpResponse]],
-        headersConfig.hc,
-        ec
-      )
+      httpClient
+        .get(url"$url")
+        .setHeader(headersConfig.explicitHeaders *)
+        .execute[HttpResponse]
     }
   }
 

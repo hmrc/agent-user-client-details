@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
+import org.mongodb.scala.SingleObservableFuture
 import org.scalamock.handlers.{CallHandler2, CallHandler3, CallHandler4}
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
@@ -54,7 +55,7 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
   lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
-  implicit lazy val mockAuthConnector = mock[AuthConnector]
+  implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
 
   lazy val jobMonitoringRepository = new JobMonitoringRepository(mongoComponent, config)
@@ -126,7 +127,7 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
 
     def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] =
       (mockRequestBuilder
-        .execute(_: HttpReads[A], _: ExecutionContext))
+        .execute(using _: HttpReads[A], _: ExecutionContext))
         .expects(*, *)
         .returning(Future successful value)
 
@@ -365,47 +366,6 @@ class ClientControllerISpec extends AuthorisationMockSupport with MongoSupport {
       val result = controller.getClientListStatus(testArn)(request).futureValue
       result.header.status shouldBe 202
       result.body shouldBe NoEntity
-    }
-  }
-
-  "POST /groupid/:groupid/refresh-names" should {
-    "delete all work items from the repo for the given groupId and recreate work items, ignoring any names already present in the enrolment store" in new TestScope {
-      mockAuthResponseWithoutException(buildAuthorisedResponse)
-      mockGetPrincipalForGroupIdSuccess()
-      mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
-      wis
-        .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(0))),
-          Instant.now(),
-          Succeeded
-        )
-        .futureValue
-      wis
-        .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, clientsWithFriendlyNames(1))),
-          Instant.now(),
-          PermanentlyFailed
-        )
-        .futureValue
-      wis
-        .pushNew(
-          Seq(FriendlyNameWorkItem(anotherTestGroupId, clientsWithFriendlyNames(3))),
-          Instant.now(),
-          Succeeded
-        )
-        .futureValue
-      val request = FakeRequest("POST", "")
-      val result = controller.forceRefreshFriendlyNames(testArn)(request).futureValue
-      result.header.status shouldBe Status.ACCEPTED
-      // Check that none of the old work items are left and that now we have new to-do ones with no name filled in.
-      val workItems = wis.query(testGroupId, None).futureValue
-      workItems.length shouldBe clientsWithFriendlyNames.length
-      all(workItems.map(_.status)) shouldBe ToDo
-      all(workItems.map(_.item.client.friendlyName)) shouldBe empty
-      // Test that work items for a different groupId haven't been affected
-      val otherWorkItems = wis.query(anotherTestGroupId, None).futureValue
-      otherWorkItems.length shouldBe 1
-      otherWorkItems.head.status shouldBe Succeeded
     }
   }
 

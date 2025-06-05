@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import org.bson.types.ObjectId
+import org.mongodb.scala.SingleObservableFuture
 import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec

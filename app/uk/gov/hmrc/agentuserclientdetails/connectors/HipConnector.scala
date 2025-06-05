@@ -19,21 +19,19 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import com.google.inject.{ImplementedBy, Inject}
 import play.api.Logging
 import play.api.http.{HeaderNames, Status}
-import play.api.http.Status.NOT_FOUND
-import play.utils.UriEncoding
-import sttp.model.Uri.UriContext
 import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse, StringContextOps}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
-import java.time.{Clock, Instant}
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.{Clock, Instant}
 import java.util.UUID
 import javax.inject.Singleton
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,7 +44,7 @@ trait HipConnector {
 @Singleton
 class HipConnectorImpl @Inject() (
   appConfig: AppConfig,
-  httpClient: HttpClient,
+  httpClient: HttpClientV2,
   val metrics: Metrics,
   clock: Clock
 )(implicit val ec: ExecutionContext)
@@ -58,10 +56,8 @@ class HipConnectorImpl @Inject() (
     */
   def getTradingDetailsForMtdItId(mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] = {
 
-    val url: URL = uri"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details"
-      .withParam("mtdReference", Some(mtdItId.value))
-      .toJavaUri
-      .toURL
+    val url: URL =
+      url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdItId.value}"
 
     val correlationId: String = makeCorrelationId()
     val headers = Seq(
@@ -81,10 +77,9 @@ class HipConnectorImpl @Inject() (
 
     monitor(s"ConsumedAPI-HIP-ITSA_Taxpayer_Business_Details-GET") {
       httpClient
-        .GET[HttpResponse](
-          url = url,
-          headers = headers
-        )
+        .get(url)
+        .setHeader(headers *)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case 200 =>

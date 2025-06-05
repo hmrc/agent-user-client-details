@@ -31,7 +31,7 @@ case class Es3Cache(
 object Es3Cache {
   val ClientCountField: String = "clientCount"
   implicit val dtf: Format[Instant] = MongoJavatimeFormats.instantFormat
-  def format(implicit crypto: Encrypter with Decrypter): Format[Es3Cache] = Json.format[Es3Cache]
+  def format(implicit crypto: Encrypter & Decrypter): Format[Es3Cache] = Json.format[Es3Cache]
 
   def merge(es3Caches: Seq[Es3Cache]): Option[Es3Cache] =
     es3Caches.headOption.map { head =>

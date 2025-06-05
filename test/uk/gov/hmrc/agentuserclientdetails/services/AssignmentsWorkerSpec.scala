@@ -67,7 +67,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "make a call to ES11 and mark the item as succeeded when call succeeds" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -85,7 +85,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
         .verify(testUserId, testEnrolmentKey, *, *)
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Succeeded, *)
         .once()
     }
@@ -93,7 +93,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "when the ES11 call fails with a retryable failure such as a 429 status, mark the item as failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -111,7 +111,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -119,7 +119,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "when the ES11 call fails with a non-response exception, mark the item as failed (retryable)" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -137,7 +137,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -145,7 +145,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "when the ES11 call fails with a non-retryable failure, mark the item as permanently failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -163,7 +163,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }
@@ -171,7 +171,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -187,7 +187,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }
@@ -197,7 +197,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "make a call to ES12 and mark the item as succeeded when call succeeds" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -215,7 +215,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
         .verify(testUserId, testEnrolmentKey, *, *)
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Succeeded, *)
         .once()
     }
@@ -223,7 +223,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "when the ES12 call fails with a retryable failure such as a 429 status, mark the item as failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -241,7 +241,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -249,7 +249,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "when the ES12 call fails with a non-response exception, mark the item as failed (retryable)" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -267,7 +267,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, Failed, *)
         .once()
     }
@@ -275,7 +275,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "when the ES12 call fails with a non-retryable failure, mark the item as permanently failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -293,7 +293,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }
@@ -301,7 +301,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -317,7 +317,7 @@ class AssignmentsWorkerSpec extends AnyWordSpec with Matchers with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus with ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
         .verify(workItem.id, PermanentlyFailed, *)
         .once()
     }

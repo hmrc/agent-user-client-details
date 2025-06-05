@@ -21,36 +21,22 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json.{Format, Json, OFormat}
-import uk.gov.hmrc.agentmtdidentifiers.model.Service._
+import play.api.libs.json.{Format, Json}
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.*
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments, Service}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.{ES19Request, PaginatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
-import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.HttpReads.is2xx
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpException, HttpResponse, NotFoundException, UpstreamErrorResponse}
+import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
+import uk.gov.hmrc.http.HttpReads.Implicits.*
+import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpException, HttpResponse, NotFoundException, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
-
-case class ES19Request(friendlyName: String)
-
-object ES19Request {
-  implicit val format: Format[ES19Request] = Json.format[ES19Request]
-}
-
-case class PaginatedEnrolments(
-  startRecord: Int,
-  totalRecords: Int,
-  enrolments: Seq[Enrolment]
-)
-
-object PaginatedEnrolments {
-  implicit val format: OFormat[PaginatedEnrolments] = Json.format[PaginatedEnrolments]
-}
 
 @ImplementedBy(classOf[EnrolmentStoreProxyConnectorImpl])
 trait EnrolmentStoreProxyConnector {
@@ -100,15 +86,15 @@ trait EnrolmentStoreProxyConnector {
 
 @Singleton
 class EnrolmentStoreProxyConnectorImpl @Inject() (
-  http: HttpClient,
+  http: HttpClientV2,
   val metrics: Metrics
 )(implicit appConfig: AppConfig, materializer: Materializer, val ec: ExecutionContext)
     extends EnrolmentStoreProxyConnector with HttpAPIMonitor with Logging {
 
-  val espBaseUrl = new URL(appConfig.enrolmentStoreProxyUrl)
+  val espBaseUrl = url"${appConfig.enrolmentStoreProxyUrl}"
 
   // excludes PersonalIncomeRecord (unsupported)
-  val excludedServices =
+  private val excludedServices =
     Seq(PersonalIncomeRecord) ++
       (if (appConfig.enableCbcFeature) Seq.empty else Seq(Cbc, CbcNonUk)) ++
       (if (appConfig.enablePillar2Feature) Seq.empty else Seq(Pillar2))
@@ -124,14 +110,14 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     ec: ExecutionContext
   ): Future[Seq[String]] = {
 
-    val url =
-      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=${`type`}")
+    val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=${`type`}"
 
     `type` match {
       case "principal" | "delegated" | "all" =>
         monitor(s"ConsumedAPI-ES-getUsersAssignedToEnrolment-GET") {
           http
-            .GET[HttpResponse](url.toString)
+            .get(url)
+            .execute[HttpResponse]
             .map { response =>
               response.status match {
                 case Status.NO_CONTENT =>
@@ -147,7 +133,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
                         .as[Seq[String]]
                   }
                 case other =>
-                  throw UpstreamErrorResponse(s"Unexpected status on ES0 request ${response.body}", other, other)
+                  throw UpstreamErrorResponse(s"Unexpected status on ES0 request: ${response.body}", other, other)
               }
             }
         }
@@ -162,12 +148,12 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   def getPrincipalGroupIdFor(arn: Arn)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[String]] = {
     val enrolmentKeyPrefix = "HMRC-AS-AGENT~AgentReferenceNumber"
     val enrolmentKey = enrolmentKeyPrefix + "~" + arn.value
-    val url =
-      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal")
+    val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/groups?type=principal"
 
     monitor(s"ConsumedAPI-ES-getPrincipalGroupIdFor-GET") {
       http
-        .GET[HttpResponse](url.toString)
+        .get(url)
+        .execute[HttpResponse]
         .map { response =>
           response.status match {
             case Status.NO_CONTENT =>
@@ -197,22 +183,23 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
 
     def fetchPage(page: Int /* Note: first page is 1, not 0 */ ): Future[Option[PaginatedEnrolments]] = {
       val startRecord = 1 + ((page - 1) * appConfig.es3MaxRecordsFetchCount)
-      val url = new URL(
-        espBaseUrl,
-        s"/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}" // Note: we want delegated only
-      )
+      val url =
+        url"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}" // Note: we want delegated only
       monitor(s"ConsumedAPI-ES-getEnrolmentsAssignedToUser-GET") {
-        http.GET[HttpResponse](url.toString).map { response =>
-          response.status match {
-            case Status.OK         => response.json.asOpt[PaginatedEnrolments]
-            case Status.NO_CONTENT => Option.empty[PaginatedEnrolments]
-            case Status.NOT_FOUND =>
-              throw new NotFoundException(s"ES2 call for $userId returned status 404")
-            case other =>
-              logger.error(s"Unexpected status on ES2 request: $other, ${response.body}")
-              throw new HttpException(s"ES2 call for $userId returned status $other", other)
+        http
+          .get(url)
+          .execute[HttpResponse]
+          .map { response =>
+            response.status match {
+              case Status.OK         => response.json.asOpt[PaginatedEnrolments]
+              case Status.NO_CONTENT => Option.empty[PaginatedEnrolments]
+              case Status.NOT_FOUND =>
+                throw new NotFoundException(s"ES2 call for $userId returned status 404")
+              case other =>
+                logger.error(s"Unexpected status on ES2 request: $other, ${response.body}")
+                throw new HttpException(s"ES2 call for $userId returned status $other", other)
+            }
           }
-        }
       }
     }
 
@@ -261,23 +248,23 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     hc: HeaderCarrier
   ): Future[Option[PaginatedEnrolments]] = {
     val url =
-      new URL(
-        espBaseUrl,
-        s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}"
-      )
+      url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated&start-record=$startRecord&max-records=${appConfig.es3MaxRecordsFetchCount}"
 
     monitor(s"ConsumedAPI-ES-getEnrolmentsForGroupId-GET") {
-      http.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case Status.OK =>
-            response.json.asOpt[PaginatedEnrolments]
-          case Status.NO_CONTENT =>
-            Option.empty[PaginatedEnrolments]
-          case other =>
-            logger.error(s"Unexpected status on ES3 request: $other, ${response.body}")
-            Option.empty[PaginatedEnrolments]
+      http
+        .get(url)
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case Status.OK =>
+              response.json.asOpt[PaginatedEnrolments]
+            case Status.NO_CONTENT =>
+              Option.empty[PaginatedEnrolments]
+            case other =>
+              logger.error(s"Unexpected status on ES3 request: $other, ${response.body}")
+              Option.empty[PaginatedEnrolments]
+          }
         }
-      }
     }
   }
 
@@ -286,17 +273,20 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit] = {
-    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/users/$userId/enrolments/$enrolmentKey")
+    val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments/$enrolmentKey"
     monitor(s"ConsumedAPI-ES-assignEnrolment-POST") {
-      http.POSTEmpty[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            if (status != Status.CREATED)
-              logger.warn(s"assignEnrolment: Expected 201 status, got other success status ($status)")
-          case other =>
-            throw UpstreamErrorResponse(s"Unexpected status on ES11 request: ${response.body}", other, other)
+      http
+        .post(url)
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case status if is2xx(status) =>
+              if (status != Status.CREATED)
+                logger.warn(s"assignEnrolment: Expected 201 status, got other success status ($status)")
+            case other =>
+              throw UpstreamErrorResponse(s"Unexpected status on ES11 request: ${response.body}", other, other)
+          }
         }
-      }
     }
   }
 
@@ -305,17 +295,20 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit] = {
-    val url = new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/users/$userId/enrolments/$enrolmentKey")
+    val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments/$enrolmentKey"
     monitor(s"ConsumedAPI-ES-unassignEnrolment-DELETE") {
-      http.DELETE[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            if (status != Status.NO_CONTENT)
-              logger.warn(s"assignEnrolment: Expected 204 status, got other success status ($status)")
-          case other =>
-            throw UpstreamErrorResponse(s"Unexpected status on ES12 request: ${response.body}", other, other)
+      http
+        .delete(url)
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case status if is2xx(status) =>
+              if (status != Status.NO_CONTENT)
+                logger.warn(s"assignEnrolment: Expected 204 status, got other success status ($status)")
+            case other =>
+              throw UpstreamErrorResponse(s"Unexpected status on ES12 request: ${response.body}", other, other)
+          }
         }
-      }
     }
   }
 
@@ -324,21 +317,24 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit] = {
-    val url = new URL(
-      espBaseUrl,
-      s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name"
-    )
+    implicit val format: Format[ES19Request] = ES19Request.format
+    val url =
+      url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name"
     monitor(s"ConsumedAPI-ES-updateEnrolmentFriendlyName-PUT") {
-      http.PUT[ES19Request, HttpResponse](url.toString, ES19Request(friendlyName)).map { response =>
-        response.status match {
-          case status if is2xx(status) =>
-            if (status != Status.NO_CONTENT) {
-              logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
-            }
-          case other =>
-            throw UpstreamErrorResponse(s"Unexpected status on ES19 request: ${response.body}", other, other)
+      http
+        .put(url)
+        .withBody(Json.toJson(ES19Request(friendlyName)))
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case status if is2xx(status) =>
+              if (status != Status.NO_CONTENT) {
+                logger.warn(s"updateEnrolmentFriendlyName: Expected 204 status, got other success status ($status)")
+              }
+            case other =>
+              throw UpstreamErrorResponse(s"Unexpected status on ES19 request: ${response.body}", other, other)
+          }
         }
-      }
     }
   }
 
@@ -346,18 +342,21 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
   override def getGroupDelegatedEnrolments(
     groupId: String
   )(implicit hc: HeaderCarrier): Future[Option[GroupDelegatedEnrolments]] = {
-    val url =
-      new URL(espBaseUrl, s"/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated")
+    val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated"
     monitor(s"ConsumedAPI-ES-getGroupDelegatedEnrolments-GET") {
-      http.GET[HttpResponse](url.toString).map { response =>
-        response.status match {
-          case Status.OK => Some(response.json.as[GroupDelegatedEnrolments])
-          case other =>
-            logger.error(s"Could not fetch group delegated enrolments $groupId, status: $other, body: ${response.body}")
-            None
+      http
+        .get(url)
+        .execute[HttpResponse]
+        .map { response =>
+          response.status match {
+            case Status.OK => Some(response.json.as[GroupDelegatedEnrolments])
+            case other =>
+              logger.error(
+                s"Could not fetch group delegated enrolments $groupId, status: $other, body: ${response.body}"
+              )
+              None
+          }
         }
-      }
     }
   }
-
 }

@@ -18,9 +18,9 @@ package uk.gov.hmrc.agentuserclientdetails.auth
 
 import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
+import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, Name, Retrieval, ~}
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
 import uk.gov.hmrc.http.HeaderCarrier
 
