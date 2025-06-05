@@ -23,10 +23,11 @@ import play.api.http.Status
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.Citizen
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -42,6 +43,7 @@ class CitizenDetailsConnectorISpec extends BaseIntegrationSpec with MockFactory 
   val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
   val cdConnector = new CitizenDetailsConnectorImpl(appConfig, mockHttpClient, metrics)
   implicit val hc: HeaderCarrier = HeaderCarrier()
+  val testNino: Nino = Nino("HC275906A")
 
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
@@ -62,9 +64,8 @@ class CitizenDetailsConnectorISpec extends BaseIntegrationSpec with MockFactory 
       .expects(*, *)
       .returning(Future successful value)
 
-  "CitizenDetailsConnector" should {
-    "getCitizenDetails" in {
-      val testNino = Nino("HC275906A")
+  "getCitizenDetails" should {
+    "return a Citizen model when status is 200" in {
       val responseJson = Json.parse(s"""{
                                        |   "name": {
                                        |      "current": {
@@ -82,6 +83,23 @@ class CitizenDetailsConnectorISpec extends BaseIntegrationSpec with MockFactory 
       mockHttpGet(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}")
       mockRequestBuilderExecute(mockResponse)
       cdConnector.getCitizenDetails(testNino).futureValue shouldBe Some(Citizen(Some("John"), Some("Smith")))
+    }
+
+    "return None when status is 404" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
+      mockHttpGet(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}")
+      mockRequestBuilderExecute(mockResponse)
+      cdConnector.getCitizenDetails(testNino).futureValue shouldBe None
+    }
+
+    "throw an exception when status is unrecognised" in {
+      val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR)
+      mockHttpGet(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}")
+      mockRequestBuilderExecute(mockResponse)
+      cdConnector.getCitizenDetails(testNino).failed.futureValue shouldBe UpstreamErrorResponse(
+        "unexpected error during 'getCitizenDetails', statusCode=500",
+        500
+      )
     }
   }
 }

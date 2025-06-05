@@ -21,15 +21,16 @@ import izumi.reflect.Tag
 import org.apache.pekko.stream.Materializer
 import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
-import play.api.http.Status.{CREATED, NOT_FOUND, NO_CONTENT, OK}
+import play.api.http.Status.*
 import play.api.libs.json.{JsValue, Json}
 import play.api.libs.ws.BodyWritable
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentmtdidentifiers.model.*
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.PaginatedEnrolments
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpException, HttpReads, HttpResponse, NotFoundException, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -49,6 +50,8 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
   lazy val esp: EnrolmentStoreProxyConnector = new EnrolmentStoreProxyConnectorImpl(mockHttpClient, metrics)
 
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
+
+  val mockErrorResponse: HttpResponse = HttpResponse(INTERNAL_SERVER_ERROR, "oops")
 
   override def moduleOverrides: AbstractModule = new AbstractModule {
     override def configure(): Unit =
@@ -208,6 +211,21 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
       esp.getUsersAssignedToEnrolment(enrolmentKey, enrolmentType).futureValue shouldBe Seq.empty
     }
 
+    "throw an exception when ES0 call returns an unexpected status" in {
+      val enrolmentKey = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
+      val enrolmentType = "principal"
+
+      mockHttpGet(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/$enrolmentKey/users?type=$enrolmentType"
+      )
+      mockRequestBuilderExecute(mockErrorResponse)
+
+      esp.getUsersAssignedToEnrolment(enrolmentKey, enrolmentType).failed.futureValue shouldBe UpstreamErrorResponse(
+        "Unexpected status on ES0 request: oops",
+        500
+      )
+    }
+
     "complete ES1 call successfully" in {
       val arn = "TARN0000001"
       val groupId = "2K6H-N1C1-7M7V-O4A3"
@@ -231,6 +249,20 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
       mockRequestBuilderExecute(mockResponse)
 
       esp.getPrincipalGroupIdFor(Arn(arn)).futureValue shouldBe None
+    }
+
+    "throw an exception when ES1 call returns an unexpected status" in {
+      val arn = "TARN0000001"
+
+      mockHttpGet(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~$arn/groups?type=principal"
+      )
+      mockRequestBuilderExecute(mockErrorResponse)
+
+      esp.getPrincipalGroupIdFor(Arn(arn)).failed.futureValue shouldBe UpstreamErrorResponse(
+        "Unexpected status on ES1 request: oops",
+        500
+      )
     }
 
     "complete ES3 call successfully, discounting unsupported enrolments" in {
@@ -265,6 +297,28 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
       )
     }
 
+    "return an empty sequence when ES3 call returns 204" in {
+      val testGroupId = "2K6H-N1C1-7M7V-O4A3"
+
+      mockHttpGet(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=1&max-records=${appConfig.es3MaxRecordsFetchCount}"
+      )
+      mockRequestBuilderExecute(HttpResponse(NO_CONTENT))
+
+      esp.getEnrolmentsForGroupId(testGroupId).futureValue shouldBe Seq()
+    }
+
+    "return an empty sequence when ES3 call returns an unexpected status" in {
+      val testGroupId = "2K6H-N1C1-7M7V-O4A3"
+
+      mockHttpGet(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments?type=delegated&start-record=1&max-records=${appConfig.es3MaxRecordsFetchCount}"
+      )
+      mockRequestBuilderExecute(mockErrorResponse)
+
+      esp.getEnrolmentsForGroupId(testGroupId).futureValue shouldBe Seq()
+    }
+
     "complete ES19 call successfully" in {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       val mockResponse: HttpResponse =
@@ -283,6 +337,28 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
         .updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name")
         .futureValue shouldBe Future.unit.futureValue
     }
+
+    "throw an exception when ES19 call returns an unexpected status" in {
+      val testGroupId = "2K6H-N1C1-7M7V-O4A3"
+      val enrolmentKey: String = EnrolmentKey.fromEnrolment(mtdVatEnrolment)
+      mockHttpPut(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name"
+      )
+      (mockRequestBuilder
+        .withBody(_: JsValue)(using _: BodyWritable[JsValue], _: Tag[JsValue], _: ExecutionContext))
+        .expects(*, *, *, *)
+        .returns(mockRequestBuilder)
+      mockRequestBuilderExecute(mockErrorResponse)
+
+      esp
+        .updateEnrolmentFriendlyName(testGroupId, enrolmentKey, "Friendly Name")
+        .failed
+        .futureValue shouldBe UpstreamErrorResponse(
+        "Unexpected status on ES19 request: oops",
+        500
+      )
+    }
+
     "complete ES11 call successfully" in {
       val testUserId = "ABCEDEFGI1234568"
       val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
@@ -294,6 +370,21 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
 
       esp.assignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe Future.unit.futureValue
     }
+
+    "throw an exception when ES11 call returns an unexpected status" in {
+      val testUserId = "ABCEDEFGI1234568"
+      val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
+      mockHttpPost(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$testUserId/enrolments/$testEnrolmentKey"
+      )
+      mockRequestBuilderExecute(mockErrorResponse)
+
+      esp.assignEnrolment(testUserId, testEnrolmentKey).failed.futureValue shouldBe UpstreamErrorResponse(
+        "Unexpected status on ES11 request: oops",
+        500
+      )
+    }
+
     "complete ES12 call successfully" in {
       val testUserId = "ABCEDEFGI1234568"
       val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
@@ -304,6 +395,20 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
       mockRequestBuilderExecute(mockResponse)
 
       esp.unassignEnrolment(testUserId, testEnrolmentKey).futureValue shouldBe Future.unit.futureValue
+    }
+
+    "throw an exception when ES12 call returns an unexpected status" in {
+      val testUserId = "ABCEDEFGI1234568"
+      val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
+      mockHttpDelete(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$testUserId/enrolments/$testEnrolmentKey"
+      )
+      mockRequestBuilderExecute(mockErrorResponse)
+
+      esp.unassignEnrolment(testUserId, testEnrolmentKey).failed.futureValue shouldBe UpstreamErrorResponse(
+        "Unexpected status on ES12 request: oops",
+        500
+      )
     }
 
     s"handle ES21 call returning non-$OK" in {
@@ -361,6 +466,37 @@ class EnrolmentStoreProxyConnectorISpec extends BaseIntegrationSpec with MockFac
       mockRequestBuilderExecute(HttpResponse(NO_CONTENT, ""))
 
       esp.getEnrolmentsAssignedToUser(userId).futureValue.toSet shouldBe enrolments.toSet
+    }
+
+    "throw a NotFoundException when ES2 call returns a 404 status" in {
+      val userId = "myUser"
+      val pageSize: Int = appConfig.es3MaxRecordsFetchCount
+      val mockResponse = HttpResponse(NOT_FOUND)
+
+      def urlForPage(page: Int): URL =
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&start-record=${(page - 1) * pageSize + 1}&max-records=$pageSize"
+
+      mockHttpGet(urlForPage(1))
+      mockRequestBuilderExecute(mockResponse)
+
+      val result = esp.getEnrolmentsAssignedToUser(userId).failed.futureValue
+      result.isInstanceOf[NotFoundException]
+      result.getMessage shouldBe s"ES2 call for $userId returned status 404"
+    }
+
+    "throw a HttpException when ES2 call returns an unexpected status" in {
+      val userId = "myUser"
+      val pageSize: Int = appConfig.es3MaxRecordsFetchCount
+
+      def urlForPage(page: Int): URL =
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&start-record=${(page - 1) * pageSize + 1}&max-records=$pageSize"
+
+      mockHttpGet(urlForPage(1))
+      mockRequestBuilderExecute(mockErrorResponse)
+
+      val result = esp.getEnrolmentsAssignedToUser(userId).failed.futureValue
+      result.isInstanceOf[HttpException]
+      result.getMessage shouldBe s"ES2 call for $userId returned status 500"
     }
   }
 }

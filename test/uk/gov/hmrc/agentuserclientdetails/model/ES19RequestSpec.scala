@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,22 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Json, OFormat, Reads}
+import play.api.libs.json.Json
+import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
-case class AgentDetailsDesResponse(agencyDetails: Option[AgencyDetails])
+class ES19RequestSpec extends BaseSpec {
 
-case class AgencyDetails(agencyName: Option[String], agencyEmail: Option[String])
+  "ES19Request" should {
 
-object AgencyDetails {
-  implicit val agencyDetailsFormat: OFormat[AgencyDetails] = Json.format[AgencyDetails]
-}
+    val model: ES19Request = ES19Request("Enrolment Man")
+    val json = Json.obj("friendlyName" -> "Enrolment Man")
 
-object AgentDetailsDesResponse {
-  implicit val agencyDetailsFormat: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
+    "read from JSON" in {
+      json.as[ES19Request] shouldBe model
+    }
+
+    "write to JSON" in {
+      Json.toJson(model) shouldBe json
+    }
+  }
 }

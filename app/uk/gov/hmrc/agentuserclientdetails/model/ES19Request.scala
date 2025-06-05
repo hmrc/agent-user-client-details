@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,10 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Json, OFormat, Reads}
+import play.api.libs.json.{Format, Json}
 
-case class AgentDetailsDesResponse(agencyDetails: Option[AgencyDetails])
+case class ES19Request(friendlyName: String)
 
-case class AgencyDetails(agencyName: Option[String], agencyEmail: Option[String])
-
-object AgencyDetails {
-  implicit val agencyDetailsFormat: OFormat[AgencyDetails] = Json.format[AgencyDetails]
-}
-
-object AgentDetailsDesResponse {
-  implicit val agencyDetailsFormat: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
+object ES19Request {
+  implicit val format: Format[ES19Request] = Json.format[ES19Request]
 }

@@ -2,7 +2,7 @@ import sbt.*
 
 object AppDependencies {
 
-  private val bootstrapVer: String = "9.12.0"
+  private val bootstrapVer: String = "9.13.0"
   private val mongoVer: String = "2.6.0"
   private val pekkoVersion = "1.0.3"
 
@@ -18,6 +18,6 @@ object AppDependencies {
     "uk.gov.hmrc.mongo"       %% "hmrc-mongo-test-play-30"    % mongoVer        % Test,
     "uk.gov.hmrc"             %% "bootstrap-test-play-30"     % bootstrapVer    % Test,
     "org.apache.pekko"        %% "pekko-stream-testkit"       % pekkoVersion    % Test,
-    "org.scalamock"           %% "scalamock"                  % "6.0.0"         % Test
+    "org.scalamock"           %% "scalamock"                  % "7.3.2"         % Test
   )
 }

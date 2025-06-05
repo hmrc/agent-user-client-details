@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServ
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
 object StatusUtil {
-  val retryableStatuses =
+  val retryableStatuses: Seq[Int] =
     Seq(UNAUTHORIZED, TOO_MANY_REQUESTS, INTERNAL_SERVER_ERROR, BAD_GATEWAY, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT)
   def isRetryable(status: Int): Boolean = retryableStatuses.contains(status)
   def isRetryable(e: Throwable): Boolean = e match {

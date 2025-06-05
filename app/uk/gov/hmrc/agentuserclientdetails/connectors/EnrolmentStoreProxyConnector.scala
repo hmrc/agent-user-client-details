@@ -21,14 +21,15 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import play.api.http.Status
-import play.api.libs.json.{Format, Json, OFormat}
+import play.api.libs.json.{Format, Json}
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
-import uk.gov.hmrc.agentmtdidentifiers.model.Service._
+import uk.gov.hmrc.agentmtdidentifiers.model.Service.*
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Enrolment, GroupDelegatedEnrolments, Service}
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.{ES19Request, PaginatedEnrolments}
 import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpErrorFunctions.is2xx
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpException, HttpResponse, NotFoundException, StringContextOps, UpstreamErrorResponse}
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -36,22 +37,6 @@ import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import javax.inject.{Inject, Singleton}
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
-
-case class ES19Request(friendlyName: String)
-
-object ES19Request {
-  implicit val format: Format[ES19Request] = Json.format[ES19Request]
-}
-
-case class PaginatedEnrolments(
-  startRecord: Int,
-  totalRecords: Int,
-  enrolments: Seq[Enrolment]
-)
-
-object PaginatedEnrolments {
-  implicit val format: OFormat[PaginatedEnrolments] = Json.format[PaginatedEnrolments]
-}
 
 @ImplementedBy(classOf[EnrolmentStoreProxyConnectorImpl])
 trait EnrolmentStoreProxyConnector {
@@ -148,7 +133,7 @@ class EnrolmentStoreProxyConnectorImpl @Inject() (
                         .as[Seq[String]]
                   }
                 case other =>
-                  throw UpstreamErrorResponse(s"Unexpected status on ES0 request ${response.body}", other, other)
+                  throw UpstreamErrorResponse(s"Unexpected status on ES0 request: ${response.body}", other, other)
               }
             }
         }

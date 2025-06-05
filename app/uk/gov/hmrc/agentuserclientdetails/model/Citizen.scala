@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,21 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json.{Json, OFormat, Reads}
+import play.api.libs.json.{JsPath, Reads}
 
-case class AgentDetailsDesResponse(agencyDetails: Option[AgencyDetails])
-
-case class AgencyDetails(agencyName: Option[String], agencyEmail: Option[String])
-
-object AgencyDetails {
-  implicit val agencyDetailsFormat: OFormat[AgencyDetails] = Json.format[AgencyDetails]
+case class Citizen(firstName: Option[String], lastName: Option[String]) {
+  lazy val name: Option[String] = {
+    val n = Seq(firstName, lastName).collect { case Some(x) => x }.mkString(" ")
+    if (n.isEmpty) None else Some(n)
+  }
 }
 
-object AgentDetailsDesResponse {
-  implicit val agencyDetailsFormat: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
+object Citizen {
+  implicit val reads: Reads[Citizen] = {
+    val current = JsPath \ "name" \ "current"
+    for {
+      fn <- (current \ "firstName").readNullable[String]
+      ln <- (current \ "lastName").readNullable[String]
+    } yield Citizen(fn, ln)
+  }
 }

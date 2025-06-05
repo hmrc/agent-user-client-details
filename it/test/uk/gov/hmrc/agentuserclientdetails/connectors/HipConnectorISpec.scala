@@ -52,9 +52,7 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
     mockHttpClient,
     metrics,
     fixedClock
-  ) {
-    protected override def makeCorrelationId(): String = correlationId
-  }
+  )
 
   def mockRequestBuilderExecute[A](value: A): CallHandler2[HttpReads[A], ExecutionContext, Future[A]] = {
     (mockRequestBuilder
@@ -122,11 +120,14 @@ class HipConnectorISpec extends BaseIntegrationSpec with MockFactory {
     val mockResponse = HttpResponse(Status.NOT_FOUND, "url not found")
     mockRequestBuilderExecute(mockResponse)
 
-    hipConnector
+    val result = hipConnector
       .getTradingDetailsForMtdItId(mtdItId)
       .failed
       .futureValue
-      .getMessage shouldBe "Unexpected response from HIP API: [correlationId: 5c290341-2d37-4e3c-a348-06724b2cf1c0] [status: 404] [responseBody: url not found]"
+      .getMessage
+    val correlationId = result.split("correlationId: ")(1).split("]")(0)
+
+    result shouldBe s"Unexpected response from HIP API: [correlationId: $correlationId] [status: 404] [responseBody: url not found]"
   }
 
   lazy val responseBodySuccess: String =

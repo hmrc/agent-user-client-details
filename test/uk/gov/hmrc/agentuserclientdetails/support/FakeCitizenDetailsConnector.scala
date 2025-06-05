@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import uk.gov.hmrc.agentuserclientdetails.connectors.{Citizen, CitizenDetailsConnector}
+import uk.gov.hmrc.agentuserclientdetails.connectors.CitizenDetailsConnector
+import uk.gov.hmrc.agentuserclientdetails.model.Citizen
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.{HeaderCarrier, UpstreamErrorResponse}
 

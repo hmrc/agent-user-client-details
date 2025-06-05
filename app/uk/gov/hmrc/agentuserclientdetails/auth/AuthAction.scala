@@ -20,7 +20,6 @@ import play.api.mvc.{Request, Result}
 import play.api.{Configuration, Environment, Logging}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.AgentUser
-import uk.gov.hmrc.agentuserclientdetails.util.AuthRedirects
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{allEnrolments, credentialRole, credentials, name}
@@ -37,7 +36,7 @@ class AuthAction @Inject() (
   val authConnector: AuthConnector,
   val env: Environment,
   val config: Configuration
-) extends AuthRedirects with AuthorisedFunctions with Logging {
+) extends AuthorisedFunctions with Logging {
 
   private val agentEnrolment = "HMRC-AS-AGENT"
   private val agentReferenceNumberIdentifier = "AgentReferenceNumber"
