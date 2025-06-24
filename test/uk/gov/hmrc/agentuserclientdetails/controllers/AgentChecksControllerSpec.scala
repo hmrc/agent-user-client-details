@@ -27,7 +27,6 @@ import play.api.test.Helpers._
 import play.api.test.FakeRequest
 import play.api.test.Helpers
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.agents.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
@@ -45,7 +44,7 @@ class AgentChecksControllerSpec
 extends BaseSpec {
 
   private val arn: Arn = Arn("TARN0000001")
-  val user: AgentUser = AgentUser("userId", "userName")
+  val credId: String = "userId"
   private val clientCount = 5
   private val agentSize: AgentSize = AgentSize(
     arn,
@@ -57,7 +56,7 @@ extends BaseSpec {
 
     "dependency service returns nothing" should {
       s"return $NOT_FOUND" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetAgentSizeWithoutException(None)
 
         val result = agentChecksController.getAgentSize(arn)(FakeRequest())
@@ -70,7 +69,7 @@ extends BaseSpec {
       def extractClientCountFrom(body: String) = (Json.parse(body) \ "client-count").get.as[Int]
 
       s"return $OK with matching client count" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetAgentSizeWithoutException(Some(agentSize))
 
         val result = agentChecksController.getAgentSize(arn)(FakeRequest())
@@ -81,7 +80,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $NOT_FOUND" should {
       s"return $NOT_FOUND" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetAgentSizeWithException(
           UpstreamErrorResponse(
             "not found message",
@@ -97,7 +96,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $UNAUTHORIZED" should {
       s"return $UNAUTHORIZED" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetAgentSizeWithException(
           UpstreamErrorResponse(
             "unauthorized message",
@@ -113,7 +112,7 @@ extends BaseSpec {
 
     s"dependency service throws a 5xx upstream error" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetAgentSizeWithException(
           UpstreamErrorResponse(
             "backend problem message",
@@ -129,7 +128,7 @@ extends BaseSpec {
 
     s"dependency service throws a runtime exception" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetAgentSizeWithException(new RuntimeException("boo boo"))
 
         val result = agentChecksController.getAgentSize(arn)(FakeRequest())
@@ -142,7 +141,7 @@ extends BaseSpec {
 
     "more than one users exist in group" should {
       s"return $NO_CONTENT" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceUserCheckWithoutException(2)
 
         val result = agentChecksController.userCheck(arn)(FakeRequest())
@@ -152,7 +151,7 @@ extends BaseSpec {
 
     "less than two users exist in group" should {
       s"return $FORBIDDEN" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceUserCheckWithoutException(1)
 
         val result = agentChecksController.userCheck(arn)(FakeRequest())
@@ -162,7 +161,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $NOT_FOUND" should {
       s"return $NOT_FOUND" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceUserCheckWithException(UpstreamErrorResponse(
           "not found message",
           NOT_FOUND,
@@ -176,7 +175,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $UNAUTHORIZED" should {
       s"return $UNAUTHORIZED" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceUserCheckWithException(
           UpstreamErrorResponse(
             "unauthorized message",
@@ -192,7 +191,7 @@ extends BaseSpec {
 
     s"dependency service throws a 5xx upstream error" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceUserCheckWithException(
           UpstreamErrorResponse(
             "backend problem message",
@@ -208,7 +207,7 @@ extends BaseSpec {
 
     s"dependency service throws a runtime exception" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceUserCheckWithException(new RuntimeException("boo boo"))
 
         val result = agentChecksController.userCheck(arn)(FakeRequest())
@@ -221,7 +220,7 @@ extends BaseSpec {
 
     "dependency service indicates outstanding work items exist" should {
       s"return $OK" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithoutException(true)
 
         val result = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
@@ -231,7 +230,7 @@ extends BaseSpec {
 
     "dependency service indicates outstanding work items do not exist" should {
       s"return $NO_CONTENT" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithoutException(false)
 
         val result = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
@@ -241,7 +240,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $NOT_FOUND" should {
       s"return $NOT_FOUND" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(
           UpstreamErrorResponse(
             "not found message",
@@ -257,7 +256,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $UNAUTHORIZED" should {
       s"return $UNAUTHORIZED" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(
           UpstreamErrorResponse(
             "unauthorized message",
@@ -273,7 +272,7 @@ extends BaseSpec {
 
     s"dependency service throws a 5xx upstream error" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(
           UpstreamErrorResponse(
             "backend problem message",
@@ -289,7 +288,7 @@ extends BaseSpec {
 
     s"dependency service throws a runtime exception" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingWorkItemsExistWithException(new RuntimeException("boo boo"))
 
         val result = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
@@ -302,7 +301,7 @@ extends BaseSpec {
 
     "dependency service indicates outstanding work items exist" should {
       s"return $OK" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithoutException(true)
 
         val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
@@ -312,7 +311,7 @@ extends BaseSpec {
 
     "dependency service indicates outstanding work items do not exist" should {
       s"return $NO_CONTENT" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithoutException(false)
 
         val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
@@ -322,7 +321,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $NOT_FOUND" should {
       s"return $NOT_FOUND" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
           UpstreamErrorResponse(
             "not found message",
@@ -338,7 +337,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $UNAUTHORIZED" should {
       s"return $UNAUTHORIZED" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
           UpstreamErrorResponse(
             "unauthorized message",
@@ -354,7 +353,7 @@ extends BaseSpec {
 
     s"dependency service throws a 5xx upstream error" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(
           UpstreamErrorResponse(
             "backend problem message",
@@ -370,7 +369,7 @@ extends BaseSpec {
 
     s"dependency service throws a runtime exception" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceOutstandingAssignmentsWorkItemsExistWithException(new RuntimeException("boo boo"))
 
         val result = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
@@ -385,7 +384,7 @@ extends BaseSpec {
 
     "dependency service indicates no team members exist" should {
       s"return $OK with zero team members" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetTeamMembersWithoutException(Seq.empty)
 
         val result = agentChecksController.getTeamMembers(arn)(FakeRequest())
@@ -396,7 +395,7 @@ extends BaseSpec {
 
     "dependency service indicates team members exist" should {
       s"return $OK with non-zero team members" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         val teamMembers: Seq[UserDetails] = Seq(UserDetails(userId = Some("userId")))
         mockAgentChecksServiceGetTeamMembersWithoutException(teamMembers)
 
@@ -408,7 +407,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $NOT_FOUND" should {
       s"return $NOT_FOUND" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetTeamMembersWithException(
           UpstreamErrorResponse(
             "not found message",
@@ -424,7 +423,7 @@ extends BaseSpec {
 
     s"dependency service throws an upstream error having status $UNAUTHORIZED" should {
       s"return $UNAUTHORIZED" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetTeamMembersWithException(
           UpstreamErrorResponse(
             "unauthorized message",
@@ -440,7 +439,7 @@ extends BaseSpec {
 
     s"dependency service throws a 5xx upstream error" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetTeamMembersWithException(
           UpstreamErrorResponse(
             "backend problem message",
@@ -456,7 +455,7 @@ extends BaseSpec {
 
     s"dependency service throws a runtime exception" should {
       s"return $INTERNAL_SERVER_ERROR" in new TestScope {
-        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+        mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
         mockAgentChecksServiceGetTeamMembersWithException(new RuntimeException("boo boo"))
 
         val result = agentChecksController.getTeamMembers(arn)(FakeRequest())

@@ -21,7 +21,6 @@ import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Credentials
-import uk.gov.hmrc.auth.core.retrieve.Name
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.auth.core.syntax.retrieved.authSyntaxForRetrieved
@@ -40,27 +39,21 @@ with MockFactory {
     EnrolmentIdentifier(agentReferenceNumberIdentifier, arnStr)
   )
   val agentEnrolment = "HMRC-AS-AGENT"
-  val name: Name = Name(Some("Jane"), Some("Doe"))
-  val ggCredentials: Credentials = Credentials("user1", "GovernmentGateway")
   val enrolments: Set[Enrolment] = Set(Enrolment(
     agentEnrolment,
     agentEnrolmentIdentifiers,
     "Activated"
   ))
 
-  type GrantAccess = Enrolments ~ Option[CredentialRole] ~ Option[Name] ~ Option[Credentials]
+  type GrantAccess = Enrolments ~ Option[CredentialRole]
 
   def buildAuthorisedResponse: GrantAccess =
     Enrolments(enrolments) and
-      Some(User) and
-      Some(name) and
-      Some(ggCredentials)
+      Some(User)
 
   def buildAuthorisedResponseAssistant: GrantAccess =
     Enrolments(enrolments) and
-      Some(Assistant) and
-      Some(name) and
-      Some(ggCredentials)
+      Some(Assistant)
 
   def mockAuthResponseWithoutException(response: GrantAccess)(implicit authConnector: AuthConnector): Unit =
     (authConnector
