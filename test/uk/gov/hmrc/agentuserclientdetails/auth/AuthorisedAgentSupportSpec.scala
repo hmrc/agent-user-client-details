@@ -24,7 +24,6 @@ import play.api.mvc.Request
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
 import scala.concurrent.ExecutionContext
@@ -43,7 +42,7 @@ extends BaseSpec {
 
   "Auth Action returning authorised agent" should {
     s"return $Ok" in new TestScope {
-      mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn, user)))
+      mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
 
       authorisedAgentSupport.withAuthorisedAgent()(body).futureValue shouldBe Ok
     }
@@ -59,7 +58,6 @@ extends BaseSpec {
     val authorisedAgentSupport: AuthorisedAgentSupport = new AuthorisedAgentSupport {}
 
     val arn: Arn = Arn("KARN0762398")
-    val user: AgentUser = AgentUser("userId", "userName")
 
     def mockAuthActionGetAuthorisedAgent(
       maybeAuthorisedAgent: Option[AuthorisedAgent]

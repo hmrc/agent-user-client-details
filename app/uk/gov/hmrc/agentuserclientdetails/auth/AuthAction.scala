@@ -22,15 +22,10 @@ import play.api.Configuration
 import play.api.Environment
 import play.api.Logging
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.AgentUser
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentialRole
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentials
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.name
-import uk.gov.hmrc.auth.core.retrieve.Credentials
-import uk.gov.hmrc.auth.core.retrieve.Name
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
@@ -63,13 +58,9 @@ with Logging {
     implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
     authorised(AuthProviders(GovernmentGateway) and Enrolment(agentEnrolment))
-      .retrieve(allEnrolments and credentialRole and name and credentials) {
-        case enrols ~ credRole ~ name ~ credentials =>
-          getArnAndAgentUser(
-            enrols,
-            name,
-            credentials
-          ) match {
+      .retrieve(allEnrolments and credentialRole) {
+        case enrols ~ credRole =>
+          getArn(enrols) match {
             case Some(authorisedAgent) =>
               if (credRole.contains(User) | credRole.contains(Admin) | (credRole.contains(Assistant) & allowStandardUser)) {
                 Future.successful(Option(authorisedAgent))
@@ -97,22 +88,14 @@ with Logging {
     }
   }
 
-  private def getArnAndAgentUser(
-    enrolments: Enrolments,
-    maybeName: Option[Name],
-    maybeCredentials: Option[Credentials]
+  private def getArn(
+    enrolments: Enrolments
   ): Option[AuthorisedAgent] =
     for {
       enrolment <- enrolments.getEnrolment(agentEnrolment)
       identifier <- enrolment.getIdentifier(agentReferenceNumberIdentifier)
-      credentials <- maybeCredentials
-      name <- maybeName
     } yield AuthorisedAgent(
-      Arn(identifier.value),
-      AgentUser(
-        credentials.providerId,
-        (name.name.getOrElse("") + " " + name.lastName.getOrElse("")).trim
-      )
+      Arn(identifier.value)
     )
 
   private def failureHandler(triedResult: Try[Option[AuthorisedAgent]]): Future[Option[AuthorisedAgent]] =
@@ -125,7 +108,4 @@ with Logging {
 
 }
 
-case class AuthorisedAgent(
-  arn: Arn,
-  agentUser: AgentUser
-)
+case class AuthorisedAgent(arn: Arn)

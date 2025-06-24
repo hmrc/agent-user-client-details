@@ -41,10 +41,7 @@ with MockFactory {
   )
   val agentEnrolment = "HMRC-AS-AGENT"
 
-  val name: Name = Name(Some("Jane"), Some("Doe"))
   val emptyName: Name = Name(None, None)
-
-  val ggCredentials: Credentials = Credentials("user1", "GovernmentGateway")
 
   val enrolments: Set[Enrolment] = Set(Enrolment(
     agentEnrolment,
@@ -54,47 +51,21 @@ with MockFactory {
 
   def buildAuthorisedResponse: GrantAccess =
     Enrolments(enrolments) and
-      Some(User) and
-      Some(name) and
-      Some(ggCredentials)
+      Some(User)
 
   def buildUnauthorisedResponseHavingEmptyEnrolments: GrantAccess =
     Enrolments(Set.empty) and
-      Some(User) and
-      Some(name) and
-      Some(ggCredentials)
+      Some(User)
 
   def buildUnauthorisedResponseHavingIncorrectCredentialRole: GrantAccess =
     Enrolments(enrolments) and
-      None and
-      Some(name) and
-      Some(ggCredentials)
-
-  def buildUnauthorisedResponseHavingIncorrectUsername: GrantAccess =
-    Enrolments(enrolments) and
-      Some(User) and
-      None and
-      Some(ggCredentials)
-
-  def buildAuthorisedResponseHavingEmptyUsername: GrantAccess =
-    Enrolments(enrolments) and
-      Some(User) and
-      Some(emptyName) and
-      Some(ggCredentials)
-
-  def buildUnauthorisedResponseHavingIncorrectCredentials: GrantAccess =
-    Enrolments(enrolments) and
-      Some(User) and
-      Some(name) and
       None
 
   def buildAuthorisedResponseHavingAssistantCredentialRole: GrantAccess =
     Enrolments(enrolments) and
-      Some(Assistant) and
-      Some(name) and
-      Some(ggCredentials)
+      Some(Assistant)
 
-  type GrantAccess = Enrolments ~ Option[CredentialRole] ~ Option[Name] ~ Option[Credentials]
+  type GrantAccess = Enrolments ~ Option[CredentialRole]
 
   def mockAuthResponseWithoutException(response: GrantAccess)(implicit authConnector: AuthConnector): Unit =
     (authConnector
