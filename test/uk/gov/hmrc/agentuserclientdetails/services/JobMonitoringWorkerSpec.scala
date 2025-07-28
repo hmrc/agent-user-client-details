@@ -21,7 +21,7 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.testkit.NoMaterializer
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.concurrent.ScalaFutures._
+import org.scalatest.concurrent.ScalaFutures.*
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.agents.accessgroups.Client
@@ -30,8 +30,9 @@ import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.JobData
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
@@ -47,7 +48,9 @@ with MockFactory {
 
   val groupId = "myGroupId"
   val client1: Client = Client("HMRC-MTD-VAT~VRN~000000001", "Frank Wright")
+  val sensitiveClient1 = SensitiveClient(client1)
   val client2: Client = Client("HMRC-MTD-VAT~VRN~000000002", "Howell & Son")
+  val sensitiveClient2 = SensitiveClient(client2)
 
   val materializer: Materializer = NoMaterializer
 
@@ -284,7 +287,7 @@ with MockFactory {
         .returns(
           Future.successful(
             Seq(
-              mkWorkItem(FriendlyNameWorkItem(groupId, client2), ToDo) // There is one item still to do
+              mkWorkItem(FriendlyNameWorkItem(groupId, sensitiveClient2), ToDo) // There is one item still to do
             )
           )
         )
@@ -350,7 +353,7 @@ with MockFactory {
         )
         .returns(
           Future.successful(
-            Seq(mkWorkItem(FriendlyNameWorkItem(groupId, client2), PermanentlyFailed))
+            Seq(mkWorkItem(FriendlyNameWorkItem(groupId, sensitiveClient2), PermanentlyFailed))
           ) // one permanently failed item
         )
 

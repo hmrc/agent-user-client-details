@@ -20,7 +20,7 @@ import org.mongodb.scala.bson.ObjectId
 import play.api.http.HttpEntity.NoEntity
 import play.api.libs.json.JsNumber
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
 import uk.gov.hmrc.agents.accessgroups.Client
@@ -32,13 +32,14 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnecto
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.PaginatedClientsBuilder
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.services.ES3CacheService
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
 import uk.gov.hmrc.agentuserclientdetails.services.JobMonitoringService
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.time.Instant
@@ -203,7 +204,7 @@ with AuthorisedAgentSupport {
     sendEmail: Boolean, // whether to send an email to inform the agent that the fetching of client names has finished
     lang: Option[String] // The language to be used for notification emails. "en" or "cy"
   )(implicit request: RequestHeader): Future[Result] = {
-    def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
+    def makeWorkItem(client: SensitiveClient)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
       val mSessionId: Option[String] =
         if (appConfig.stubsCompatibilityMode)
           hc.sessionId.map(_.value)
@@ -226,8 +227,8 @@ with AuthorisedAgentSupport {
         val clientsWithNoFriendlyName = clients.filter(_.friendlyName.isEmpty)
         for {
           wisAlreadyInRepo <- workItemService.query(groupId, None)
-          clientsAlreadyInRepo = wisAlreadyInRepo.map(_.item.client)
-          clientsPermanentlyFailed = wisAlreadyInRepo.filter(_.status == PermanentlyFailed).map(_.item.client)
+          clientsAlreadyInRepo = wisAlreadyInRepo.map(_.item.client.decryptedValue)
+          clientsPermanentlyFailed = wisAlreadyInRepo.filter(_.status == PermanentlyFailed).map(_.item.client.decryptedValue)
           // We don't want to retry 'permanently failed' enrolments (Those with no name available in DES/IF, or if
           // we know that the call will not succeed if tried again). In this case simply return blank friendly names.
           clientsWantingName = setDifference(clientsWithNoFriendlyName, clientsPermanentlyFailed)
@@ -241,7 +242,7 @@ with AuthorisedAgentSupport {
               Future.successful(())
             else
               workItemService.pushNew(
-                toBeAdded.map(client => makeWorkItem(client)),
+                toBeAdded.map(client => makeWorkItem(SensitiveClient(client))),
                 Instant.now(),
                 ToDo
               )
@@ -275,7 +276,7 @@ with AuthorisedAgentSupport {
   def getOutstandingWorkItemsForGroupIdFn(groupId: String): Future[Result] = workItemService.query(groupId, None).map { wis =>
     Ok(
       Json.toJson[Seq[Client]](
-        wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.client)
+        wis.filter(wi => Set[ProcessingStatus](ToDo, Failed).contains(wi.status)).map(_.item.client.decryptedValue)
       )
     )
   }

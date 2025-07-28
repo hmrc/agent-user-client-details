@@ -2,8 +2,8 @@
 
 GET        /arn/:arn/client/:id                      uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClient(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, id: String)
 GET        /arn/:arn/client-list                     uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, sendEmail: Option[Boolean], lang: Option[String])
-GET        /arn/:arn/clients                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getPaginatedClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, page: Int, pageSize: Int, search: Option[String], filter: Option[String])
 GET        /arn/:arn/client-list-status              uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClientListStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/clients                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getPaginatedClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, page: Int, pageSize: Int, search: Option[String], filter: Option[String])
 GET        /arn/:arn/tax-service-client-count        uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getTaxServiceClientCount(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET        /arn/:arn/agency-details                  uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getAgencyDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 

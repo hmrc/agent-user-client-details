@@ -25,6 +25,7 @@ import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.clusterworkthrottling.Rate
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
@@ -32,7 +33,7 @@ import uk.gov.hmrc.clusterworkthrottling.ThrottledWorkItemProcessor
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.SessionId
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.net.URLEncoder
@@ -114,16 +115,17 @@ extends Logging {
   def processItem(workItem: WorkItem[FriendlyNameWorkItem]): Future[Unit] = {
     implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId.apply))
     val groupId = workItem.item.groupId
-    val enrolmentKey = workItem.item.client.enrolmentKey
+    val friendlyName = workItem.item.client.decryptedValue.friendlyName
+    val enrolmentKey = workItem.item.client.decryptedValue.enrolmentKey
     // TODO handle case when identifier is empty and/or there is more than one identifier
     // TODO handle case where the service ID provided is not valid.
 
-    if (workItem.item.client.friendlyName.nonEmpty) {
+    if (friendlyName.nonEmpty) {
       // There is already a friendlyName populated. All we need to do is store the enrolment.
       throttledUpdateFriendlyName(
         groupId,
         enrolmentKey,
-        workItem.item.client.friendlyName
+        friendlyName
       ).transformWith {
         case Success(_) =>
           logger.info(s"Previously fetched friendly name for $enrolmentKey updated via ES19 successfully.")
@@ -171,11 +173,11 @@ extends Logging {
               Map("groupId" -> groupId, "enrolmentKey" -> enrolmentKey)
             )
             .map(_ => ())
-        case Success(Some(friendlyName)) =>
+        case Success(Some(name)) =>
           throttledUpdateFriendlyName(
             groupId,
             enrolmentKey,
-            friendlyName
+            name
           ).transformWith {
             case Success(_) =>
               workItemService
@@ -189,7 +191,7 @@ extends Logging {
               for {
                 // push a new work item with the friendly name already populated so the name lookup doesn't have to be done again
                 _ <- workItemService.pushNew(
-                  Seq(workItem.item.copy(client = workItem.item.client.copy(friendlyName = friendlyName))),
+                  Seq(workItem.item.copy(client = SensitiveClient(workItem.item.client.decryptedValue.copy(friendlyName = name)))),
                   Instant.now(),
                   ToDo
                 )

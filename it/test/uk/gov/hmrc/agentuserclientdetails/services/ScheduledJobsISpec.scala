@@ -36,11 +36,12 @@ import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -62,6 +63,7 @@ with PlayRunners {
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~101747641"
   val testArn = "BARN9706518"
   val client1: Client = Client(testEnrolmentKey, "John Innes")
+  val sensitiveClient1: SensitiveClient = SensitiveClient(client1)
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   override def beforeEach(): Unit = {
@@ -96,7 +98,7 @@ with PlayRunners {
         val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         wis.removeAll().futureValue
         wis.pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client1)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
           Instant.now(),
           Succeeded
         ).futureValue

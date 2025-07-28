@@ -133,14 +133,14 @@ extends Logging {
   def hasCompleted(jobData: FriendlyNameJobData): Future[Boolean] =
     for {
       outstandingItems: Seq[WorkItem[FriendlyNameWorkItem]] <- friendlyNameWorkItemService.query(jobData.groupId, status = Some(Seq(Failed, ToDo)))
-      outstandingEnrolmentKeys = outstandingItems.map(_.item.client.enrolmentKey)
+      outstandingEnrolmentKeys = outstandingItems.map(_.item.client.decryptedValue.enrolmentKey)
       isCompleted = outstandingEnrolmentKeys.toSet.intersect(jobData.enrolmentKeys.toSet).isEmpty
     } yield isCompleted
 
   def failuresFor(jobData: FriendlyNameJobData): Future[Set[String]] =
     for {
       permanentlyFailedItems: Seq[WorkItem[FriendlyNameWorkItem]] <- friendlyNameWorkItemService.query(jobData.groupId, status = Some(Seq(PermanentlyFailed)))
-      permanentlyFailedEnrolmentKeys = permanentlyFailedItems.map(_.item.client.enrolmentKey)
+      permanentlyFailedEnrolmentKeys = permanentlyFailedItems.map(_.item.client.decryptedValue.enrolmentKey)
       failures = permanentlyFailedEnrolmentKeys.toSet.intersect(jobData.enrolmentKeys.toSet)
     } yield failures
 

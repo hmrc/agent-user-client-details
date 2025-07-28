@@ -27,6 +27,10 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.Application
 import play.api.Configuration
 import play.api.Environment
+import org.apache.pekko.stream.Materializer
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 
 abstract class BaseIntegrationSpec
 extends AnyWordSpec
@@ -38,6 +42,11 @@ with BeforeAndAfterEach {
 
   protected lazy val conf: Configuration = GuiceApplicationBuilder().configuration
   protected lazy val env: Environment = GuiceApplicationBuilder().environment
+
+  implicit lazy val materializer: Materializer = app.injector.instanceOf[Materializer]
+
+  implicit lazy val crypto: Encrypter
+    with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
 
   /** Child classes can override per their requirements
     */
