@@ -77,7 +77,7 @@ extends WorkItemRepository[FriendlyNameWorkItem](
       .throttle(rate, 1.second)
       .runForeach { record =>
         collection
-          .replaceOne(equal("item.groupId", record.item.groupId), record)
+          .replaceOne(equal("_id", record.id), record)
           .toFuture()
           .map { _ =>
             logger.warn("[FriendlyNameWorkItemRepository] successfully encrypted record")
