@@ -32,18 +32,19 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsJson
 import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.status
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentmtdidentifiers.model.*
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors._
+import uk.gov.hmrc.agentuserclientdetails.connectors.*
 import uk.gov.hmrc.agentuserclientdetails.model.AgencyDetails
 import uk.gov.hmrc.agentuserclientdetails.model.AgentDetailsDesResponse
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
-import uk.gov.hmrc.agentuserclientdetails.services._
+import uk.gov.hmrc.agentuserclientdetails.services.*
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.client.RequestBuilder
@@ -52,7 +53,7 @@ import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.test.MongoSupport
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 
 import java.net.URL
 import java.time.Instant
@@ -100,6 +101,13 @@ with MongoSupport {
   )
   val clientsWithoutAnyFriendlyNames = clientsWithFriendlyNames.map(_.copy(friendlyName = ""))
   val clientsWithoutSomeFriendlyNames = clientsWithFriendlyNames.take(2) ++ clientsWithoutAnyFriendlyNames.drop(2)
+
+  val sensitiveClient1: SensitiveClient = SensitiveClient(client1)
+  val sensitiveClient2: SensitiveClient = SensitiveClient(client2)
+  val sensitiveClient3: SensitiveClient = SensitiveClient(client3)
+  val sensitiveClient4: SensitiveClient = SensitiveClient(client4)
+  val sensitiveClient5: SensitiveClient = SensitiveClient(client5)
+  val sensitiveClient6: SensitiveClient = SensitiveClient(client6)
 
   override def moduleOverrides: AbstractModule =
     new AbstractModule {
@@ -396,7 +404,7 @@ with MongoSupport {
         .pushNew(
           clientsWithoutSomeFriendlyNames
             .filter(_.friendlyName.isEmpty)
-            .map(e => FriendlyNameWorkItem(testGroupId, e)),
+            .map(e => FriendlyNameWorkItem(testGroupId, SensitiveClient(e))),
           Instant.now(),
           PermanentlyFailed
         )
@@ -443,7 +451,7 @@ with MongoSupport {
       val request = FakeRequest("GET", "")
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client1)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
           Instant.now(),
           Succeeded
         )
@@ -459,7 +467,7 @@ with MongoSupport {
       val request = FakeRequest("GET", "")
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client1)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
           Instant.now(),
           ToDo
         )
@@ -476,21 +484,21 @@ with MongoSupport {
       val request = FakeRequest("GET", "")
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client1)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
           Instant.now(),
           ToDo
         )
         .futureValue
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client3)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient3)),
           Instant.now(),
           Succeeded
         )
         .futureValue
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(anotherTestGroupId, client2)),
+          Seq(FriendlyNameWorkItem(anotherTestGroupId, sensitiveClient2)),
           Instant.now(),
           ToDo
         )

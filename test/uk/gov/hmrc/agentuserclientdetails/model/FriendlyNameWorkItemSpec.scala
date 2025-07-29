@@ -17,23 +17,36 @@
 package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.Json
+import play.api.libs.json.JsObject
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 
 class FriendlyNameWorkItemSpec
 extends BaseSpec {
 
+  implicit val crypto: Encrypter
+    with Decrypter = aesCrypto
+
   "FriendlyNameWorkItem" should {
+    val client: Client = Client("HMRC-MTD-VAT~VRN~123456789", "Smith Roberts")
+    val sensitiveClient = SensitiveClient(client)
 
     val model: FriendlyNameWorkItem = FriendlyNameWorkItem(
       "ID123",
-      Client("HMRC-MTD-IT", "Roy"),
+      sensitiveClient,
       Some("abcedfg-qwerty")
     )
 
     val json = Json.obj(
       "groupId" -> "ID123",
-      "client" -> Json.obj("enrolmentKey" -> "HMRC-MTD-IT", "friendlyName" -> "Roy"),
+      "client" -> Json.obj(
+        "enrolmentKey" -> "ddtpL0YcymEiA6dH+XLNcN2oYy6tDgEBCZrecQlriRE=",
+        "friendlyName" -> "RRhGxwmDG4jML/ChHcNOYA==",
+        "encrypted" -> true
+      ),
       "sessionId" -> "abcedfg-qwerty"
     )
 
@@ -45,4 +58,5 @@ extends BaseSpec {
       Json.toJson(model) shouldBe json
     }
   }
+
 }

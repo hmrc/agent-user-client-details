@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnecto
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.UpdateFriendlyNameRequest
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
@@ -92,7 +93,7 @@ with AuthorisedAgentSupport {
               workItemsForLater = (retriableFailures.map(_._1) ++ clientsToDoLater).map(client =>
                 FriendlyNameWorkItem(
                   groupId,
-                  client,
+                  SensitiveClient(client),
                   mSessionId
                 )
               )

@@ -36,6 +36,7 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ResultStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 
 import java.net.ConnectException
 import java.time.Instant
@@ -49,6 +50,10 @@ with Matchers
 with MockFactory {
 
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
+  val client1 = Client("HMRC-MTD-VAT~VRN~12345678", "")
+  val client2 = Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")
+  val sensitiveClient1 = SensitiveClient(client1)
+  val sensitiveClient2 = SensitiveClient(client2)
 
   val mockSi: ServiceInstances = null // very hard to mock this class due to exceptions when the constructor gets called
 
@@ -119,6 +124,7 @@ with MockFactory {
   }
   "processItem" should {
     "retrieve the friendly name and store it via ES19 and mark the item as succeeded when everything is successful" in {
+
       val stubWis: FriendlyNameWorkItemService = stub[FriendlyNameWorkItemService]
       (stubWis
         .complete(
@@ -148,7 +154,7 @@ with MockFactory {
           appConfig,
           materializer
         )
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, sensitiveClient1), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
@@ -210,7 +216,7 @@ with MockFactory {
           appConfig,
           materializer
         )
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, sensitiveClient1), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
@@ -272,7 +278,7 @@ with MockFactory {
           appConfig,
           materializer
         )
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, sensitiveClient1), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
@@ -340,7 +346,7 @@ with MockFactory {
           appConfig,
           materializer
         )
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, sensitiveClient1), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
@@ -408,7 +414,7 @@ with MockFactory {
           appConfig,
           materializer
         )
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, sensitiveClient1), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (mockEsp
@@ -476,7 +482,7 @@ with MockFactory {
           appConfig,
           materializer
         )
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, sensitiveClient1), ToDo)
         .copy(receivedAt = Instant.now().minusSeconds(2 * 24 * 3600 /* 2 days */ ))
       fnWorker.processItem(workItem).futureValue
 
@@ -547,7 +553,7 @@ with MockFactory {
           appConfig,
           materializer
         )
-      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "")), ToDo)
+      val workItem = mkWorkItem(FriendlyNameWorkItem(testGroupId, sensitiveClient1), ToDo)
       fnWorker.processItem(workItem).futureValue
 
       (stubWis
@@ -570,7 +576,7 @@ with MockFactory {
           _: ProcessingStatus
         )(_: ExecutionContext))
         .verify(
-          argThat((_: Seq[FriendlyNameWorkItem]).head.client.friendlyName.nonEmpty),
+          argThat((_: Seq[FriendlyNameWorkItem]).head.client.friendlyName.decryptedValue.nonEmpty),
           *,
           ToDo,
           *
@@ -609,7 +615,7 @@ with MockFactory {
           materializer
         )
       val workItem = mkWorkItem(
-        FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")),
+        FriendlyNameWorkItem(testGroupId, sensitiveClient2),
         ToDo
       )
       fnWorker.processItem(workItem).futureValue
@@ -678,7 +684,7 @@ with MockFactory {
           materializer
         )
       val workItem = mkWorkItem(
-        FriendlyNameWorkItem(testGroupId, Client("HMRC-MTD-VAT~VRN~12345678", "Friendly Name & Cousin's company")),
+        FriendlyNameWorkItem(testGroupId, sensitiveClient2),
         ToDo
       )
       fnWorker.processItem(workItem).futureValue

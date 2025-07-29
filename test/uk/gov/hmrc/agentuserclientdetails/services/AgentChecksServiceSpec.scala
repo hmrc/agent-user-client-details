@@ -28,6 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.*
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
@@ -267,6 +268,7 @@ extends BaseSpec {
 
     "enrolment store proxy returns a group for ARN" when {
       val client = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
+      val sensitiveClient = SensitiveClient.apply(client)
 
       val outstandingProcessingStatuses: Set[ProcessingStatus] = Set(
         ToDo,
@@ -290,7 +292,7 @@ extends BaseSpec {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
 
           val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = nonOutstandingProcessingStatuses.toSeq.map(buildWorkItem(
-            FriendlyNameWorkItem(groupId, client),
+            FriendlyNameWorkItem(groupId, sensitiveClient),
             _
           ))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
@@ -304,7 +306,7 @@ extends BaseSpec {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
 
           val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + InProgress).toSeq
-            .map(buildWorkItem(FriendlyNameWorkItem(groupId, client), _))
+            .map(buildWorkItem(FriendlyNameWorkItem(groupId, sensitiveClient), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
           agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
@@ -315,7 +317,7 @@ extends BaseSpec {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
           val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + ToDo).toSeq.map(buildWorkItem(
-            FriendlyNameWorkItem(groupId, client),
+            FriendlyNameWorkItem(groupId, sensitiveClient),
             _
           ))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
@@ -328,7 +330,7 @@ extends BaseSpec {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
           val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Deferred).toSeq.map(
-            buildWorkItem(FriendlyNameWorkItem(groupId, client), _)
+            buildWorkItem(FriendlyNameWorkItem(groupId, sensitiveClient), _)
           )
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
@@ -340,7 +342,7 @@ extends BaseSpec {
         "return true" in new TestScope {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
           val workItems: Seq[WorkItem[FriendlyNameWorkItem]] = (nonOutstandingProcessingStatuses + Failed).toSeq.map(
-            buildWorkItem(FriendlyNameWorkItem(groupId, client), _)
+            buildWorkItem(FriendlyNameWorkItem(groupId, sensitiveClient), _)
           )
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 

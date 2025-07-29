@@ -56,7 +56,6 @@ with MockFactory {
   val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
 
   implicit lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-  implicit lazy val materializer: Materializer = app.injector.instanceOf[Materializer]
   lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
   lazy val esp: EnrolmentStoreProxyConnector = new EnrolmentStoreProxyConnectorImpl(mockHttpClient, metrics)
 

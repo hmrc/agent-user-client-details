@@ -18,14 +18,18 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.Format
 import play.api.libs.json.Json
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
+
+import java.time.Instant
 
 case class FriendlyNameWorkItem(
   groupId: String,
-  client: Client,
+  client: SensitiveClient,
   sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
 )
 
 object FriendlyNameWorkItem {
-  implicit val format: Format[FriendlyNameWorkItem] = Json.format[FriendlyNameWorkItem]
+  implicit def format(implicit crypto: Encrypter & Decrypter): Format[FriendlyNameWorkItem] = Json.format[FriendlyNameWorkItem]
 }

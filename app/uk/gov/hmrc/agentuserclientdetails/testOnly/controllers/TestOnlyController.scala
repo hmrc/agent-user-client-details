@@ -35,6 +35,7 @@ import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSizeRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.services.ES3CacheService
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
 import uk.gov.hmrc.http.HeaderCarrier
@@ -130,7 +131,7 @@ with Logging {
           None // only required for local testing against stubs
       FriendlyNameWorkItem(
         groupId,
-        client,
+        SensitiveClient.apply(client),
         mSessionId
       )
     }

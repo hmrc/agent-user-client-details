@@ -17,11 +17,14 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.AbstractModule
+import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Updates
 import com.typesafe.config.Config
 import org.bson.types.ObjectId
 import org.mongodb.scala.SingleObservableFuture
 import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
@@ -29,9 +32,13 @@ import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceIm
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
+import org.scalatest.concurrent.Eventually.eventually
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,6 +60,17 @@ with MockFactory {
   val client2 = Client("HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345", "Frank Wright")
   val client3 = Client("HMRC-CGT-PD~CgtRef~XMCGTP123456789", "George Candy")
   val client4 = Client("HMRC-MTD-VAT~VRN~VRN", "Ross Barker")
+
+  val sensitiveClient1: SensitiveClient = SensitiveClient(client1)
+  val sensitiveClient2: SensitiveClient = SensitiveClient(client2)
+  val sensitiveClient3: SensitiveClient = SensitiveClient(client3)
+  val sensitiveClient4: SensitiveClient = SensitiveClient(client4)
+
+  val model: FriendlyNameWorkItem = FriendlyNameWorkItem(
+    "ID123",
+    sensitiveClient1,
+    Some("abcedfg-qwerty")
+  )
 
   lazy val mockAuthConnector = mock[AuthConnector]
 
@@ -86,18 +104,18 @@ with MockFactory {
     "collect the correct statistics about work items in the repository" in {
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1), FriendlyNameWorkItem(testGroupId, sensitiveClient2)),
           Instant.now(),
           ToDo
         )
         .futureValue
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client3)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient3)),
         Instant.now(),
         Succeeded
       ).futureValue
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client4)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient4)),
         Instant.now(),
         Failed
       ).futureValue
@@ -113,18 +131,18 @@ with MockFactory {
     "return the correct items based on a query" in {
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client1), FriendlyNameWorkItem(testGroupId, client2)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1), FriendlyNameWorkItem(testGroupId, sensitiveClient2)),
           Instant.now(),
           ToDo
         )
         .futureValue
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client3)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient3)),
         Instant.now(),
         Succeeded
       ).futureValue
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client4)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient4)),
         Instant.now(),
         Failed
       ).futureValue
@@ -139,22 +157,22 @@ with MockFactory {
   "cleanup" should {
     "remove any items that are either succeeded or duplicate (if they were last updated earlier than the given cutoff)" in {
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client1)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
         Instant.now(),
         Succeeded
       ).futureValue
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client2)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient2)),
         Instant.now(),
         Duplicate
       ).futureValue
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client3)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient3)),
         Instant.now(),
         PermanentlyFailed
       ).futureValue
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client4)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient4)),
         Instant.now(),
         Failed
       ).futureValue
@@ -167,7 +185,7 @@ with MockFactory {
     "not remove an item that was recently updated" in {
       wis
         .pushNew(
-          Seq(FriendlyNameWorkItem(testGroupId, client1)),
+          Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
           Instant.now(),
           Succeeded
         )
@@ -183,11 +201,60 @@ with MockFactory {
   "deleteWorkItems" should {
     "delete all work items" in {
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, client1)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
         Instant.now(),
         Succeeded
       ).futureValue
       wir.deleteWorkItems(testGroupId).futureValue shouldBe 1L
+    }
+  }
+
+  "FriendlyNameWorkItemRepository" when {
+    "counting unencrypted records" should {
+
+      "provide a total count of records that do not have the encrypted flag" in {
+
+        val workItemDef = mkWorkItem(model, Succeeded)
+
+        wir.collection.insertOne(workItemDef)
+          .toFuture()
+          .futureValue
+
+        wir.countUnencrypted().futureValue shouldBe 0
+
+        wir.collection
+          .updateOne(
+            Filters.equal("item.groupId", model.groupId),
+            Updates.unset("item.client.encrypted")
+          ).toFuture().futureValue
+
+        wir.countUnencrypted().futureValue shouldBe 1
+      }
+    }
+
+    "encrypting old records" should {
+
+      "find records that do not have the encrypted flag and encrypt them" in {
+
+        val workItemDef = mkWorkItem(model, Succeeded)
+
+        wir.collection.insertOne(workItemDef)
+          .toFuture()
+          .futureValue
+
+        wir.collection
+          .updateOne(
+            Filters.equal("item.groupId", model.groupId),
+            Updates.unset("item.client.encrypted")
+          ).toFuture().futureValue
+
+        val throttleRate = 2
+        wir.encryptOldRecords(throttleRate)
+
+        eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+          wir.countUnencrypted().futureValue shouldBe 0
+        }
+      }
     }
   }
 
