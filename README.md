@@ -61,6 +61,11 @@ It also contains the following to support the display of a client list within AS
 
     sbt "clean;coverageOn;test;IntegrationTest/test;coverageReport"
 
+### Automated testing
+This service is tested by the following automated test repositories:
+- [agent-gran-perms-acceptance-tests](https://github.com/hmrc/agent-gran-perms-acceptance-tests/)
+- [agent-granperms-performance-tests](https://github.com/hmrc/agent-granperms-performance-tests)
+
 ## Running the app locally
 
     sm --stop AGENT_USER_CLIENT_DETAILS
