@@ -17,69 +17,36 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel
 
 import play.api.libs.json._
-import uk.gov.hmrc.agentuserclientdetails.util.EncryptionUtil.decryptToSensitive
 import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Sensitive
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
-import uk.gov.hmrc.crypto.json.JsonEncryption.sensitiveEncrypter
 import uk.gov.hmrc.crypto.json.JsonEncryption
 
 case class SensitiveClient(
   enrolmentKey: SensitiveString,
-  friendlyName: SensitiveString,
-  encrypted: Option[Boolean]
+  friendlyName: SensitiveString
 )
 extends Sensitive[Client] {
-  def decryptedValue: Client = Client(
-    enrolmentKey.decryptedValue,
-    friendlyName.decryptedValue
-  )
+  def decryptedValue: Client = Client(enrolmentKey.decryptedValue, friendlyName.decryptedValue)
 }
 
 object SensitiveClient {
 
   def apply(client: Client): SensitiveClient = SensitiveClient(
     enrolmentKey = SensitiveString(client.enrolmentKey),
-    friendlyName = SensitiveString(client.friendlyName),
-    Some(true)
+    friendlyName = SensitiveString(client.friendlyName)
   )
 
-  implicit def format(implicit
+  implicit def databaseFormat(implicit
     crypto: Encrypter
       with Decrypter
   ): Format[SensitiveClient] = {
 
-    def writes: Writes[SensitiveClient] =
-      model =>
-        Json.obj(
-          "enrolmentKey" -> sensitiveEncrypter[String, SensitiveString].writes(model.enrolmentKey),
-          "friendlyName" -> sensitiveEncrypter[String, SensitiveString].writes(model.friendlyName),
-          "encrypted" -> true
-        )
+    implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)
 
-    def reads: Reads[SensitiveClient] =
-      (json: JsValue) => {
-        val encrypted = (json \ "encrypted").asOpt[Boolean]
-        val name = decryptToSensitive(
-          "friendlyName",
-          encrypted,
-          json
-        )
-        val identifier = decryptToSensitive(
-          "enrolmentKey",
-          encrypted,
-          json
-        )
-        JsSuccess(SensitiveClient(
-          identifier,
-          name,
-          encrypted
-        ))
-      }
-
-    Format(reads, writes)
+    Json.format[SensitiveClient]
   }
 
 }

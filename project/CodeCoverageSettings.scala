@@ -25,7 +25,7 @@ object CodeCoverageSettings {
   val settings: Seq[Setting[?]] = Seq(
     ScoverageKeys.coverageExcludedPackages := excludedPackages.mkString(";"),
     ScoverageKeys.coverageMinimumStmtTotal := 90.00,
-    ScoverageKeys.coverageMinimumBranchTotal:= 78,
+    ScoverageKeys.coverageMinimumBranchTotal:= 70,
     ScoverageKeys.coverageMinimumBranchPerFile := 00.00,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true

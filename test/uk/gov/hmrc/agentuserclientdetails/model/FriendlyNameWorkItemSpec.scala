@@ -44,8 +44,7 @@ extends BaseSpec {
       "groupId" -> "ID123",
       "client" -> Json.obj(
         "enrolmentKey" -> "ddtpL0YcymEiA6dH+XLNcN2oYy6tDgEBCZrecQlriRE=",
-        "friendlyName" -> "RRhGxwmDG4jML/ChHcNOYA==",
-        "encrypted" -> true
+        "friendlyName" -> "RRhGxwmDG4jML/ChHcNOYA=="
       ),
       "sessionId" -> "abcedfg-qwerty"
     )
