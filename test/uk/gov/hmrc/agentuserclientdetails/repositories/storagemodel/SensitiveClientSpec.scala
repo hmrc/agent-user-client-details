@@ -33,8 +33,7 @@ extends BaseSpec {
   val sensitiveClient: SensitiveClient = SensitiveClient(client)
   val sensitiveJson: JsObject = Json.obj(
     "enrolmentKey" -> "ddtpL0YcymEiA6dH+XLNcN2oYy6tDgEBCZrecQlriRE=",
-    "friendlyName" -> "RRhGxwmDG4jML/ChHcNOYA==",
-    "encrypted" -> true
+    "friendlyName" -> "RRhGxwmDG4jML/ChHcNOYA=="
   )
 
   "SensitiveClient" should {
@@ -45,14 +44,6 @@ extends BaseSpec {
 
     "read from JSON" in {
       sensitiveJson.as[SensitiveClient].decryptedValue shouldBe client
-    }
-
-    "read from unencrypted JSON" in {
-      val unencryptedJson: JsObject = Json.obj(
-        "enrolmentKey" -> "HMRC-MTD-VAT~VRN~123456789",
-        "friendlyName" -> "Smith Roberts"
-      )
-      unencryptedJson.as[SensitiveClient].decryptedValue shouldBe client
     }
   }
 
