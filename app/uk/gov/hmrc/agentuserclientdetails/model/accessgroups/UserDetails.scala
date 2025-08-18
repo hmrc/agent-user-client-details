@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentuserclientdetails.util
+package uk.gov.hmrc.agentuserclientdetails.model.accessgroups
 
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import play.api.libs.json.Format
+import play.api.libs.json.Json
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+/** Cut down version of UserDetails from users-groups-search. Contains only the fields we are interested in.
+  */
+case class UserDetails(
+  userId: Option[String] = None,
+  credentialRole: Option[String] = None,
+  name: Option[String] = None,
+  email: Option[String] = None
+)
 
-trait HttpAPIMonitor {
-
-  val metrics: Metrics
-  implicit val ec: ExecutionContext
-  def monitor[A](str: String)(f: => Future[A]): Future[A] = {
-    val timerContext = metrics.defaultRegistry.timer(s"Timer-$str").time()
-    f.andThen { case _ => timerContext.stop() }
-  }
-
+object UserDetails {
+  implicit val format: Format[UserDetails] = Json.format
 }

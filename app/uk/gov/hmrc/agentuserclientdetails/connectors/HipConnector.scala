@@ -21,9 +21,8 @@ import com.google.inject.Inject
 import play.api.Logging
 import play.api.http.HeaderNames
 import play.api.http.Status
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -55,9 +54,7 @@ class HipConnectorImpl @Inject() (
   clock: Clock
 )(implicit val ec: ExecutionContext)
 extends HipConnector
-with HttpAPIMonitor
 with Logging {
-  httpMonitor: HttpAPIMonitor =>
 
   /** API number: API#5266 Itsa Taxpayer Business Details https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd
     */
@@ -81,36 +78,35 @@ with Logging {
       ("X-Transmitting-System", "HIP")
     )
 
-    monitor(s"ConsumedAPI-HIP-ITSA_Taxpayer_Business_Details-GET") {
-      httpClient
-        .get(url)
-        .setHeader(headers *)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case 200 =>
-              Some(
-                TradingDetails(
-                  (response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino],
-                  (response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData").toOption
-                    .map(_(0) \ "tradingName")
-                    .flatMap(_.asOpt[String])
-                )
+    httpClient
+      .get(url)
+      .setHeader(headers *)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case 200 =>
+            Some(
+              TradingDetails(
+                (response.json \ "success" \ "taxPayerDisplayResponse" \ "nino").as[Nino],
+                (response.json \ "success" \ "taxPayerDisplayResponse" \ "businessData").toOption
+                  .map(_(0) \ "tradingName")
+                  .flatMap(_.asOpt[String])
               )
-            case Status.UNPROCESSABLE_ENTITY
-                if List(
-                  ErrorCodes.`Subscription data not found`,
-                  ErrorCodes.`ID not found`
-                )
-                  .contains((response.json \ "errors" \ "code").as[String]) =>
-              None
-            case otherStatus =>
-              throw new RuntimeException(
-                s"Unexpected response from HIP API: [correlationId: $correlationId] [status: $otherStatus] [responseBody: ${response.body}]"
+            )
+          case Status.UNPROCESSABLE_ENTITY
+              if List(
+                ErrorCodes.`Subscription data not found`,
+                ErrorCodes.`ID not found`
               )
-          }
+                .contains((response.json \ "errors" \ "code").as[String]) =>
+            None
+          case otherStatus =>
+            throw new RuntimeException(
+              s"Unexpected response from HIP API: [correlationId: $correlationId] [status: $otherStatus] [responseBody: ${response.body}]"
+            )
         }
-    }
+      }
+
   }
 
   protected def makeCorrelationId(): String = UUID.randomUUID().toString

@@ -23,7 +23,7 @@ import com.typesafe.config.Config
 import org.bson.types.ObjectId
 import org.mongodb.scala.SingleObservableFuture
 import org.scalamock.scalatest.MockFactory
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig

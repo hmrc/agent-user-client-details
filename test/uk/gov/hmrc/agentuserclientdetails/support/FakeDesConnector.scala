@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.CgtRef
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.CgtRef
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Vrn
 import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
 import uk.gov.hmrc.agentuserclientdetails.model._
 import uk.gov.hmrc.http.HeaderCarrier

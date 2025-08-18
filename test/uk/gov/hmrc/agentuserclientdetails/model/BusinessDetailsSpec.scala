@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.model
 import BusinessDetails._
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
 class BusinessDetailsSpec

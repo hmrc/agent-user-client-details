@@ -22,7 +22,6 @@ import play.api.libs.json.Json
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
-import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
@@ -51,7 +50,6 @@ class EmailConnectorImpl @Inject() (
   val ec: ExecutionContext
 )
 extends EmailConnector
-with HttpAPIMonitor
 with HttpErrorFunctions
 with Logging {
 
@@ -60,20 +58,17 @@ with Logging {
   def sendEmail(emailInformation: EmailInformation)(implicit
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[Boolean] =
-    monitor(s"Send-Email-${emailInformation.templateId}") {
-      http
-        .post(url"$baseUrl/hmrc/email")
-        .withBody(Json.toJson(emailInformation))
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case status if is2xx(status) => true
-            case other =>
-              logger.warn(s"Unexpected status from email service, status: $other, body: ${response.body}")
-              false
-          }
-        }
+  ): Future[Boolean] = http
+    .post(url"$baseUrl/hmrc/email")
+    .withBody(Json.toJson(emailInformation))
+    .execute[HttpResponse]
+    .map { response =>
+      response.status match {
+        case status if is2xx(status) => true
+        case other =>
+          logger.warn(s"Unexpected status from email service, status: $other, body: ${response.body}")
+          false
+      }
     }
 
 }

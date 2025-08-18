@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 
 class PaginatedClientsBuilderSpec
 extends AnyWordSpec

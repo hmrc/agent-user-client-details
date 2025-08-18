@@ -1,28 +1,28 @@
 # microservice specific routes
 
-GET        /arn/:arn/client/:id                      uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClient(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, id: String)
-GET        /arn/:arn/client-list                     uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, sendEmail: Option[Boolean], lang: Option[String])
-GET        /arn/:arn/client-list-status              uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClientListStatus(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET        /arn/:arn/clients                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getPaginatedClients(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, page: Int, pageSize: Int, search: Option[String], filter: Option[String])
-GET        /arn/:arn/tax-service-client-count        uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getTaxServiceClientCount(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET        /arn/:arn/agency-details                  uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getAgencyDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/client/:id                      uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClient(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn, id: String)
+GET        /arn/:arn/client-list                     uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClients(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn, sendEmail: Option[Boolean], lang: Option[String])
+GET        /arn/:arn/client-list-status              uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getClientListStatus(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
+GET        /arn/:arn/clients                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getPaginatedClients(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn, page: Int, pageSize: Int, search: Option[String], filter: Option[String])
+GET        /arn/:arn/tax-service-client-count        uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getTaxServiceClientCount(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
+GET        /arn/:arn/agency-details                  uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getAgencyDetails(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
 
 GET        /groupid/:groupid/outstanding-work-items  uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getOutstandingWorkItemsForGroupId(groupid: String)
-GET        /arn/:arn/outstanding-work-items          uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getOutstandingWorkItemsForArn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/outstanding-work-items          uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getOutstandingWorkItemsForArn(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
 
 POST       /work-items/clean                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.cleanupWorkItems
 GET        /work-items/stats                         uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.getWorkItemStats
 
-GET        /arn/:arn/agent-size                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getAgentSize(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET        /arn/:arn/user-check                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.userCheck(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET        /arn/:arn/work-items-exist                uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.outstandingWorkItemsExist(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET        /arn/:arn/assignments-work-items-exist    uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.outstandingAssignmentsWorkItemsExist(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET        /arn/:arn/team-members                    uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getTeamMembers(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/agent-size                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getAgentSize(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
+GET        /arn/:arn/user-check                      uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.userCheck(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
+GET        /arn/:arn/work-items-exist                uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.outstandingWorkItemsExist(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
+GET        /arn/:arn/assignments-work-items-exist    uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.outstandingAssignmentsWorkItemsExist(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
+GET        /arn/:arn/team-members                    uk.gov.hmrc.agentuserclientdetails.controllers.AgentChecksController.getTeamMembers(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
 
-POST       /arn/:arn/friendly-name                   uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController.updateFriendlyName(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-PUT        /arn/:arn/update-friendly-name            uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController.updateOneFriendlyName(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+POST       /arn/:arn/friendly-name                   uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController.updateFriendlyName(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
+PUT        /arn/:arn/update-friendly-name            uk.gov.hmrc.agentuserclientdetails.controllers.FriendlyNameController.updateOneFriendlyName(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
 
 POST       /user-enrolment-assignments               uk.gov.hmrc.agentuserclientdetails.controllers.AssignmentController.assignEnrolments
-POST       /arn/:arn/user/:userId/ensure-assignments uk.gov.hmrc.agentuserclientdetails.controllers.AssignmentController.ensureAssignments(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, userId: String)
+POST       /arn/:arn/user/:userId/ensure-assignments uk.gov.hmrc.agentuserclientdetails.controllers.AssignmentController.ensureAssignments(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn, userId: String)
 
-GET        /arn/:arn/cache-refresh                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.cacheRefresh(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET        /arn/:arn/cache-refresh                   uk.gov.hmrc.agentuserclientdetails.controllers.ClientController.cacheRefresh(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)

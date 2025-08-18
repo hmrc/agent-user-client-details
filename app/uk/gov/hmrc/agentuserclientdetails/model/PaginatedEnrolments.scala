@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
-import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
 
 case class PaginatedEnrolments(
   startRecord: Int,

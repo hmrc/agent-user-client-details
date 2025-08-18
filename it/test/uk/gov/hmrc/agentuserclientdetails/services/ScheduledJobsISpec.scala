@@ -29,7 +29,7 @@ import org.scalatest.time.Span
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.inject.bind
 import play.api.test.PlayRunners
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
 import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem

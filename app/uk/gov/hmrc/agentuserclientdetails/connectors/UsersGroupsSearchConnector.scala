@@ -18,9 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import play.api.Logging
 import play.api.http.Status
-import uk.gov.hmrc.agents.accessgroups.UserDetails
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
@@ -43,8 +42,7 @@ class UsersGroupsSearchConnector @Inject() (
   appConfig: AppConfig,
   val ec: ExecutionContext
 )
-extends HttpAPIMonitor
-with HttpErrorFunctions
+extends HttpErrorFunctions
 with Logging {
 
   def getGroupUsers(
@@ -54,26 +52,26 @@ with Logging {
     ec: ExecutionContext
   ): Future[Seq[UserDetails]] = {
     val url = url"${appConfig.userGroupsSearchUrl}/users-groups-search/groups/$groupId/users"
-    monitor(s"ConsumedAPI-UGS-getGroupUsers-GET") {
-      httpClient
-        .get(url)
-        .execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case status if is2xx(status) => response.json.as[Seq[UserDetails]]
-            case Status.NOT_FOUND =>
-              logger.warn(s"Group $groupId not found in SCP")
-              Seq.empty
-            case other =>
-              logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
-              throw UpstreamErrorResponse(
-                response.body,
-                other,
-                other
-              )
-          }
+
+    httpClient
+      .get(url)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case status if is2xx(status) => response.json.as[Seq[UserDetails]]
+          case Status.NOT_FOUND =>
+            logger.warn(s"Group $groupId not found in SCP")
+            Seq.empty
+          case other =>
+            logger.error(s"Error in UGS-getGroupUsers: $other, ${response.body}")
+            throw UpstreamErrorResponse(
+              response.body,
+              other,
+              other
+            )
         }
-    }
+
+      }
   }
 
 }

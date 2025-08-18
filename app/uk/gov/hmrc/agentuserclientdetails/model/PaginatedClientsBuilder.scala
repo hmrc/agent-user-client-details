@@ -16,9 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.PaginatedList
-import uk.gov.hmrc.agentmtdidentifiers.model.PaginationMetaData
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 
 object PaginatedClientsBuilder {
 

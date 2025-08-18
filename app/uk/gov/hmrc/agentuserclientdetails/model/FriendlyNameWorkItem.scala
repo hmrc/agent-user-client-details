@@ -22,8 +22,6 @@ import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 
-import java.time.Instant
-
 case class FriendlyNameWorkItem(
   groupId: String,
   client: SensitiveClient,

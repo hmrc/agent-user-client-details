@@ -21,7 +21,7 @@ import play.api.mvc.Results.NoContent
 import play.api.test.FakeRequest
 import play.api.Configuration
 import play.api.Environment
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.auth.core._
 
 import scala.concurrent.ExecutionContext

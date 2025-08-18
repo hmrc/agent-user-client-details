@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
-import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Identifier
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
 class PaginatedEnrolmentsSpec

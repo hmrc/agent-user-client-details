@@ -24,7 +24,7 @@ import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.SingleObservableFuture
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.Es3Cache
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveEnrolment

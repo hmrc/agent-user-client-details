@@ -21,10 +21,9 @@ import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Reads._
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
-import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
@@ -67,7 +66,6 @@ class IfConnectorImpl @Inject() (
   desIfHeaders: DesIfHeaders
 )(implicit val ec: ExecutionContext)
 extends IfConnector
-with HttpAPIMonitor
 with HttpErrorFunctions
 with Logging {
 
@@ -158,12 +156,11 @@ with Logging {
       apiName
     )
 
-    monitor(s"ConsumedAPI-IF-$apiName-GET") {
-      httpClient
-        .get(url"$url")
-        .setHeader(headersConfig.explicitHeaders *)
-        .execute[HttpResponse]
-    }
+    httpClient
+      .get(url"$url")
+      .setHeader(headersConfig.explicitHeaders *)
+      .execute[HttpResponse]
+
   }
 
   private val utrPattern = "^\\d{10}$"

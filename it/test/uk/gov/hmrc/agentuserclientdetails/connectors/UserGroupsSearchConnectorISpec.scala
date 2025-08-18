@@ -22,7 +22,7 @@ import play.api.http.Status.BAD_GATEWAY
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.api.libs.json.Json
-import uk.gov.hmrc.agents.accessgroups.UserDetails
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.http.client.HttpClientV2
