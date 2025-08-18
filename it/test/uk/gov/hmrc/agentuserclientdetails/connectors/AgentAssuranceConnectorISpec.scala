@@ -24,7 +24,7 @@ import play.api.http.Status.NO_CONTENT
 import play.api.http.Status.OK
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model._

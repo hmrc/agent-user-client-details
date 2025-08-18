@@ -24,9 +24,9 @@ import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import play.api.mvc.Result
 import sttp.model.Uri.UriContext
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.HipConnector

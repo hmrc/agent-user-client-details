@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import org.bson.types.ObjectId
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.Client
-import uk.gov.hmrc.agents.accessgroups.UserDetails
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector

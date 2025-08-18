@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.UserDetails
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector

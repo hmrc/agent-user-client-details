@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 

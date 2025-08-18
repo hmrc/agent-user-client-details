@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.model
 
 import play.api.libs.json.Json.reads
 import play.api.libs.json.Reads
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 
 case class BusinessDetails(
   businessData: Seq[BusinessData],

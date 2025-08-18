@@ -21,7 +21,7 @@ import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Result
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgentSupport
 import uk.gov.hmrc.agentuserclientdetails.services.AgentChecksService

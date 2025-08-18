@@ -18,9 +18,9 @@ package uk.gov.hmrc.agentuserclientdetails.services
 
 import com.google.inject.ImplementedBy
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
-import uk.gov.hmrc.agents.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.Es3Cache
 import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepository
 import uk.gov.hmrc.http.HeaderCarrier

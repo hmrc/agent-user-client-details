@@ -21,10 +21,10 @@ import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
-import uk.gov.hmrc.agentmtdidentifiers.model.Urn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.PptRef
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Urn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Utr
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription

@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.support
 
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.PptRef
 import uk.gov.hmrc.agentuserclientdetails.connectors.IfConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
 import uk.gov.hmrc.agentuserclientdetails.model._

@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import play.api.http.Status._
+import play.api.http.Status.*
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model._
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.agentuserclientdetails.model.AgentDetailsDesResponse
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpResponse

@@ -17,12 +17,12 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentmtdidentifiers.model.Service._
-import uk.gov.hmrc.agentmtdidentifiers.model.CgtRef
-import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
-import uk.gov.hmrc.agentmtdidentifiers.model.PptRef
-import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.agentuserclientdetails.model.Service._
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.CgtRef
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.PptRef
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Vrn
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.CitizenDetailsConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector

@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
-import uk.gov.hmrc.agentmtdidentifiers.model.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.domain.Nino

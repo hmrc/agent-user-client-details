@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.binders
 
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
 
 import scala.reflect.ClassTag
 

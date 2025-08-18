@@ -12,7 +12,7 @@
 # Add all the application routes to the prod.routes file
 ->         /                          prod.Routes
 
-POST       /test-only/agent-user-client-details/arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.forceRefreshFriendlyNames(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+POST       /test-only/agent-user-client-details/arn/:arn/refresh-names                   uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.forceRefreshFriendlyNames(arn: uk.gov.hmrc.agentuserclientdetails.model.Arn)
 DELETE     /test-only/agent-user-client-details/delete-test-data/arn/:arn/groupId/:groupId uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.deleteTestData(arn: String, groupId: String)
 
 GET        /test-only/agent-user-client-details/hip-connectivity-test/get-trading-details-for-mtditid  uk.gov.hmrc.agentuserclientdetails.testOnly.controllers.TestOnlyController.getTradingDetailsForMtdItId(mtdItId: String)

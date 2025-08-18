@@ -19,9 +19,9 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import org.scalamock.handlers.CallHandler1
 import org.scalamock.handlers.CallHandler2
 import org.scalamock.handlers.CallHandler3
-import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
-import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Identifier
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepository

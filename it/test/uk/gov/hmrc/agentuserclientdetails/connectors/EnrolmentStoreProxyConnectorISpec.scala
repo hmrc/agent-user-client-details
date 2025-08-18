@@ -25,9 +25,11 @@ import play.api.http.Status.*
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.ws.BodyWritable
-import uk.gov.hmrc.agentmtdidentifiers.model.*
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.*
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.GroupDelegatedEnrolments
 import uk.gov.hmrc.agentuserclientdetails.model.PaginatedEnrolments
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.client.HttpClientV2

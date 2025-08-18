@@ -26,10 +26,10 @@ import play.api.mvc.ControllerComponents
 import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Enrolment
-import uk.gov.hmrc.agentmtdidentifiers.model.EnrolmentKey
-import uk.gov.hmrc.agentmtdidentifiers.model.Identifier
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Identifier
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig

@@ -26,7 +26,7 @@ import org.mongodb.scala.SingleObservableFuture
 import play.api.Logging
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 

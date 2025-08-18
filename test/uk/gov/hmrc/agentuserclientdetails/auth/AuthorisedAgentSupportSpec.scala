@@ -23,7 +23,7 @@ import play.api.mvc.AnyContentAsEmpty
 import play.api.mvc.Request
 import play.api.mvc.Result
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 
 import scala.concurrent.ExecutionContext

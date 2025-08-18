@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel
 
 import play.api.libs.json._
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.Sensitive
@@ -41,7 +41,7 @@ object SensitiveClient {
 
   implicit def databaseFormat(implicit
     crypto: Encrypter
-      with Decrypter
+      & Decrypter
   ): Format[SensitiveClient] = {
 
     implicit val sensitiveStringFormat: Format[SensitiveString] = JsonEncryption.sensitiveEncrypterDecrypter(SensitiveString.apply)

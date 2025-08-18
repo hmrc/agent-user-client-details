@@ -21,11 +21,10 @@ import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentmtdidentifiers.model._
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes._
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.CgtSubscription
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
-import uk.gov.hmrc.agentuserclientdetails.util.HttpAPIMonitor
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http._
@@ -68,8 +67,7 @@ class DesConnectorImpl @Inject() (
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
 )(implicit val ec: ExecutionContext)
-extends HttpAPIMonitor
-with DesConnector
+extends DesConnector
 with HttpErrorFunctions
 with Logging {
 
@@ -132,13 +130,10 @@ with Logging {
       url,
       apiName
     )
-
-    monitor(s"ConsumedAPI-DES-$apiName-GET") {
-      httpClient
-        .get(url"$url")
-        .setHeader(headersConfig.explicitHeaders *)
-        .execute[HttpResponse]
-    }
+    httpClient
+      .get(url"$url")
+      .setHeader(headersConfig.explicitHeaders *)
+      .execute[HttpResponse]
   }
 
 }

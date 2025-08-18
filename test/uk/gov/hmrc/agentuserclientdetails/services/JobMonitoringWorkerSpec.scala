@@ -24,7 +24,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures.*
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.connectors.EmailConnector
 import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData

@@ -19,8 +19,8 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.mvc.*
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgentSupport
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig

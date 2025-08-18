@@ -26,8 +26,8 @@ import play.api.mvc.Result
 import play.api.test.Helpers._
 import play.api.test.FakeRequest
 import play.api.test.Helpers
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agents.accessgroups.UserDetails
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgent
