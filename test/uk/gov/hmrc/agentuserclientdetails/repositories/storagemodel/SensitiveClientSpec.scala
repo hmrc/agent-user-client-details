@@ -27,7 +27,7 @@ class SensitiveClientSpec
 extends BaseSpec {
 
   implicit val crypto: Encrypter
-    with Decrypter = aesCrypto
+  & Decrypter = aesCrypto
 
   val client: Client = Client("HMRC-MTD-VAT~VRN~123456789", "Smith Roberts")
   val sensitiveClient: SensitiveClient = SensitiveClient(client)
