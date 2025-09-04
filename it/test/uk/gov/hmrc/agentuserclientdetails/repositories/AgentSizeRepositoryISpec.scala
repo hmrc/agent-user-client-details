@@ -17,41 +17,35 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import org.mongodb.scala.model.IndexModel
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
-import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
 
-class AgentSizeRepositoryImplSpec
-extends AnyWordSpecLike
-with Matchers
+class AgentSizeRepositoryISpec
+extends BaseIntegrationSpec
 with DefaultPlayMongoRepositorySupport[AgentSize] {
 
-  implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  implicit val executionContext: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  override protected val repository: PlayMongoRepository[AgentSize] = new AgentSizeRepositoryImpl(mongoComponent)
 
-  trait TestScope {
+  val arn: Arn = Arn("KARN1234567")
 
-    val arn: Arn = Arn("KARN1234567")
+  val agentSize: AgentSize = AgentSize(
+    arn,
+    50,
+    LocalDateTime.now()
+  )
 
-    val agentSize: AgentSize = AgentSize(
-      arn,
-      50,
-      LocalDateTime.now()
-    )
-
-    val agentSizeRepository: AgentSizeRepositoryImpl = repository.asInstanceOf[AgentSizeRepositoryImpl]
-
-  }
+  val agentSizeRepository: AgentSizeRepositoryImpl = repository.asInstanceOf[AgentSizeRepositoryImpl]
 
   "AgentSizeRepository" when {
 
     "set up" should {
-      "have correct indexes" in new TestScope {
+      "have correct indexes" in {
         agentSizeRepository.collectionName shouldBe "agent-size"
         agentSizeRepository.indexes.size shouldBe 1
         val indexModel: IndexModel = agentSizeRepository.indexes.head
@@ -62,20 +56,20 @@ with DefaultPlayMongoRepositorySupport[AgentSize] {
     }
 
     "fetching a non-existing record" should {
-      "return nothing" in new TestScope {
+      "return nothing" in {
         agentSizeRepository.get(arn).futureValue shouldBe None
       }
     }
 
     "fetching an existing record" should {
-      "return the agentSize record" in new TestScope {
+      "return the agentSize record" in {
         agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordInserted)
         agentSizeRepository.get(arn).futureValue shouldBe Some(agentSize)
       }
     }
 
     "updating an existing record" should {
-      s"return $RecordUpdated" in new TestScope {
+      s"return $RecordUpdated" in {
         agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordInserted)
         agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordUpdated)
       }
@@ -83,12 +77,10 @@ with DefaultPlayMongoRepositorySupport[AgentSize] {
   }
 
   "delete" should {
-    "delete data" in new TestScope {
+    "delete data" in {
       agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordInserted)
       agentSizeRepository.delete(arn.value).futureValue shouldBe 1L
     }
   }
-
-  override protected val repository: PlayMongoRepository[AgentSize] = new AgentSizeRepositoryImpl(mongoComponent)
 
 }

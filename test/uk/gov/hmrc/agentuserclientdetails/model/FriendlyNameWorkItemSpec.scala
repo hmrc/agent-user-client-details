@@ -28,7 +28,7 @@ class FriendlyNameWorkItemSpec
 extends BaseSpec {
 
   implicit val crypto: Encrypter
-    with Decrypter = aesCrypto
+  & Decrypter = aesCrypto
 
   "FriendlyNameWorkItem" should {
     val client: Client = Client("HMRC-MTD-VAT~VRN~123456789", "Smith Roberts")

@@ -17,35 +17,32 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
-import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.Json
+import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
+import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.PptRef
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Urn
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Utr
-import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
-import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
+import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.client.RequestBuilder
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class IfConnectorISpec
 extends BaseIntegrationSpec
+with HttpClientStub
 with MockFactory {
 
   lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -54,9 +51,6 @@ with MockFactory {
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
-
-  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
-  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
 
   val ifConnector =
     new IfConnectorImpl(
@@ -74,37 +68,11 @@ with MockFactory {
       override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
     }
 
-  def mockHttpGet(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .get(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
-
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[
-    HttpReads[A],
-    ExecutionContext,
-    Future[A]
-  ] = {
-    (mockRequestBuilder
-      .setHeader(_ *))
-      .expects(*)
-      .returning(mockRequestBuilder)
-
-    (mockRequestBuilder
-      .execute(using _: HttpReads[A], _: ExecutionContext))
-      .expects(*, *)
-      .returning(Future successful value)
-  }
-
   "IfConnector" should {
     "getTrustName (URN)" in {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getTrustName(testUrn.value).futureValue shouldBe Some("Friendly Trust")
     }
 
@@ -112,7 +80,7 @@ with MockFactory {
       val testUtr = Utr("4937455253")
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getTrustName(testUtr.value).futureValue shouldBe Some("Friendly Trust")
     }
 
@@ -133,7 +101,7 @@ with MockFactory {
       mockHttpGet(
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Bill Sikes"))
     }
 
@@ -153,7 +121,7 @@ with MockFactory {
       mockHttpGet(
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Friendly Organisation"))
     }
 
@@ -192,7 +160,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(responseJson).toString)
 
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
 
       ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue should matchPattern {
         case Some(TradingDetails(Nino("ZR987654C"), Some("Surname DADTN"))) =>
@@ -205,7 +173,7 @@ with MockFactory {
     "a 404 is received for getTrustName" in {
       val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getTrustName(testUrn.value).futureValue shouldBe None
     }
 
@@ -214,14 +182,14 @@ with MockFactory {
       mockHttpGet(
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getPptSubscription(testPptRef).futureValue shouldBe None
     }
 
     "a 404 is received for getTradingNameForMtdItId" in {
       val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue shouldBe None
     }
   }
@@ -231,7 +199,7 @@ with MockFactory {
     "an unexpected status is received for getTrustName" in {
       val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR, "oops")
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getTrustName(testUrn.value).failed.futureValue shouldBe UpstreamErrorResponse(
         "unexpected status during retrieving TrustName, error=oops",
         500
@@ -243,7 +211,7 @@ with MockFactory {
       mockHttpGet(
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getPptSubscription(testPptRef).failed.futureValue shouldBe UpstreamErrorResponse(
         "unexpected error from getPptSubscriptionDisplay: oops",
         500
@@ -253,7 +221,7 @@ with MockFactory {
     "an unexpected status is received for getTradingNameForMtdItId" in {
       val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR)
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
       ifConnector.getTradingDetailsForMtdItId(testMtdItId).failed.futureValue shouldBe UpstreamErrorResponse(
         "unexpected error during 'getTradingNameForMtdItId', statusCode=500",
         500
