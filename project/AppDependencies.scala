@@ -2,7 +2,7 @@ import sbt.*
 
 object AppDependencies {
 
-  private val bootstrapVer: String = "9.19.0"
+  private val bootstrapVer: String = "10.1.0"
   private val mongoVer: String = "2.7.0"
   private val pekkoVersion = "1.0.3"
 
@@ -11,7 +11,7 @@ object AppDependencies {
     "uk.gov.hmrc"             %% "bootstrap-backend-play-30"         % bootstrapVer,
     "uk.gov.hmrc"             %% "cluster-work-throttling"           % "9.2.0",
     "uk.gov.hmrc"             %% "crypto-json-play-30"               % "8.3.0",
-    "uk.gov.hmrc"             %% "domain-play-30"                    % "11.0.0"
+    "uk.gov.hmrc"             %% "domain-play-30"                    % "13.0.0"
   )
 
   val test: Seq[ModuleID] = Seq(
