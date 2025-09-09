@@ -31,5 +31,6 @@ with MockFactory
 with ScalaFutures {
 
   val aesCrypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
+  & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
+
 }

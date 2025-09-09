@@ -21,11 +21,11 @@ import com.typesafe.config.Config
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.ObservableFuture
 import play.api.Configuration
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Request
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
+import play.api.test.Helpers.*
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
@@ -33,12 +33,13 @@ import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Identifier
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.Unassign
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
+import uk.gov.hmrc.agentuserclientdetails.stubs.AuthorisationMockSupport
+import uk.gov.hmrc.agentuserclientdetails.stubs.EnrolmentStoreProxyConnectorStub
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.NotFoundException
@@ -53,7 +54,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class AssignmentControllerISpec
 extends BaseIntegrationSpec
 with DefaultPlayMongoRepositorySupport[WorkItem[AssignmentWorkItem]]
-with AuthorisationMockSupport {
+with AuthorisationMockSupport
+with EnrolmentStoreProxyConnectorStub {
 
   override protected val repository: PlayMongoRepository[WorkItem[AssignmentWorkItem]] = wir
 
@@ -66,7 +68,6 @@ with AuthorisationMockSupport {
 
   lazy val wir = AssignmentsWorkItemRepository(config, mongoComponent)
   lazy val wis = new AssignmentsWorkItemServiceImpl(wir, appConfig)
-  lazy val esp = mock[EnrolmentStoreProxyConnector]
 
   implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
   implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
@@ -108,7 +109,7 @@ with AuthorisationMockSupport {
         new AssignmentController(
           cc,
           wis,
-          esp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = fnc.assignEnrolments(request: Request[JsValue])
@@ -133,7 +134,7 @@ with AuthorisationMockSupport {
         new AssignmentController(
           cc,
           wis,
-          esp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = fnc.assignEnrolments(request: Request[JsValue])
@@ -153,7 +154,7 @@ with AuthorisationMockSupport {
         new AssignmentController(
           cc,
           wis,
-          esp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = fnc.assignEnrolments(request: Request[JsValue])
@@ -167,7 +168,7 @@ with AuthorisationMockSupport {
         new AssignmentController(
           cc,
           wis,
-          esp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = fnc.assignEnrolments(request)
@@ -177,7 +178,6 @@ with AuthorisationMockSupport {
 
   "POST /arn/:arn/user/:userId/ensure-assignments" should {
     "respond with 200 if the client is already in sync (already has exactly the given enrolments assigned)" in {
-      val userId = "myUser"
       val enrolments = Seq(
         Enrolment(
           "HMRC-MTD-VAT",
@@ -193,17 +193,14 @@ with AuthorisationMockSupport {
         )
       )
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      val stubEsp = stub[EnrolmentStoreProxyConnector]
-      (stubEsp
-        .getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(userId, *, *)
-        .returns(Future.successful(enrolments))
+      mockGetEnrolmentsAssignedToUserSuccess(enrolments)
+
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.fromEnrolment)))
       val ac =
         new AssignmentController(
           cc,
           wis,
-          stubEsp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = ac.ensureAssignments(arn, "myUser")(request)
@@ -212,7 +209,6 @@ with AuthorisationMockSupport {
     }
 
     "respond with 202 if changes are needed and add items in the queue to effect the desired change" in {
-      val userId = "myUser"
       val storedEnrolments = Seq(
         Enrolment(
           "HMRC-MTD-VAT",
@@ -242,17 +238,14 @@ with AuthorisationMockSupport {
         )
       )
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      val stubEsp = stub[EnrolmentStoreProxyConnector]
-      (stubEsp
-        .getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(userId, *, *)
-        .returns(Future.successful(storedEnrolments))
+      mockGetEnrolmentsAssignedToUserSuccess(storedEnrolments)
+
       val request = FakeRequest("POST", "").withBody(Json.toJson(wantedEnrolments.map(EnrolmentKey.fromEnrolment)))
       val ac =
         new AssignmentController(
           cc,
           wis,
-          stubEsp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = ac.ensureAssignments(arn, "myUser")(request)
@@ -275,7 +268,6 @@ with AuthorisationMockSupport {
     }
 
     "respond with 404 status if userId is unknown" in {
-      val userId = "unknownUser"
       val enrolments = Seq(
         Enrolment(
           "HMRC-MTD-VAT",
@@ -291,17 +283,14 @@ with AuthorisationMockSupport {
         )
       )
       mockAuthResponseWithoutException(buildAuthorisedResponse)
-      val stubEsp = stub[EnrolmentStoreProxyConnector]
-      (stubEsp
-        .getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
-        .when(userId, *, *)
-        .returns(Future.failed(new NotFoundException("")))
+      mockGetEnrolmentsAssignedToUserException(new NotFoundException(""))
+
       val request = FakeRequest("POST", "").withBody(Json.toJson(enrolments.map(EnrolmentKey.fromEnrolment)))
       val ac =
         new AssignmentController(
           cc,
           wis,
-          stubEsp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = ac.ensureAssignments(arn, "unknownUser")(request)
@@ -317,7 +306,7 @@ with AuthorisationMockSupport {
         new AssignmentController(
           cc,
           wis,
-          esp,
+          mockEnrolmentStoreProxyConnector,
           appConfig
         )
       val result = ac.ensureAssignments(arn, "myUser")(request)

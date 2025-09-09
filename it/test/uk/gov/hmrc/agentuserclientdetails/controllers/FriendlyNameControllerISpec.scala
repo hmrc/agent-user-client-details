@@ -19,12 +19,12 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import com.google.inject.AbstractModule
 import com.typesafe.config.Config
 import play.api.Configuration
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.ControllerComponents
 import play.api.mvc.Request
 import play.api.test.FakeRequest
-import play.api.test.Helpers._
-import uk.gov.hmrc.agentuserclientdetails.model._
+import play.api.test.Helpers.*
+import uk.gov.hmrc.agentuserclientdetails.model.*
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
@@ -33,12 +33,14 @@ import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnecto
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
+import uk.gov.hmrc.agentuserclientdetails.stubs.AuthorisationMockSupport
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import uk.gov.hmrc.mongo.workitem.WorkItem
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future

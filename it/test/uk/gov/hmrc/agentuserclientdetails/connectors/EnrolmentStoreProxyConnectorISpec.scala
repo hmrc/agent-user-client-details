@@ -18,29 +18,26 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
 import izumi.reflect.Tag
-import org.apache.pekko.stream.Materializer
-import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status.*
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.ws.BodyWritable
-import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.*
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.model.GroupDelegatedEnrolments
 import uk.gov.hmrc.agentuserclientdetails.model.PaginatedEnrolments
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.*
+import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.client.RequestBuilder
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpException
-import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.NotFoundException
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
+import uk.gov.hmrc.http.client.RequestBuilder
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -50,12 +47,10 @@ import scala.concurrent.Future
 
 class EnrolmentStoreProxyConnectorISpec
 extends BaseIntegrationSpec
+with HttpClientStub
 with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
-
-  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
-  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
 
   implicit lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
@@ -69,56 +64,6 @@ with MockFactory {
     new AbstractModule {
       override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
     }
-
-  def mockHttpGet(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .get(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
-
-  def mockHttpPost(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .post(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
-
-  def mockHttpPut(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .put(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
-
-  def mockHttpDelete(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .delete(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
-
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[
-    HttpReads[A],
-    ExecutionContext,
-    Future[A]
-  ] =
-    (mockRequestBuilder
-      .execute(using _: HttpReads[A], _: ExecutionContext))
-      .expects(*, *)
-      .returning(Future successful value)
 
   val mtdVatEnrolment: Enrolment = Enrolment(
     "HMRC-MTD-VAT",

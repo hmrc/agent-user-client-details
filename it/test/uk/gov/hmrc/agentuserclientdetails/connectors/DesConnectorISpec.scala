@@ -17,32 +17,29 @@
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
-import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
 import play.api.libs.json.Json
-import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.CgtRef
-import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Vrn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.*
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.CgtRef
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Vrn
+import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.auth.core.AuthConnector
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.client.RequestBuilder
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class DesConnectorISpec
 extends BaseIntegrationSpec
+with HttpClientStub
 with MockFactory {
 
   lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
@@ -51,8 +48,6 @@ with MockFactory {
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
-  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
-  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
 
   val desConnector =
     new DesConnectorImpl(
@@ -64,32 +59,6 @@ with MockFactory {
 
   val testCgtRef: CgtRef = CgtRef("XMCGTP123456789")
   val testVrn: Vrn = Vrn("12345678")
-
-  def mockHttpGet(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .get(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
-
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[
-    HttpReads[A],
-    ExecutionContext,
-    Future[A]
-  ] = {
-    (mockRequestBuilder
-      .setHeader(_ *))
-      .expects(*)
-      .returning(mockRequestBuilder)
-
-    (mockRequestBuilder
-      .execute(using _: HttpReads[A], _: ExecutionContext))
-      .expects(*, *)
-      .returning(Future successful value)
-  }
 
   override def moduleOverrides: AbstractModule =
     new AbstractModule {
@@ -103,7 +72,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(cgtSubscription).toString)
 
       mockHttpGet(url"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
 
       val desConnector =
         new DesConnectorImpl(
@@ -123,7 +92,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, Json.toJson(cgtSubscription).toString)
 
       mockHttpGet(url"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
 
       desConnector.getCgtSubscription(CgtRef("XMCGTP123456789")).futureValue should matchPattern {
         case Some(sub) if sub == cgtSubscription =>
@@ -187,7 +156,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
 
       mockHttpGet(url"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
 
       desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(
         VatCustomerDetails(
@@ -259,7 +228,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
 
       mockHttpGet(url"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information")
-      mockRequestBuilderExecute(mockResponse)
+      mockRequestBuilderExecuteWithHeader(mockResponse)
 
       desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe Some(
         VatCustomerDetails(
@@ -280,14 +249,14 @@ with MockFactory {
       "a 404 is received for getCgtSubscription" in {
         val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
         mockHttpGet(url"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}")
-        mockRequestBuilderExecute(mockResponse)
+        mockRequestBuilderExecuteWithHeader(mockResponse)
         desConnector.getCgtSubscription(testCgtRef).futureValue shouldBe None
       }
 
       "a 404 is received for getVatCustomerDetails" in {
         val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
         mockHttpGet(url"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information")
-        mockRequestBuilderExecute(mockResponse)
+        mockRequestBuilderExecuteWithHeader(mockResponse)
         desConnector.getVatCustomerDetails(testVrn).futureValue shouldBe None
       }
     }
@@ -297,7 +266,7 @@ with MockFactory {
       "an unexpected status is returned for getCgtSubscription" in {
         val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR, "oops")
         mockHttpGet(url"${appConfig.desBaseUrl}/subscriptions/CGT/ZCGT/${testCgtRef.value}")
-        mockRequestBuilderExecute(mockResponse)
+        mockRequestBuilderExecuteWithHeader(mockResponse)
         desConnector.getCgtSubscription(testCgtRef).failed.futureValue shouldBe UpstreamErrorResponse(
           "unexpected error during 'getCgtSubscription': oops",
           500
@@ -307,7 +276,7 @@ with MockFactory {
       "an unexpected status is returned for getVatCustomerDetails" in {
         val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR)
         mockHttpGet(url"${appConfig.desBaseUrl}/vat/customer/vrn/${testVrn.value}/information")
-        mockRequestBuilderExecute(mockResponse)
+        mockRequestBuilderExecuteWithHeader(mockResponse)
         desConnector.getVatCustomerDetails(testVrn).failed.futureValue shouldBe UpstreamErrorResponse(
           "unexpected error during 'getVatCustomerDetails', statusCode=500",
           500

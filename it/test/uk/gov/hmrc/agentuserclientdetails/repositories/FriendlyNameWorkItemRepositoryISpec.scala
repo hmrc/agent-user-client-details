@@ -17,17 +17,15 @@
 package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.google.inject.AbstractModule
-import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Updates
 import com.typesafe.config.Config
 import org.bson.types.ObjectId
 import org.mongodb.scala.SingleObservableFuture
 import org.scalamock.scalatest.MockFactory
-import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
-import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
+import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemServiceImpl
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
@@ -35,10 +33,6 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
-import org.scalatest.concurrent.Eventually.eventually
-import org.scalatest.time.Millis
-import org.scalatest.time.Seconds
-import org.scalatest.time.Span
 
 import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global

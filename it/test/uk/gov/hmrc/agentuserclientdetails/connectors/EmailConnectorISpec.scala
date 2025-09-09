@@ -27,39 +27,26 @@ import play.api.libs.ws.BodyWritable
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.client.RequestBuilder
+import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.client.RequestBuilder
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 class EmailConnectorISpec
 extends BaseIntegrationSpec
+with HttpClientStub
 with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
-  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
-
-  def mockHttpPost(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .post(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
-
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[
+  override def mockRequestBuilderExecute[A](value: A): CallHandler2[
     HttpReads[A],
     ExecutionContext,
     Future[A]

@@ -16,33 +16,29 @@
 
 package uk.gov.hmrc.agentuserclientdetails.connectors
 
-import org.scalamock.handlers.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status
-import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.client.RequestBuilder
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
-import java.net.URL
-import java.time.format.DateTimeFormatter
 import java.time.Clock
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class HipConnectorISpec
 extends BaseIntegrationSpec
+with HttpClientStub
 with MockFactory {
 
   implicit val hc: HeaderCarrier = HeaderCarrier()
@@ -54,9 +50,6 @@ with MockFactory {
     testCaseName: String
   )
 
-  val mockHttpClient: HttpClientV2 = mock[HttpClientV2]
-  val mockRequestBuilder: RequestBuilder = mock[RequestBuilder]
-
   val hipConnector: HipConnector =
     new HipConnectorImpl(
       appConfig,
@@ -64,32 +57,6 @@ with MockFactory {
       metrics,
       fixedClock
     )
-
-  def mockRequestBuilderExecute[A](value: A): CallHandler2[
-    HttpReads[A],
-    ExecutionContext,
-    Future[A]
-  ] = {
-    (mockRequestBuilder
-      .setHeader(_ *))
-      .expects(*)
-      .returning(mockRequestBuilder)
-
-    (mockRequestBuilder
-      .execute(using _: HttpReads[A], _: ExecutionContext))
-      .expects(*, *)
-      .returning(Future successful value)
-  }
-
-  def mockHttpGet(url: URL): CallHandler2[
-    URL,
-    HeaderCarrier,
-    RequestBuilder
-  ] =
-    (mockHttpClient
-      .get(_: URL)(_: HeaderCarrier))
-      .expects(url, *)
-      .returning(mockRequestBuilder)
 
   "HipConnector.getTradingDetailsForMtdItId calls API endpoint and return TradingDetails" when {
     List(
@@ -127,7 +94,7 @@ with MockFactory {
       tc.testCaseName in {
         mockHttpGet(url"$url")
         val mockResponse = HttpResponse(tc.responseStatus, tc.responseBody)
-        mockRequestBuilderExecute(mockResponse)
+        mockRequestBuilderExecuteWithHeader(mockResponse)
         hipConnector.getTradingDetailsForMtdItId(mtdItId).futureValue shouldBe tc.expectedReturn
       }
     }
@@ -137,7 +104,7 @@ with MockFactory {
 
     mockHttpGet(url"$url")
     val mockResponse = HttpResponse(Status.NOT_FOUND, "url not found")
-    mockRequestBuilderExecute(mockResponse)
+    mockRequestBuilderExecuteWithHeader(mockResponse)
 
     val result =
       hipConnector
