@@ -78,5 +78,7 @@ extends AppConfig {
   val hipEnabled: Boolean = true
   val hipBaseUrl: String = ""
   val hipAuthToken: String = "hipToken"
+  val asaBaseUrl: String = ""
+  val enableAgentRecordViaAsa: Boolean = true
 
 }

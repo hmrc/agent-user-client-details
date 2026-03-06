@@ -27,12 +27,12 @@ import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgentSupport
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.PaginatedClientsBuilder
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
+import uk.gov.hmrc.agentuserclientdetails.services.AgentRecordService
 import uk.gov.hmrc.agentuserclientdetails.services.ES3CacheService
 import uk.gov.hmrc.agentuserclientdetails.services.FriendlyNameWorkItemService
 import uk.gov.hmrc.agentuserclientdetails.services.JobMonitoringService
@@ -57,7 +57,7 @@ class ClientController @Inject() (
   espConnector: EnrolmentStoreProxyConnector,
   es3CacheService: ES3CacheService,
   jobMonitoringService: JobMonitoringService,
-  agentAssuranceConnector: AgentAssuranceConnector,
+  agentRecordService: AgentRecordService,
   appConfig: AppConfig
 )(implicit
   authAction: AuthAction,
@@ -299,7 +299,7 @@ with AuthorisedAgentSupport {
 
   def getAgencyDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withAuthorisedAgent() { _ =>
-      agentAssuranceConnector.getAgentDetails(arn).map(_.flatMap(_.agencyDetails)).map {
+      agentRecordService.getAgentDetails(arn).map(_.flatMap(_.agencyDetails)).map {
         case Some(agencyDetails) => Ok(Json.toJson(agencyDetails))
         case None => NotFound
       }
@@ -348,7 +348,7 @@ with AuthorisedAgentSupport {
       Future.successful(None)
     else {
       for {
-        maybeAgentDetailsDesResponse <- agentAssuranceConnector.getAgentDetails(arn)
+        maybeAgentDetailsDesResponse <- agentRecordService.getAgentDetails(arn)
         _ =
           if (maybeAgentDetailsDesResponse.isEmpty)
             logger.warn(
