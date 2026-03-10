@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentuserclientdetails.repositories
 
 import com.typesafe.config.Config
 import org.mongodb.scala.model.Filters
-import org.mongodb.scala.SingleObservableFuture
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
