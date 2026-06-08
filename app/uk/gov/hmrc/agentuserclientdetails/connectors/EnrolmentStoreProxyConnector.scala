@@ -135,10 +135,6 @@ with Logging {
   // excludes PersonalIncomeRecord (unsupported)
   private val excludedServices =
     Seq(PersonalIncomeRecord) ++
-      (if (appConfig.enableCbcFeature)
-         Seq.empty
-       else
-         Seq(Cbc, CbcNonUk)) ++
       (if (appConfig.enablePillar2Feature)
          Seq.empty
        else
