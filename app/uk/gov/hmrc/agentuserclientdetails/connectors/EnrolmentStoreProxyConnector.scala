@@ -133,12 +133,7 @@ with Logging {
   val espBaseUrl = url"${appConfig.enrolmentStoreProxyUrl}"
 
   // excludes PersonalIncomeRecord (unsupported)
-  private val excludedServices =
-    Seq(PersonalIncomeRecord) ++
-      (if (appConfig.enablePillar2Feature)
-         Seq.empty
-       else
-         Seq(Pillar2))
+  private val excludedServices = Seq(PersonalIncomeRecord)
 
   private lazy val supportedServiceKeys = Service.supportedServices
     .filterNot(service => excludedServices.contains(service))

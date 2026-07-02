@@ -98,8 +98,6 @@ trait AppConfig {
 
   val es3MaxRecordsFetchCount: Int
 
-  val enablePillar2Feature: Boolean
-
   val internalHostPatterns: Seq[Regex]
 
   val enableAgentRecordViaAsa: Boolean
@@ -189,8 +187,6 @@ extends AppConfig {
 
   val userGroupsSearchUrl: String = servicesConfig.baseUrl("users-groups-search")
   val es3MaxRecordsFetchCount: Int = servicesConfig.getInt("es3.max-records-fetch-count")
-
-  val enablePillar2Feature: Boolean = servicesConfig.getBoolean("features.enable-pillar2")
 
   val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 
