@@ -68,7 +68,6 @@ extends AppConfig {
   val serviceJobIntervalSeconds: Int = 60
   val serviceJobInitialDelaySeconds: Int = 60
   val es3MaxRecordsFetchCount: Int = 1000
-  val enablePillar2Feature: Boolean = true
   val internalHostPatterns: Seq[Regex] = Seq(
     "^.*\\.service$",
     "^.*\\.mdtp$",
