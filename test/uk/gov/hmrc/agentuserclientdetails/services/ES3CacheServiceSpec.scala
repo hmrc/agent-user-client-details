@@ -51,7 +51,7 @@ extends BaseSpec {
         mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(enrolments)
         mockEs3CacheRepositorySave(enrolments)
 
-        es3CacheService.getClients(groupId).futureValue shouldBe Seq(
+        es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue shouldBe Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
         )
       }
@@ -68,7 +68,7 @@ extends BaseSpec {
 
         mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, enrolments.map(SensitiveEnrolment(_)))))
 
-        es3CacheService.getClients(groupId).futureValue shouldBe Seq(
+        es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue shouldBe Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
         )
       }
@@ -97,15 +97,15 @@ extends BaseSpec {
       mockEs3CacheRepositorySave(es3Response)
       mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, es3Response.map(SensitiveEnrolment(_)))))
 
-      es3CacheService.refresh(groupId).futureValue shouldBe Some(())
+      es3CacheService.refreshIfGroupIdExist(groupId).futureValue shouldBe Some(())
 
-      es3CacheService.getClients(groupId).futureValue shouldBe List(Client("HMRC-MTD-VAT~VRN~123456789", ""))
+      es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue shouldBe List(Client("HMRC-MTD-VAT~VRN~123456789", ""))
     }
 
     "not rebuild the cache if one doesn't exist" in new TestScope {
 
       mockEs3CacheRepositoryFetch(None)
-      es3CacheService.refresh(groupId).futureValue shouldBe None
+      es3CacheService.refreshIfGroupIdExist(groupId).futureValue shouldBe None
     }
   }
 

@@ -136,7 +136,7 @@ extends Logging {
           case None => Future.successful(None)
           case Some(groupId) =>
             es3CacheService
-              .getClients(groupId)
+              .fetchClientsAndPoupluateCacheIfEmpty(groupId)
               .map(clients => Option(clients.size))
         }
     } yield clientCount

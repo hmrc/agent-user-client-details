@@ -73,7 +73,7 @@ with AuthorisedAgentSupport {
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheService
-          .getClients(groupId)
+          .fetchClientsAndPoupluateCacheIfEmpty(groupId)
           .map { clients =>
             clients
               .find(_.enrolmentKey == enrolmentKey)
@@ -105,7 +105,7 @@ with AuthorisedAgentSupport {
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheService
-          .getClients(groupId)
+          .fetchClientsAndPoupluateCacheIfEmpty(groupId)
           .map(clients =>
             clients
               .map(client => EnrolmentKey.serviceOf(client.enrolmentKey))
@@ -127,7 +127,7 @@ with AuthorisedAgentSupport {
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheService
-          .getClients(groupId)
+          .fetchClientsAndPoupluateCacheIfEmpty(groupId)
           .map { clients =>
             val clientsMatchingSearch =
               search.fold(clients) { searchTerm =>
@@ -190,10 +190,13 @@ with AuthorisedAgentSupport {
   def cacheRefresh(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     authAction.simpleAuth {
       withGroupIdFor(arn) { groupId =>
-        es3CacheService.refresh(groupId).map {
-          case Some(_) => NoContent
-          case None => NotFound
-        }
+        es3CacheService
+          .refreshIfGroupIdExist(groupId)
+          .recover {
+            case ex => logger.error(s"Cache refresh failed for $groupId", ex)
+          }
+
+        Future.successful(Accepted)
       }
     }
   }
@@ -217,7 +220,7 @@ with AuthorisedAgentSupport {
       )
     }
 
-    es3CacheService.getClients(groupId).transformWith {
+    es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).transformWith {
       // if friendly names are populated for all enrolments, return 200
       case Success(clients) if clients.forall(_.friendlyName.nonEmpty) =>
         logger.info(s"${clients.length} enrolments found for groupId $groupId. No friendly name lookups needed.")

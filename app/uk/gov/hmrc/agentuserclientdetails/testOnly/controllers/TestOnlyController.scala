@@ -34,6 +34,7 @@ import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSizeRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepository
+import uk.gov.hmrc.agentuserclientdetails.repositories.Es3CacheRepositoryTestDeleteTrait
 import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.services.ES3CacheService
@@ -106,7 +107,7 @@ with Logging {
     for {
       a <- agentSizeRepository.delete(arn)
       b <- assignmentsWorkItemRepository.deleteWorkItems(arn)
-      c <- es3CacheRepository.deleteCache(groupId)
+      c <- es3CacheRepository.asInstanceOf[Es3CacheRepositoryTestDeleteTrait].deleteCache(groupId)
       d <- friendlyNameWorkItemRepository.deleteWorkItems(groupId)
       _ = logger.info(
         s"Deleted test-data for $arn $groupId: agentSize: $a, assignmentsWi: $b, es3Cache: $c, friendlyNameWi: $d"
@@ -136,7 +137,7 @@ with Logging {
       )
     }
 
-    es3CacheService.getClients(groupId).transformWith {
+    es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).transformWith {
       case Success(clients) =>
         for {
           _ <- workItemService.removeByGroupId(groupId)

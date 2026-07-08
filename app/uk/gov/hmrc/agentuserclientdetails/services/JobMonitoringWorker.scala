@@ -97,7 +97,7 @@ extends Logging {
 
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)
-              _ <- es3CacheService.refresh(job.groupId)
+              _ <- es3CacheService.refreshIfGroupIdExist(job.groupId)
               _ <-
                 if (job.sendEmailOnCompletion) {
                   failuresFor(job).flatMap { failures =>

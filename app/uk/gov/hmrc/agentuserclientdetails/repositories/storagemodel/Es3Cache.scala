@@ -22,6 +22,7 @@ import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
+import scala.util.Try
 
 case class Es3Cache(
   groupId: String,
@@ -35,9 +36,11 @@ object Es3Cache {
   implicit val dtf: Format[Instant] = MongoJavatimeFormats.instantFormat
   def format(implicit crypto: Encrypter & Decrypter): Format[Es3Cache] = Json.format[Es3Cache]
 
-  def merge(es3Caches: Seq[Es3Cache]): Option[Es3Cache] = es3Caches.headOption.map { head =>
-    require(es3Caches.map(_.groupId).distinct.size == 1)
-    Es3Cache(head.groupId, es3Caches.map(_.clients).reduce(_ ++ _))
+  def merge(es3Caches: Seq[Es3Cache]): Try[Option[Es3Cache]] = Try {
+    es3Caches.headOption.map { head =>
+      require(es3Caches.map(_.groupId).distinct.size == 1)
+      Es3Cache(head.groupId, es3Caches.map(_.clients).reduce(_ ++ _))
+    }
   }
   def split(
     es3Cache: Es3Cache,

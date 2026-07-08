@@ -512,7 +512,7 @@ extends BaseSpec {
     clients: Seq[Client]
   )(mockES3CacheService: ES3CacheService) =
     (mockES3CacheService
-      .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
       .expects(groupId, *, *)
       .returning(Future.successful(clients))
 

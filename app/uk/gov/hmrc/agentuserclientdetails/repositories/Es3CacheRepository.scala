@@ -48,8 +48,6 @@ trait Es3CacheRepository {
   ): Future[Es3Cache]
   def get(groupId: String): Future[Option[Es3Cache]]
 
-  def deleteCache(groupId: String): Future[Long]
-
 }
 
 /** Caches ES3 enrolments of an agent's groupId for a configurable duration.
@@ -81,6 +79,7 @@ extends PlayMongoRepository[Es3Cache](
   replaceIndexes = true
 )
 with Es3CacheRepository
+with Es3CacheRepositoryTestDeleteTrait
 with Logging {
 
   override lazy val requiresTtlIndex = false
@@ -113,14 +112,21 @@ with Logging {
       deleteResult <- collection.deleteMany(equal(FIELD_GROUP_ID, groupId)).toFuture()
       _ = logger.info(s"Deleted ${deleteResult.getDeletedCount} existing documents for $groupId")
       savedCount <- collection.insertMany(documents).toFuture().map(_.getInsertedIds.size())
-      _ = logger.info(s"Inserted $savedCount documents for $groupId")
+      _ = {
+        if (savedCount == documents.size) {
+          logger.info(s"Inserted $savedCount documents for $groupId")
+        }
+        else {
+          logger.warn(s"Document count mismatch for $groupId: expected to save ${documents.size} documents but only $savedCount were saved")
+        }
+      }
     } yield es3Cache
   }
 
   override def get(groupId: String): Future[Option[Es3Cache]] = collection
     .find(equal(FIELD_GROUP_ID, groupId))
     .toFuture()
-    .map(Es3Cache.merge)
+    .map(documents => Es3Cache.merge(documents).getOrElse(None))
 
   // test-only to remove perf-test data.
   override def deleteCache(groupId: String): Future[Long] = collection.deleteOne(equal("groupId", groupId)).toFuture().map(_.getDeletedCount)

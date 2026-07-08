@@ -124,7 +124,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -185,7 +185,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -239,7 +239,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -294,7 +294,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -359,7 +359,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
