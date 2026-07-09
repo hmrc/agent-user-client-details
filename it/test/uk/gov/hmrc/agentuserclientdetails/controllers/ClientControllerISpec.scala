@@ -690,6 +690,89 @@ with MongoSupport {
   }
 
   "GET /cache-refresh" should {
+
+    "onComplete Refresh completed for groupId" in new TestScope {
+
+      mockSimpleAuthResponse()
+      mockGetPrincipalGroupIdSuccess(Some(testGroupId))
+
+      (es3CacheService
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(
+          testGroupId,
+          *,
+          *
+        )
+        .returning(Future.successful(Some(testGroupId)))
+
+      val logger = LoggerFactory.getLogger(classOf[ClientController]).asInstanceOf[LBLogger]
+      val listAppender = new ListAppender[ILoggingEvent]()
+      listAppender.start()
+      logger.addAppender(listAppender)
+
+      try {
+        val request = FakeRequest("PUT", "")
+        val result = controller.cacheRefresh(testArn)(request).futureValue
+        result.header.status shouldBe Status.ACCEPTED
+
+        eventually {
+          val events = listAppender.list.asScala.toList
+          val matched = events.exists { e =>
+            e.getLevel == Level.INFO &&
+            e.getFormattedMessage.contains(s"Refresh completed for $testGroupId")
+          }
+
+          matched shouldBe true
+        }
+      }
+      finally {
+        // Cleanup: detach appender to avoid leaking state into other tests
+        logger.detachAppender(listAppender)
+        listAppender.stop()
+      }
+    }
+
+    "onComplete Cache refreshed trigger for non-existent group ID" in new TestScope {
+
+      mockSimpleAuthResponse()
+      mockGetPrincipalGroupIdSuccess(Some(testGroupId))
+
+      (es3CacheService
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(
+          testGroupId,
+          *,
+          *
+        )
+        .returning(Future.successful(None))
+
+      val logger = LoggerFactory.getLogger(classOf[ClientController]).asInstanceOf[LBLogger]
+      val listAppender = new ListAppender[ILoggingEvent]()
+      listAppender.start()
+      logger.addAppender(listAppender)
+
+      try {
+        val request = FakeRequest("PUT", "")
+        val result = controller.cacheRefresh(testArn)(request).futureValue
+        result.header.status shouldBe Status.ACCEPTED
+
+        eventually {
+          val events = listAppender.list.asScala.toList
+          val matched = events.exists { e =>
+            e.getLevel == Level.WARN &&
+            e.getFormattedMessage.contains(s"Cache refreshed trigger for non-existent group ID $testGroupId")
+          }
+
+          matched shouldBe true
+        }
+      }
+      finally {
+        // Cleanup: detach appender to avoid leaking state into other tests
+        logger.detachAppender(listAppender)
+        listAppender.stop()
+      }
+    }
+
     "return 202 Accepted and log error when refresh fails" in new TestScope {
 
       mockSimpleAuthResponse()
