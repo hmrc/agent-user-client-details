@@ -94,6 +94,21 @@ with Logging {
 
   private val FIELD_GROUP_ID = "groupId"
 
+  private def numberOfDocumentLogs(
+    groupId: String,
+    expectedCount: Int,
+    savedCount: Int,
+    documents: Seq[Es3Cache]
+  ): Unit = {
+
+    if (savedCount == documents.size) {
+      logger.info(s"Inserted $savedCount documents for $groupId")
+    }
+    else {
+      logger.warn(s"Document count mismatch for $groupId: expected to save ${documents.size} documents but only $savedCount were saved")
+    }
+  }
+
   override def put(
     groupId: String,
     clients: Seq[Enrolment]
@@ -112,14 +127,12 @@ with Logging {
       deleteResult <- collection.deleteMany(equal(FIELD_GROUP_ID, groupId)).toFuture()
       _ = logger.info(s"Deleted ${deleteResult.getDeletedCount} existing documents for $groupId")
       savedCount <- collection.insertMany(documents).toFuture().map(_.getInsertedIds.size())
-      _ = {
-        if (savedCount == documents.size) {
-          logger.info(s"Inserted $savedCount documents for $groupId")
-        }
-        else {
-          logger.warn(s"Document count mismatch for $groupId: expected to save ${documents.size} documents but only $savedCount were saved")
-        }
-      }
+      _ = numberOfDocumentLogs(
+        groupId,
+        documents.size,
+        savedCount,
+        documents
+      )
     } yield es3Cache
   }
 

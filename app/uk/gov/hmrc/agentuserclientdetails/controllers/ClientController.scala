@@ -192,11 +192,12 @@ with AuthorisedAgentSupport {
       withGroupIdFor(arn) { groupId =>
         es3CacheService
           .refreshIfGroupIdExist(groupId)
-          .recover {
-            case ex => logger.error(s"Cache refresh failed for $groupId", ex)
+          .onComplete {
+            case Success(None) => logger.warn(s"Cache refreshed trigger for non-existent group ID $groupId")
+            case Success(Some(_)) => logger.info(s"Refresh completed for $groupId")
+            case Failure(ex) => logger.error(s"Cache refresh failed for $groupId", ex)
           }
-
-        Future.successful(Accepted)
+        Future.successful(Accepted("Cache refresh started in the background, check logs for updates"))
       }
     }
   }
