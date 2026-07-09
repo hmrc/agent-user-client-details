@@ -36,7 +36,7 @@ object Es3Cache {
   implicit val dtf: Format[Instant] = MongoJavatimeFormats.instantFormat
   def format(implicit crypto: Encrypter & Decrypter): Format[Es3Cache] = Json.format[Es3Cache]
 
-  def merge(es3Caches: Seq[Es3Cache]): Try[Option[Es3Cache]] = Try {
+  def merge(es3Caches: Seq[Es3Cache]): Option[Es3Cache] = {
     es3Caches.headOption.map { head =>
       require(es3Caches.map(_.groupId).distinct.size == 1)
       Es3Cache(head.groupId, es3Caches.map(_.clients).reduce(_ ++ _))

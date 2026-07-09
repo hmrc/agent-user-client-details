@@ -139,7 +139,7 @@ with Logging {
   override def get(groupId: String): Future[Option[Es3Cache]] = collection
     .find(equal(FIELD_GROUP_ID, groupId))
     .toFuture()
-    .map(documents => Es3Cache.merge(documents).getOrElse(None))
+    .map(documents => Es3Cache.merge(documents))
 
   // test-only to remove perf-test data.
   override def deleteCache(groupId: String): Future[Long] = collection.deleteOne(equal("groupId", groupId)).toFuture().map(_.getDeletedCount)

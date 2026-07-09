@@ -59,8 +59,8 @@ with Matchers {
         cache.copy(clients = clients.take(10)),
         cache.copy(clients = clients.takeRight(5))
       )
-      Es3Cache.merge(caches).get.get.clients.size shouldBe clients.size
-      Es3Cache.merge(caches).get.get.clients shouldBe clients
+      Es3Cache.merge(caches).get.clients.size shouldBe clients.size
+      Es3Cache.merge(caches).get.clients shouldBe clients
     }
   }
 
