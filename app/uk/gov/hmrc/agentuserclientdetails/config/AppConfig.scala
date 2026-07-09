@@ -100,8 +100,6 @@ trait AppConfig {
 
   val internalHostPatterns: Seq[Regex]
 
-  val enableAgentRecordViaAsa: Boolean
-
   val asaBaseUrl: String
 
 }
@@ -190,7 +188,6 @@ extends AppConfig {
 
   val internalHostPatterns: Seq[Regex] = config.get[Seq[String]]("internalServiceHostPatterns").map(_.r)
 
-  val enableAgentRecordViaAsa: Boolean = servicesConfig.getBoolean("features.enable-agent-record-via-asa")
   val asaBaseUrl: String = baseUrl("agent-services-account")
 
 }
