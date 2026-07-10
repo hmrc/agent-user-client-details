@@ -197,7 +197,7 @@ with AuthorisedAgentSupport {
             case Success(Some(_)) => logger.info(s"Refresh completed for $groupId")
             case Failure(ex) => logger.error(s"Cache refresh failed for $groupId", ex)
           }
-        Future.successful(Accepted("Cache refresh started in the background, check logs for updates"))
+        Future.successful(NoContent)
       }
     }
   }

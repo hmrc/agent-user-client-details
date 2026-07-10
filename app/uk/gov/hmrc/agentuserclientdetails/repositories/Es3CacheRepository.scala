@@ -40,7 +40,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @ImplementedBy(classOf[Es3CacheRepositoryImpl])
-trait Es3CacheRepository {
+trait Es3CacheRepository
+extends Es3CacheRepositoryTestDeleteTrait {
 
   def put(
     groupId: String,

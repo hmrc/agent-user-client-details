@@ -713,7 +713,7 @@ with MongoSupport {
       try {
         val request = FakeRequest("PUT", "")
         val result = controller.cacheRefresh(testArn)(request).futureValue
-        result.header.status shouldBe Status.ACCEPTED
+        result.header.status shouldBe Status.NO_CONTENT
 
         eventually {
           val events = listAppender.list.asScala.toList
@@ -754,7 +754,7 @@ with MongoSupport {
       try {
         val request = FakeRequest("PUT", "")
         val result = controller.cacheRefresh(testArn)(request).futureValue
-        result.header.status shouldBe Status.ACCEPTED
+        result.header.status shouldBe Status.NO_CONTENT
 
         eventually {
           val events = listAppender.list.asScala.toList
@@ -773,7 +773,7 @@ with MongoSupport {
       }
     }
 
-    "return 202 Accepted and log error when refresh fails" in new TestScope {
+    "return asynchronously 204 NoContent when cacheRefresh is called" in new TestScope {
 
       mockSimpleAuthResponse()
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
@@ -787,32 +787,9 @@ with MongoSupport {
         )
         .returning(Future.failed(new RuntimeException("boom")))
 
-      val logger = LoggerFactory.getLogger(classOf[ClientController]).asInstanceOf[LBLogger]
-      val listAppender = new ListAppender[ILoggingEvent]()
-      listAppender.start()
-      logger.addAppender(listAppender)
-
-      try {
-        val request = FakeRequest("PUT", "")
-        val result = controller.cacheRefresh(testArn)(request).futureValue
-        result.header.status shouldBe Status.ACCEPTED
-
-        eventually {
-          val events = listAppender.list.asScala.toList
-          val matched = events.exists { e =>
-            e.getLevel == Level.ERROR &&
-            e.getFormattedMessage.contains(s"Cache refresh failed for $testGroupId") &&
-            Option(e.getThrowableProxy).exists(_.getMessage.contains("boom"))
-          }
-
-          matched shouldBe true
-        }
-      }
-      finally {
-        // Cleanup: detach appender to avoid leaking state into other tests
-        logger.detachAppender(listAppender)
-        listAppender.stop()
-      }
+      val request = FakeRequest("PUT", "")
+      val result = controller.cacheRefresh(testArn)(request).futureValue
+      result.header.status shouldBe Status.NO_CONTENT
     }
 
     "return 500 when esp throws an error" in new TestScope {
