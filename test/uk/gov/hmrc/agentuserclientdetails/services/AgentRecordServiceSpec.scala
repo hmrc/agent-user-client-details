@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.AgentServicesAccountConnector
 import uk.gov.hmrc.agentuserclientdetails.model.AgencyDetails
 import uk.gov.hmrc.agentuserclientdetails.model.AgentDetailsDesResponse
