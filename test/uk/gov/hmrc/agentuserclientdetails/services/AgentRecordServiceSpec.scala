@@ -17,13 +17,10 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.AgentAssuranceConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.AgentServicesAccountConnector
 import uk.gov.hmrc.agentuserclientdetails.model.AgencyDetails
 import uk.gov.hmrc.agentuserclientdetails.model.AgentDetailsDesResponse
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
-import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.Future
@@ -37,18 +34,10 @@ extends BaseSpec {
 
     implicit val hc: HeaderCarrier = HeaderCarrier()
 
-    def viaAsa: Boolean
-
-    implicit def mockAppConfig: AppConfig =
-      new TestAppConfig {
-        override val enableAgentRecordViaAsa: Boolean = viaAsa
-      }
     val mockAgentServicesAccountConnector: AgentServicesAccountConnector = mock[AgentServicesAccountConnector]
-    val mockAgentAssuranceConnector: AgentAssuranceConnector = mock[AgentAssuranceConnector]
 
     val agentRecordService: AgentRecordService =
       new AgentRecordService(
-        mockAgentAssuranceConnector,
         mockAgentServicesAccountConnector
       )
 
@@ -57,22 +46,9 @@ extends BaseSpec {
   "AgentRecordService.getAgentRecord" should {
     "get the agent record from agent-services-account" in new TestScope {
 
-      override def viaAsa: Boolean = true
-
       val agencyDetails = Some(AgentDetailsDesResponse(Some(AgencyDetails(Some("Agency Name"), Some("agency@email.com")))))
 
       (mockAgentServicesAccountConnector.getAgentDetails(_: HeaderCarrier)).expects(*).returning(Future.successful(agencyDetails))
-
-      agentRecordService.getAgentDetails(arn).futureValue shouldBe agencyDetails
-    }
-
-    "get the agent record from agent-assurance" in new TestScope {
-
-      override def viaAsa: Boolean = false
-
-      val agencyDetails = Some(AgentDetailsDesResponse(Some(AgencyDetails(Some("Agency Name"), Some("agency@email.com")))))
-
-      (mockAgentAssuranceConnector.getAgentDetails(_: Arn)(_: HeaderCarrier)).expects(*, *).returning(Future.successful(agencyDetails))
 
       agentRecordService.getAgentDetails(arn).futureValue shouldBe agencyDetails
     }
