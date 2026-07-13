@@ -40,15 +40,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 @ImplementedBy(classOf[Es3CacheRepositoryImpl])
-trait Es3CacheRepository {
+trait Es3CacheRepository
+extends Es3CacheRepositoryTestDeleteTrait {
 
   def put(
     groupId: String,
     clients: Seq[Enrolment]
   ): Future[Es3Cache]
   def get(groupId: String): Future[Option[Es3Cache]]
-
-  def deleteCache(groupId: String): Future[Long]
 
 }
 
@@ -81,6 +80,7 @@ extends PlayMongoRepository[Es3Cache](
   replaceIndexes = true
 )
 with Es3CacheRepository
+with Es3CacheRepositoryTestDeleteTrait
 with Logging {
 
   override lazy val requiresTtlIndex = false
@@ -94,6 +94,21 @@ with Logging {
   val COUNT_OF_CLIENTS_PER_DOCUMENT = 20000
 
   private val FIELD_GROUP_ID = "groupId"
+
+  private def numberOfDocumentLogs(
+    groupId: String,
+    expectedCount: Int,
+    savedCount: Int,
+    documents: Seq[Es3Cache]
+  ): Unit = {
+
+    if (savedCount == documents.size) {
+      logger.info(s"Inserted $savedCount documents for $groupId")
+    }
+    else {
+      logger.warn(s"Document count mismatch for $groupId: expected to save ${documents.size} documents but only $savedCount were saved")
+    }
+  }
 
   override def put(
     groupId: String,
@@ -113,14 +128,19 @@ with Logging {
       deleteResult <- collection.deleteMany(equal(FIELD_GROUP_ID, groupId)).toFuture()
       _ = logger.info(s"Deleted ${deleteResult.getDeletedCount} existing documents for $groupId")
       savedCount <- collection.insertMany(documents).toFuture().map(_.getInsertedIds.size())
-      _ = logger.info(s"Inserted $savedCount documents for $groupId")
+      _ = numberOfDocumentLogs(
+        groupId,
+        documents.size,
+        savedCount,
+        documents
+      )
     } yield es3Cache
   }
 
   override def get(groupId: String): Future[Option[Es3Cache]] = collection
     .find(equal(FIELD_GROUP_ID, groupId))
     .toFuture()
-    .map(Es3Cache.merge)
+    .map(documents => Es3Cache.merge(documents))
 
   // test-only to remove perf-test data.
   override def deleteCache(groupId: String): Future[Long] = collection.deleteOne(equal("groupId", groupId)).toFuture().map(_.getDeletedCount)

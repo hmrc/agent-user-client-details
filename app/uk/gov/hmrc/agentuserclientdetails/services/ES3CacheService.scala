@@ -34,14 +34,14 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[ES3CacheServiceImpl])
 trait ES3CacheService {
 
-  def getClients(
+  def fetchClientsAndPoupluateCacheIfEmpty(
     groupId: String
   )(implicit
     hc: HeaderCarrier,
     executionContext: ExecutionContext
   ): Future[Seq[Client]]
 
-  def refresh(
+  def refreshIfGroupIdExist(
     groupId: String
   )(implicit
     hc: HeaderCarrier,
@@ -58,7 +58,7 @@ class ES3CacheServiceImpl @Inject() (
 extends ES3CacheService
 with Logging {
 
-  override def getClients(
+  override def fetchClientsAndPoupluateCacheIfEmpty(
     groupId: String
   )(implicit
     hc: HeaderCarrier,
@@ -79,7 +79,7 @@ with Logging {
       .map(_.clients.map(enr => enrolmentToClient(enr.decryptedValue)))
   }
 
-  override def refresh(
+  override def refreshIfGroupIdExist(
     groupId: String
   )(implicit
     hc: HeaderCarrier,

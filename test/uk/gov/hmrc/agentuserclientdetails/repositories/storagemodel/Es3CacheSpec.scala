@@ -20,6 +20,8 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 
+import scala.util.Success
+
 class Es3CacheSpec
 extends AnyWordSpec
 with Matchers {

@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails
 
 import com.google.inject.AbstractModule
 import org.scalatest.BeforeAndAfterEach
+import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -37,6 +38,7 @@ extends AnyWordSpec
 with Matchers
 with ScalaFutures
 with IntegrationPatience
+with Eventually
 with GuiceOneServerPerSuite
 with BeforeAndAfterEach {
 

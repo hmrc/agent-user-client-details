@@ -58,6 +58,13 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.{Logger => LBLogger}
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import org.slf4j.LoggerFactory
+import scala.jdk.CollectionConverters._
+
 class ClientControllerISpec
 extends AuthorisationMockSupport
 with EnrolmentStoreProxyConnectorStub
@@ -158,7 +165,7 @@ with MongoSupport {
       Future[Seq[Client]]
     ] =
       (es3CacheService
-        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(clients))
 
@@ -171,7 +178,7 @@ with MongoSupport {
       Future[Seq[Client]]
     ] =
       (es3CacheService
-        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.failed(errorResponse))
 
@@ -184,7 +191,7 @@ with MongoSupport {
       Future[Option[Unit]]
     ] =
       (es3CacheService
-        .refresh(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future successful result)
 
@@ -558,7 +565,7 @@ with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
       (es3CacheService
-        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -599,7 +606,7 @@ with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
       (es3CacheService
-        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -646,7 +653,7 @@ with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
       (es3CacheService
-        .getClients(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -683,28 +690,106 @@ with MongoSupport {
   }
 
   "GET /cache-refresh" should {
-    "return 204 No Content if a cache exists" in new TestScope {
+
+    "onComplete Refresh completed for groupId" in new TestScope {
 
       mockSimpleAuthResponse()
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
 
-      mockES3CacheServiceCacheRefreshForGroupIdWithoutException(Some(()))
+      (es3CacheService
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(
+          testGroupId,
+          *,
+          *
+        )
+        .returning(Future.successful(Some(testGroupId)))
 
-      val request = FakeRequest("PUT", "")
-      val result = controller.cacheRefresh(testArn)(request)
-      result.futureValue.header.status shouldBe 204
+      val logger = LoggerFactory.getLogger(classOf[ClientController]).asInstanceOf[LBLogger]
+      val listAppender = new ListAppender[ILoggingEvent]()
+      listAppender.start()
+      logger.addAppender(listAppender)
+
+      try {
+        val request = FakeRequest("PUT", "")
+        val result = controller.cacheRefresh(testArn)(request).futureValue
+        result.header.status shouldBe Status.NO_CONTENT
+
+        eventually {
+          val events = listAppender.list.asScala.toList
+          val matched = events.exists { e =>
+            e.getLevel == Level.INFO &&
+            e.getFormattedMessage.contains(s"Refresh completed for $testGroupId")
+          }
+
+          matched shouldBe true
+        }
+      }
+      finally {
+        // Cleanup: detach appender to avoid leaking state into other tests
+        logger.detachAppender(listAppender)
+        listAppender.stop()
+      }
     }
 
-    "return 404 Not Found if a cache doesn't exist" in new TestScope {
+    "onComplete Cache refreshed trigger for non-existent group ID" in new TestScope {
 
       mockSimpleAuthResponse()
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
 
-      mockES3CacheServiceCacheRefreshForGroupIdWithoutException(None)
+      (es3CacheService
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(
+          testGroupId,
+          *,
+          *
+        )
+        .returning(Future.successful(None))
+
+      val logger = LoggerFactory.getLogger(classOf[ClientController]).asInstanceOf[LBLogger]
+      val listAppender = new ListAppender[ILoggingEvent]()
+      listAppender.start()
+      logger.addAppender(listAppender)
+
+      try {
+        val request = FakeRequest("PUT", "")
+        val result = controller.cacheRefresh(testArn)(request).futureValue
+        result.header.status shouldBe Status.NO_CONTENT
+
+        eventually {
+          val events = listAppender.list.asScala.toList
+          val matched = events.exists { e =>
+            e.getLevel == Level.WARN &&
+            e.getFormattedMessage.contains(s"Cache refreshed trigger for non-existent group ID $testGroupId")
+          }
+
+          matched shouldBe true
+        }
+      }
+      finally {
+        // Cleanup: detach appender to avoid leaking state into other tests
+        logger.detachAppender(listAppender)
+        listAppender.stop()
+      }
+    }
+
+    "return asynchronously 204 NoContent when cacheRefresh is called" in new TestScope {
+
+      mockSimpleAuthResponse()
+      mockGetPrincipalGroupIdSuccess(Some(testGroupId))
+
+      (es3CacheService
+        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .expects(
+          testGroupId,
+          *,
+          *
+        )
+        .returning(Future.failed(new RuntimeException("boom")))
 
       val request = FakeRequest("PUT", "")
-      val result = controller.cacheRefresh(testArn)(request)
-      result.futureValue.header.status shouldBe 404
+      val result = controller.cacheRefresh(testArn)(request).futureValue
+      result.header.status shouldBe Status.NO_CONTENT
     }
 
     "return 500 when esp throws an error" in new TestScope {

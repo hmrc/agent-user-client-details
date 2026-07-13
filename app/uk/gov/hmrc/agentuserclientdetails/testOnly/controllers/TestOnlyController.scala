@@ -136,7 +136,7 @@ with Logging {
       )
     }
 
-    es3CacheService.getClients(groupId).transformWith {
+    es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).transformWith {
       case Success(clients) =>
         for {
           _ <- workItemService.removeByGroupId(groupId)

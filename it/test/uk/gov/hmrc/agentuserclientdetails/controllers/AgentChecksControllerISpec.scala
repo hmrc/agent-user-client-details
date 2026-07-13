@@ -78,6 +78,7 @@ with BeforeAndAfterEach {
   val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   val agentSizeRepository: AgentSizeRepository = app.injector.instanceOf[AgentSizeRepository]
   val es3CacheRepository: Es3CacheRepository = app.injector.instanceOf[Es3CacheRepository]
+  val Es3CacheRepositoryDeleteTrait: Es3CacheRepositoryTestDeleteTrait = es3CacheRepository.asInstanceOf[Es3CacheRepositoryTestDeleteTrait]
   val friendlyNameWorkItemRepository: FriendlyNameWorkItemRepository = app.injector.instanceOf[FriendlyNameWorkItemRepository]
   val assignmentsWorkItemRepository: AssignmentsWorkItemRepository = app.injector.instanceOf[AssignmentsWorkItemRepository]
   val es3CacheService: ES3CacheService =
@@ -116,7 +117,6 @@ with BeforeAndAfterEach {
   override def beforeEach(): Unit = {
     super.beforeEach()
     agentSizeRepository.delete(arn.value).futureValue
-    es3CacheRepository.deleteCache(groupId).futureValue
     friendlyNameWorkItemRepository.deleteWorkItems(groupId).futureValue
     assignmentsWorkItemRepository.deleteWorkItems(arn.value).futureValue
   }
