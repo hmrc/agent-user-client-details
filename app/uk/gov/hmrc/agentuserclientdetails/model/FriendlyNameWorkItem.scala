@@ -28,6 +28,5 @@ case class FriendlyNameWorkItem(
   sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
 )
 
-object FriendlyNameWorkItem {
-  implicit def format(implicit crypto: Encrypter & Decrypter): Format[FriendlyNameWorkItem] = Json.format[FriendlyNameWorkItem]
-}
+object FriendlyNameWorkItem:
+  given format(using crypto: Encrypter & Decrypter): Format[FriendlyNameWorkItem] = Json.format[FriendlyNameWorkItem]

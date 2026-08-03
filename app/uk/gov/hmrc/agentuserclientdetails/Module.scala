@@ -38,7 +38,7 @@ extends AbstractModule {
   def serviceInstancesProvider(
     configuration: Configuration,
     mongo: MongoComponent
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): ServiceInstances = new DefaultServiceInstances(configuration, mongo)
 

@@ -30,7 +30,7 @@ import play.api.libs.json.OFormat
 sealed trait JobData
 
 object JobData {
-  implicit val format: Format[JobData] =
+  given format: Format[JobData] =
     new Format[JobData] {
       // Kludgy format unfortunately due to mongo codecs not generating correctly otherwise.
       def writes(o: JobData): JsValue =
@@ -61,9 +61,7 @@ case class FriendlyNameJobData(
 )
 extends JobData
 
-object FriendlyNameJobData {
+object FriendlyNameJobData:
 
   val jobType = "FriendlyNameJob"
-  implicit val format: OFormat[FriendlyNameJobData] = Json.format[FriendlyNameJobData]
-
-}
+  given format: OFormat[FriendlyNameJobData] = Json.format[FriendlyNameJobData]

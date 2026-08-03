@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.binders
 
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
+import uk.gov.hmrc.agentuserclientdetails.model.Arn
 
 class SimpleObjectBinderSpec
 extends BaseSpec {
@@ -30,8 +31,8 @@ extends BaseSpec {
         val bind: String => Example = param => Example(param)
         val unbind: Example => String = example => example.str
         val binder = new SimpleObjectBinder[Example](bind, unbind)
-        binder.bind("key", "in") shouldBe Right(Example("in"))
-        binder.unbind("key", Example("out")) shouldBe "out"
+        binder.bind("key", "in").shouldBe(Right(Example("in")))
+        binder.unbind("key", Example("out")).shouldBe("out")
       }
     }
 
@@ -40,9 +41,16 @@ extends BaseSpec {
         val bind: String => Example = _ => throw new RuntimeException("Bad")
         val unbind: Example => String = _ => throw new RuntimeException("Sad")
         val binder = new SimpleObjectBinder[Example](bind, unbind)
-        binder.bind("key", "in") shouldBe Left("Cannot parse parameter 'key' with value 'in' as 'Example'")
+        binder.bind("key", "in").shouldBe(Left("Cannot parse parameter 'key' with value 'in' as 'Example'"))
         assertThrows[RuntimeException](binder.unbind("key", Example("out")))
       }
+    }
+  }
+
+  "ArnBinder" should {
+    "bind and unbind Arn values" in {
+      Binders.ArnBinder.bind("arn", "TARN0000001").shouldBe(Right(Arn("TARN0000001")))
+      Binders.ArnBinder.unbind("arn", Arn("TARN0000001")).shouldBe("TARN0000001")
     }
   }
 

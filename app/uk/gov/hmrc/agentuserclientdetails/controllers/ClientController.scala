@@ -59,7 +59,7 @@ class ClientController @Inject() (
   jobMonitoringService: JobMonitoringService,
   agentRecordService: AgentRecordService,
   appConfig: AppConfig
-)(implicit
+)(using
   authAction: AuthAction,
   ec: ExecutionContext
 )
@@ -69,7 +69,8 @@ with AuthorisedAgentSupport {
   def getClient(
     arn: Arn,
     enrolmentKey: String
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheService
@@ -87,7 +88,8 @@ with AuthorisedAgentSupport {
     arn: Arn,
     sendEmail: Option[Boolean] = None,
     lang: Option[String] = None
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         getClientsFn(
@@ -101,7 +103,8 @@ with AuthorisedAgentSupport {
   }
 
   // returns client counts for all tax services to be used by agent-permissions backend
-  def getTaxServiceClientCount(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getTaxServiceClientCount(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheService
@@ -123,7 +126,8 @@ with AuthorisedAgentSupport {
     pageSize: Int = 20,
     search: Option[String] = None,
     filter: Option[String] = None
-  ): Action[AnyContent] = Action.async { implicit request =>
+  ): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       withGroupIdFor(arn) { groupId =>
         es3CacheService
@@ -155,7 +159,8 @@ with AuthorisedAgentSupport {
     }
   }
 
-  def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getClientListStatus(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
         getClientsFn(
@@ -173,13 +178,15 @@ with AuthorisedAgentSupport {
     }
   }
 
-  def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { implicit request =>
+  def getOutstandingWorkItemsForGroupId(groupId: String): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       getOutstandingWorkItemsForGroupIdFn(groupId)
     }
   }
 
-  def getOutstandingWorkItemsForArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getOutstandingWorkItemsForArn(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       withGroupIdFor(arn) { groupId =>
         getOutstandingWorkItemsForGroupIdFn(groupId)
@@ -187,7 +194,8 @@ with AuthorisedAgentSupport {
     }
   }
 
-  def cacheRefresh(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def cacheRefresh(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     authAction.simpleAuth {
       withGroupIdFor(arn) { groupId =>
         es3CacheService
@@ -207,8 +215,8 @@ with AuthorisedAgentSupport {
     groupId: String,
     sendEmail: Boolean, // whether to send an email to inform the agent that the fetching of client names has finished
     lang: Option[String] // The language to be used for notification emails. "en" or "cy"
-  )(implicit request: RequestHeader): Future[Result] = {
-    def makeWorkItem(client: SensitiveClient)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
+  )(using request: RequestHeader): Future[Result] = {
+    def makeWorkItem(client: SensitiveClient)(using hc: HeaderCarrier): FriendlyNameWorkItem = {
       val mSessionId: Option[String] =
         if (appConfig.stubsCompatibilityMode)
           hc.sessionId.map(_.value)
@@ -285,7 +293,8 @@ with AuthorisedAgentSupport {
     )
   }
 
-  def getWorkItemStats: Action[AnyContent] = Action.async { implicit request =>
+  def getWorkItemStats: Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       workItemService.collectStats.map { stats =>
         Ok(Json.toJson(stats))
@@ -293,7 +302,8 @@ with AuthorisedAgentSupport {
     }
   }
 
-  def cleanupWorkItems: Action[AnyContent] = Action.async { implicit request =>
+  def cleanupWorkItems: Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       workItemService.cleanup(Instant.now()).map { result =>
         Ok(JsNumber(result.getDeletedCount))
@@ -301,7 +311,8 @@ with AuthorisedAgentSupport {
     }
   }
 
-  def getAgencyDetails(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getAgencyDetails(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       agentRecordService.getAgentDetails(arn).map(_.flatMap(_.agencyDetails)).map {
         case Some(agencyDetails) => Ok(Json.toJson(agencyDetails))
@@ -323,7 +334,7 @@ with AuthorisedAgentSupport {
 
   private def withGroupIdFor(arn: Arn)(
     groupIdAction: String => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  )(using request: RequestHeader): Future[Result] =
     if (!Arn.isValid(arn.value))
       Future.successful(BadRequest("Invalid ARN"))
     else {
@@ -344,7 +355,7 @@ with AuthorisedAgentSupport {
     toBeAdded: Seq[Client],
     sendEmail: Boolean,
     lang: String // 'en' or 'cy' -- defaults to 'en' if invalid
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[ObjectId]] =

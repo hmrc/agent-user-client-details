@@ -24,7 +24,6 @@ case class UpdateFriendlyNameRequest(
   friendlyName: String
 )
 
-object UpdateFriendlyNameRequest {
+object UpdateFriendlyNameRequest:
 
-  implicit val format: OFormat[UpdateFriendlyNameRequest] = Json.format[UpdateFriendlyNameRequest]
-}
+  given format: OFormat[UpdateFriendlyNameRequest] = Json.format[UpdateFriendlyNameRequest]

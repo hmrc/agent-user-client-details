@@ -34,30 +34,30 @@ extends BaseSpec {
           )
         )
       )
-      json.as[Citizen] shouldBe model
+      json.as[Citizen].shouldBe(model)
     }
 
     "return a single name" when {
 
       "citizen has only a first name" in {
         val model: Citizen = Citizen(Some("First"), None)
-        model.name shouldBe Some("First")
+        model.name.shouldBe(Some("First"))
       }
 
       "citizen has only a last name" in {
         val model: Citizen = Citizen(None, Some("Last"))
-        model.name shouldBe Some("Last")
+        model.name.shouldBe(Some("Last"))
       }
 
       "citizen has both first and last names" in {
         val model: Citizen = Citizen(Some("First"), Some("Last"))
-        model.name shouldBe Some("First Last")
+        model.name.shouldBe(Some("First Last"))
       }
     }
 
     "fail to return a name when citizen does not have any names" in {
       val model: Citizen = Citizen(None, None)
-      model.name shouldBe None
+      model.name.shouldBe(None)
     }
   }
 }

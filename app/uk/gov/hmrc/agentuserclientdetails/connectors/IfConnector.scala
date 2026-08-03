@@ -19,14 +19,14 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 import com.google.inject.ImplementedBy
 import play.api.Logging
 import play.api.http.Status.NOT_FOUND
-import play.api.libs.json.Reads._
+import play.api.libs.json.Reads.*
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes._
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.*
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.PptSubscription
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
+import uk.gov.hmrc.http.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -38,20 +38,20 @@ import scala.concurrent.Future
 @ImplementedBy(classOf[IfConnectorImpl])
 trait IfConnector {
 
-  def getTrustName(trustTaxIdentifier: String)(implicit
+  def getTrustName(trustTaxIdentifier: String)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]]
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[PptSubscription]]
 
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[TradingDetails]]
@@ -64,7 +64,7 @@ class IfConnectorImpl @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
-)(implicit val ec: ExecutionContext)
+)(using val ec: ExecutionContext)
 extends IfConnector
 with HttpErrorFunctions
 with Logging {
@@ -74,7 +74,7 @@ with Logging {
   // IF API#1495 Agent Known Fact Check (Trusts)
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = {
@@ -98,14 +98,14 @@ with Logging {
   // IF API#1712 PPT Subscription Display
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[PptSubscription]] = {
     val url = s"$baseUrl/plastic-packaging-tax/subscriptions/PPT/${pptRef.value}/display"
     getWithDesIfHeaders("GetPptSubscriptionDisplay", url).map { response =>
       response.status match {
-        case status if is2xx(status) => Some(response.json.as[PptSubscription](PptSubscription.reads(_)))
+        case status if is2xx(status) => Some(response.json.as[PptSubscription])
         case NOT_FOUND => None
         case other => throw UpstreamErrorResponse(s"unexpected error from getPptSubscriptionDisplay: ${response.body}", other)
       }
@@ -115,7 +115,7 @@ with Logging {
   /* IF API#1171 Get Business Details (for ITSA customers) */
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[TradingDetails]] = {
@@ -145,7 +145,7 @@ with Logging {
   private def getWithDesIfHeaders(
     apiName: String,
     url: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[HttpResponse] = {
@@ -158,7 +158,7 @@ with Logging {
 
     httpClient
       .get(url"$url")
-      .setHeader(headersConfig.explicitHeaders *)
+      .setHeader(headersConfig.explicitHeaders*)
       .execute[HttpResponse]
 
   }

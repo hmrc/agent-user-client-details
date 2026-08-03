@@ -37,7 +37,7 @@ with MongoSupport {
 
   "Fetching from DB" should {
     "return nothing when data does not exist" in {
-      es3CacheRepository.get(groupId).futureValue shouldBe None
+      es3CacheRepository.get(groupId).futureValue.shouldBe(None)
     }
   }
 
@@ -50,12 +50,12 @@ with MongoSupport {
         Seq(Identifier("MTDITID", "X12345678909876"))
       ))
 
-      es3CacheRepository.put(groupId, enrolments).futureValue.groupId shouldBe groupId
+      es3CacheRepository.put(groupId, enrolments).futureValue.groupId.shouldBe(groupId)
 
       val es3CacheFetched = es3CacheRepository.get(groupId).futureValue.get
 
-      es3CacheFetched.groupId shouldBe groupId
-      es3CacheFetched.clients.map(_.decryptedValue) shouldBe enrolments
+      es3CacheFetched.groupId.shouldBe(groupId)
+      es3CacheFetched.clients.map(_.decryptedValue).shouldBe(enrolments)
     }
   }
   "delete data" should {
@@ -69,7 +69,7 @@ with MongoSupport {
 
       es3CacheRepository.put(groupId, enrolments).futureValue
 
-      es3CacheRepository.deleteCache(groupId).futureValue shouldBe 1L
+      es3CacheRepository.deleteCache(groupId).futureValue.shouldBe(1L)
     }
   }
 

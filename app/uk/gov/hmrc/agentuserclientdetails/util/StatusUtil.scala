@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.util
 
-import play.api.http.Status._
+import play.api.http.Status.*
 import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
 import uk.gov.hmrc.http.UpstreamErrorResponse
 

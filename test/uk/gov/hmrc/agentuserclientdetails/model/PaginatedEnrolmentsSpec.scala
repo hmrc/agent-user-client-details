@@ -51,11 +51,11 @@ extends BaseSpec {
     )
 
     "read from JSON" in {
-      json.as[PaginatedEnrolments] shouldBe model
+      json.as[PaginatedEnrolments].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 }

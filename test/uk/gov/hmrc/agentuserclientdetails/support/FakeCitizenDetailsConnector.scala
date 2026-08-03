@@ -27,7 +27,7 @@ import scala.concurrent.Future
 
 case object FakeCitizenDetailsConnector
 extends CitizenDetailsConnector {
-  def getCitizenDetails(nino: Nino)(implicit
+  def getCitizenDetails(nino: Nino)(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[Citizen]] = Future.successful(Some(Citizen(Some("Tom"), Some("Client"))))
@@ -35,7 +35,7 @@ extends CitizenDetailsConnector {
 
 case class FailingCitizenDetailsConnector(status: Int)
 extends CitizenDetailsConnector {
-  def getCitizenDetails(nino: Nino)(implicit
+  def getCitizenDetails(nino: Nino)(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[Citizen]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
@@ -43,7 +43,7 @@ extends CitizenDetailsConnector {
 
 case object NotFoundCitizenDetailsConnector
 extends CitizenDetailsConnector {
-  def getCitizenDetails(nino: Nino)(implicit
+  def getCitizenDetails(nino: Nino)(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[Citizen]] = Future.successful(None)

@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentuserclientdetails.services
 
 import play.api.Logging
-import uk.gov.hmrc.agentuserclientdetails.model.Service._
+import uk.gov.hmrc.agentuserclientdetails.model.Service.*
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.CgtRef
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
@@ -50,7 +50,7 @@ class ClientNameService @Inject() (
 extends AnyRef
 with Logging {
 
-  def getClientName(enrolmentKey: String)(implicit
+  def getClientName(enrolmentKey: String)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = {
@@ -86,7 +86,7 @@ with Logging {
 
   private def getItsaTradingDetails(
     mtdItId: MtdItId
-  )(implicit
+  )(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[TradingDetails]] =
@@ -95,12 +95,12 @@ with Logging {
     else
       ifConnector.getTradingDetailsForMtdItId(mtdItId)
 
-  private def getCitizenName(nino: Nino)(implicit
+  private def getCitizenName(nino: Nino)(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = citizenDetailsConnector.getCitizenDetails(nino).map(_.flatMap(_.name))
 
-  private def getVatName(vrn: Vrn)(implicit
+  private def getVatName(vrn: Vrn)(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = desConnector
@@ -118,12 +118,12 @@ with Logging {
 
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = ifConnector.getTrustName(trustTaxIdentifier)
 
-  def getCgtName(cgtRef: CgtRef)(implicit
+  def getCgtName(cgtRef: CgtRef)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = desConnector
@@ -135,7 +135,7 @@ with Logging {
       }
     })
 
-  def getPptCustomerName(pptRef: PptRef)(implicit
+  def getPptCustomerName(pptRef: PptRef)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = ifConnector.getPptSubscription(pptRef).map(_.map(_.customerName))

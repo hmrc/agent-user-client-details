@@ -41,7 +41,7 @@ with MockFactory {
 
   val agentServicesAccountConnector = new AgentServicesAccountConnector(appConfig, mockHttpClient)
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   "AgentServicesAccountConnector" should {
     "return Some(agent details)" in {
@@ -52,7 +52,7 @@ with MockFactory {
       mockHttpGet(url"${appConfig.asaBaseUrl}/agent-services-account/agent-record-with-checks")
       mockRequestBuilderExecute(mockResponse)
 
-      agentServicesAccountConnector.getAgentDetails().futureValue shouldBe agencyDetails
+      agentServicesAccountConnector.getAgentDetails.futureValue.shouldBe(agencyDetails)
     }
 
     "return None" in {
@@ -62,7 +62,7 @@ with MockFactory {
       mockHttpGet(url"${appConfig.asaBaseUrl}/agent-services-account/agent-record-with-checks")
       mockRequestBuilderExecute(mockResponse)
 
-      agentServicesAccountConnector.getAgentDetails().futureValue shouldBe None
+      agentServicesAccountConnector.getAgentDetails.futureValue.shouldBe(None)
     }
 
   }

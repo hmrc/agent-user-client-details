@@ -21,13 +21,13 @@ import play.api.Logging
 import play.api.http.Status.NOT_FOUND
 import play.api.http.Status.OK
 import play.utils.UriEncoding
-import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes._
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.*
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.CgtSubscription
 import uk.gov.hmrc.agentuserclientdetails.model.VatCustomerDetails
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
+import uk.gov.hmrc.http.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
@@ -46,14 +46,14 @@ trait DesConnector {
 
   def getCgtSubscription(
     cgtRef: CgtRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[CgtSubscription]]
 
   def getVatCustomerDetails(
     vrn: Vrn
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[VatCustomerDetails]]
@@ -66,7 +66,7 @@ class DesConnectorImpl @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics,
   desIfHeaders: DesIfHeaders
-)(implicit val ec: ExecutionContext)
+)(using val ec: ExecutionContext)
 extends DesConnector
 with HttpErrorFunctions
 with Logging {
@@ -75,7 +75,7 @@ with Logging {
 
   def getCgtSubscription(
     cgtRef: CgtRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[CgtSubscription]] = {
@@ -98,7 +98,7 @@ with Logging {
 
   def getVatCustomerDetails(
     vrn: Vrn
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[VatCustomerDetails]] = {
@@ -120,7 +120,7 @@ with Logging {
   private def getWithDesIfHeaders(
     apiName: String,
     url: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[HttpResponse] = {
@@ -132,7 +132,7 @@ with Logging {
     )
     httpClient
       .get(url"$url")
-      .setHeader(headersConfig.explicitHeaders *)
+      .setHeader(headersConfig.explicitHeaders*)
       .execute[HttpResponse]
   }
 

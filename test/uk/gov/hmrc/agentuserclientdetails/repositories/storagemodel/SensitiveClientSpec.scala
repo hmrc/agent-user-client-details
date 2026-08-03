@@ -26,8 +26,8 @@ import uk.gov.hmrc.crypto.Encrypter
 class SensitiveClientSpec
 extends BaseSpec {
 
-  implicit val crypto: Encrypter
-  & Decrypter = aesCrypto
+  given crypto: Encrypter
+    & Decrypter = aesCrypto
 
   val client: Client = Client("HMRC-MTD-VAT~VRN~123456789", "Smith Roberts")
   val sensitiveClient: SensitiveClient = SensitiveClient(client)
@@ -39,11 +39,11 @@ extends BaseSpec {
   "SensitiveClient" should {
 
     "write to JSON" in {
-      Json.toJson(sensitiveClient) shouldBe sensitiveJson
+      Json.toJson(sensitiveClient).shouldBe(sensitiveJson)
     }
 
     "read from JSON" in {
-      sensitiveJson.as[SensitiveClient].decryptedValue shouldBe client
+      sensitiveJson.as[SensitiveClient].decryptedValue.shouldBe(client)
     }
   }
 

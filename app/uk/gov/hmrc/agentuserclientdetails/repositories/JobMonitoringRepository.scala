@@ -38,7 +38,7 @@ import scala.concurrent.ExecutionContext
 class JobMonitoringRepository @Inject() (
   mongoComponent: MongoComponent,
   config: Config
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends WorkItemRepository[JobData](
   collectionName = "job-monitoring-work-items",
   mongoComponent = mongoComponent,

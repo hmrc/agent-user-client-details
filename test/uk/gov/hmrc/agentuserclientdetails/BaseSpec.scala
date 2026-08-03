@@ -28,9 +28,7 @@ abstract class BaseSpec
 extends AnyWordSpecLike
 with Matchers
 with MockFactory
-with ScalaFutures {
+with ScalaFutures:
 
   val aesCrypto: Encrypter
-  & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
-
-}
+    & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")

@@ -20,7 +20,7 @@ import play.api.Logging
 import play.api.http.Status
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.UserDetails
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpErrorFunctions
@@ -38,7 +38,7 @@ import scala.concurrent.Future
 class UsersGroupsSearchConnector @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics
-)(implicit
+)(using
   appConfig: AppConfig,
   val ec: ExecutionContext
 )
@@ -47,7 +47,7 @@ with Logging {
 
   def getGroupUsers(
     groupId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Seq[UserDetails]] = {

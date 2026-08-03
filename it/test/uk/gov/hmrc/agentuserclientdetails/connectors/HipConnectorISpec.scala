@@ -34,14 +34,14 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContext.Implicits.global
 
 class HipConnectorISpec
 extends BaseIntegrationSpec
 with HttpClientStub
 with MockFactory {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
+  given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   case class TestCaseHappyPath(
     responseStatus: Int,

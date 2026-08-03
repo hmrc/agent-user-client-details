@@ -49,23 +49,23 @@ trait FriendlyNameWorkItemService {
   def query(
     groupId: String,
     status: Option[Seq[ProcessingStatus]]
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Seq[WorkItem[FriendlyNameWorkItem]]]
 
   /** Removes any items that have been marked as successful or duplicated.
     */
-  def cleanup(now: Instant)(implicit ec: ExecutionContext): Future[DeleteResult]
+  def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult]
 
   /** Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
     */
-  def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]]
+  def collectStats(using ec: ExecutionContext): Future[Map[String, Int]]
 
   def pushNew(
     items: Seq[FriendlyNameWorkItem],
     receivedAt: Instant,
     initialState: ProcessingStatus
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Unit]
 
@@ -74,17 +74,17 @@ trait FriendlyNameWorkItemService {
     newStatus: ProcessingStatus & ResultStatus,
     context: Map[String, String] = Map.empty
   )(
-    implicit ec: ExecutionContext
+    using ec: ExecutionContext
   ): Future[Boolean]
 
   def removeAll(): Future[DeleteResult]
 
-  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[DeleteResult]
+  def removeByGroupId(groupId: String)(using ec: ExecutionContext): Future[DeleteResult]
 
   def pullOutstanding(
     failedBefore: Instant,
     availableBefore: Instant
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Option[WorkItem[FriendlyNameWorkItem]]]
 
@@ -102,12 +102,12 @@ with Logging {
   def query(
     groupId: String,
     status: Option[Seq[ProcessingStatus]]
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Seq[WorkItem[FriendlyNameWorkItem]]] = {
     val selector =
       status match {
-        case Some(statuses) => Filters.and(Filters.equal("item.groupId", groupId), Filters.in("status", statuses.map(_.name) *))
+        case Some(statuses) => Filters.and(Filters.equal("item.groupId", groupId), Filters.in("status", statuses.map(_.name)*))
         case None => Filters.equal("item.groupId", groupId)
       }
     workItemRepo.collection.find[WorkItem[FriendlyNameWorkItem]](selector).toFuture()
@@ -115,7 +115,7 @@ with Logging {
 
   /** Removes any items that have been marked as successful or duplicated.
     */
-  def cleanup(now: Instant)(implicit ec: ExecutionContext): Future[DeleteResult] = {
+  def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult] = {
     val cutoff: Instant = now.minusSeconds(appConfig.friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds)
     workItemRepo.collection
       .deleteMany(
@@ -133,7 +133,7 @@ with Logging {
 
   /** Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
     */
-  def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] = workItemRepo.collection
+  def collectStats(using ec: ExecutionContext): Future[Map[String, Int]] = workItemRepo.collection
     .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
     .collect()
     .toFuture()
@@ -142,14 +142,14 @@ with Logging {
         val document = x.asDocument()
         document.getString("_id").getValue -> document.getNumber("count").intValue()
       }
-      Map(elems *)
+      Map(elems*)
     }
 
   def pushNew(
     items: Seq[FriendlyNameWorkItem],
     receivedAt: Instant,
     initialState: ProcessingStatus
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Unit] =
     if (items.nonEmpty)
@@ -166,7 +166,7 @@ with Logging {
     newStatus: ProcessingStatus & ResultStatus,
     context: Map[String, String] = Map.empty
   )(
-    implicit ec: ExecutionContext
+    using ec: ExecutionContext
   ): Future[Boolean] = workItemRepo.complete(id, newStatus).map { wasThisSuccessful =>
     if (!wasThisSuccessful) {
       logger.warn(s"Could not set in WIR ${newStatus.name} for ${Json.toJson(context)}")
@@ -176,7 +176,7 @@ with Logging {
 
   def removeAll(): Future[DeleteResult] = workItemRepo.collection.deleteMany(Filters.empty()).toFuture()
 
-  def removeByGroupId(groupId: String)(implicit ec: ExecutionContext): Future[DeleteResult] = workItemRepo.collection.deleteMany(Filters.equal(
+  def removeByGroupId(groupId: String)(using ec: ExecutionContext): Future[DeleteResult] = workItemRepo.collection.deleteMany(Filters.equal(
     "item.groupId",
     groupId
   )).toFuture()
@@ -184,7 +184,7 @@ with Logging {
   def pullOutstanding(
     failedBefore: Instant,
     availableBefore: Instant
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Option[WorkItem[FriendlyNameWorkItem]]] = workItemRepo.pullOutstanding(failedBefore, availableBefore)
 

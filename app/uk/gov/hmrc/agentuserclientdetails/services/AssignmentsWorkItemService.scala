@@ -29,7 +29,7 @@ import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.Duplicate
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.Succeeded
-import uk.gov.hmrc.mongo.workitem._
+import uk.gov.hmrc.mongo.workitem.*
 
 import org.mongodb.scala.SingleObservableFuture
 
@@ -43,32 +43,32 @@ trait AssignmentsWorkItemService {
 
   /** Query by status
     */
-  def query(status: Seq[ProcessingStatus])(implicit ec: ExecutionContext): Future[Seq[WorkItem[AssignmentWorkItem]]]
+  def query(status: Seq[ProcessingStatus])(using ec: ExecutionContext): Future[Seq[WorkItem[AssignmentWorkItem]]]
 
   /** Query by ARN
     */
-  def queryBy(arn: Arn)(implicit ec: ExecutionContext): Future[Seq[WorkItem[AssignmentWorkItem]]]
+  def queryBy(arn: Arn)(using ec: ExecutionContext): Future[Seq[WorkItem[AssignmentWorkItem]]]
 
   /** Removes any items that have been marked as successful or duplicated.
     */
-  def cleanup(now: Instant)(implicit ec: ExecutionContext): Future[DeleteResult]
+  def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult]
 
   /** Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
     */
-  def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]]
+  def collectStats(using ec: ExecutionContext): Future[Map[String, Int]]
 
   def pushNew(
     items: Seq[AssignmentWorkItem],
     receivedAt: Instant,
     initialState: ProcessingStatus
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Unit]
 
   def complete(
     id: ObjectId,
     newStatus: ProcessingStatus & ResultStatus
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Boolean]
 
@@ -77,7 +77,7 @@ trait AssignmentsWorkItemService {
   def pullOutstanding(
     failedBefore: Instant,
     availableBefore: Instant
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Option[WorkItem[AssignmentWorkItem]]]
 
@@ -91,14 +91,14 @@ extends AssignmentsWorkItemService {
 
   /** Query by status
     */
-  def query(status: Seq[ProcessingStatus])(implicit
+  def query(status: Seq[ProcessingStatus])(using
     ec: ExecutionContext
   ): Future[Seq[WorkItem[AssignmentWorkItem]]] = workItemRepo.collection
-    .find[WorkItem[AssignmentWorkItem]](Filters.in("status", status.map(_.name) *))
+    .find[WorkItem[AssignmentWorkItem]](Filters.in("status", status.map(_.name)*))
     .collect()
     .toFuture()
 
-  override def queryBy(arn: Arn)(implicit
+  override def queryBy(arn: Arn)(using
     ec: ExecutionContext
   ): Future[Seq[WorkItem[AssignmentWorkItem]]] = workItemRepo.collection
     .find[WorkItem[AssignmentWorkItem]](Filters.equal("item.arn", arn.value))
@@ -107,7 +107,7 @@ extends AssignmentsWorkItemService {
 
   /** Removes any items that have been marked as successful or duplicated.
     */
-  def cleanup(now: Instant)(implicit ec: ExecutionContext): Future[DeleteResult] = {
+  def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult] = {
     val cutoff: Instant = now.minusSeconds(appConfig.assignEnrolmentWorkItemRepoDeleteFinishedItemsAfterSeconds)
     workItemRepo.collection
       .deleteMany(
@@ -125,7 +125,7 @@ extends AssignmentsWorkItemService {
 
   /** Counts the number of work items in the repository in each status (to-do, succeeded, failed etc.)
     */
-  def collectStats(implicit ec: ExecutionContext): Future[Map[String, Int]] = workItemRepo.collection
+  def collectStats(using ec: ExecutionContext): Future[Map[String, Int]] = workItemRepo.collection
     .aggregate[BsonValue](Seq(Aggregates.group("$status", Accumulators.sum("count", 1))))
     .collect()
     .toFuture()
@@ -134,14 +134,14 @@ extends AssignmentsWorkItemService {
         val document = x.asDocument()
         document.getString("_id").getValue -> document.getNumber("count").intValue()
       }
-      Map(elems *)
+      Map(elems*)
     }
 
   def pushNew(
     items: Seq[AssignmentWorkItem],
     receivedAt: Instant,
     initialState: ProcessingStatus
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Unit] =
     if (items.nonEmpty)
@@ -156,7 +156,7 @@ extends AssignmentsWorkItemService {
   def complete(
     id: ObjectId,
     newStatus: ProcessingStatus & ResultStatus
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Boolean] = workItemRepo.complete(id, newStatus)
 
@@ -165,7 +165,7 @@ extends AssignmentsWorkItemService {
   def pullOutstanding(
     failedBefore: Instant,
     availableBefore: Instant
-  )(implicit
+  )(using
     ec: ExecutionContext
   ): Future[Option[WorkItem[AssignmentWorkItem]]] = workItemRepo.pullOutstanding(failedBefore, availableBefore)
 

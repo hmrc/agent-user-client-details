@@ -32,7 +32,7 @@ import scala.concurrent.Future
 case class AssignmentsWorkItemRepository @Inject() (
   config: Config,
   mongoComponent: MongoComponent
-)(implicit
+)(using
   ec: ExecutionContext
 )
 extends WorkItemRepository[AssignmentWorkItem](

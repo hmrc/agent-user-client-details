@@ -40,7 +40,7 @@ extends MockFactory { suite: TestSuite =>
     RequestBuilder
   ] =
     (mockHttpClient
-      .get(_: URL)(_: HeaderCarrier))
+      .get(_: URL)(using _: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
@@ -50,9 +50,22 @@ extends MockFactory { suite: TestSuite =>
     RequestBuilder
   ] =
     (mockHttpClient
-      .post(_: URL)(_: HeaderCarrier))
+      .post(_: URL)(using _: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
+
+  def mockHttpPostReturning(
+    url: URL,
+    requestBuilder: RequestBuilder
+  ): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
+    (mockHttpClient
+      .post(_: URL)(using _: HeaderCarrier))
+      .expects(url, *)
+      .returning(requestBuilder)
 
   def mockHttpPut(url: URL): CallHandler2[
     URL,
@@ -60,9 +73,22 @@ extends MockFactory { suite: TestSuite =>
     RequestBuilder
   ] =
     (mockHttpClient
-      .put(_: URL)(_: HeaderCarrier))
+      .put(_: URL)(using _: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
+
+  def mockHttpPutReturning(
+    url: URL,
+    requestBuilder: RequestBuilder
+  ): CallHandler2[
+    URL,
+    HeaderCarrier,
+    RequestBuilder
+  ] =
+    (mockHttpClient
+      .put(_: URL)(using _: HeaderCarrier))
+      .expects(url, *)
+      .returning(requestBuilder)
 
   def mockHttpDelete(url: URL): CallHandler2[
     URL,
@@ -70,7 +96,7 @@ extends MockFactory { suite: TestSuite =>
     RequestBuilder
   ] =
     (mockHttpClient
-      .delete(_: URL)(_: HeaderCarrier))
+      .delete(_: URL)(using _: HeaderCarrier))
       .expects(url, *)
       .returning(mockRequestBuilder)
 
@@ -90,7 +116,7 @@ extends MockFactory { suite: TestSuite =>
     Future[A]
   ] = {
     (mockRequestBuilder
-      .setHeader(_ *))
+      .setHeader(_*))
       .expects(*)
       .returning(mockRequestBuilder)
 

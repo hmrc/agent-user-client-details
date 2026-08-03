@@ -33,8 +33,8 @@ import scala.concurrent.Future
 class ThrottlerSpec
 extends BaseSpec {
 
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val materializer: Materializer = Materializer(ActorSystem())
+  given ExecutionContextExecutor = ExecutionContext.global
+  given Materializer = Materializer(ActorSystem())
 
   "Throttled processing" should {
 

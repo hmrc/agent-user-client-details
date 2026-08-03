@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.JobData
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.SessionId
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.util.concurrent.atomic.AtomicBoolean
@@ -42,7 +42,7 @@ class JobMonitoringWorker @Inject() (
   emailConnector: EmailConnector,
   es3CacheService: ES3CacheService,
   mat: Materializer
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends Logging {
 
   private val running = new AtomicBoolean(false)
@@ -62,7 +62,7 @@ extends Logging {
         running.set(true)
         val workItems: Source[WorkItem[JobData], NotUsed] = Source.unfoldAsync(())(_ => pullWorkItemWhile(continue).map(_.map(() -> _)))
         val processWorkItems: Sink[WorkItem[JobData], Future[Unit]] = Sink.foldAsync(()) { case ((), item) => processItem(item) }
-        val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
+        val result: Future[Unit] = workItems.runWith(processWorkItems)(using mat)
         result.onComplete { _ =>
           logger.debug("Job monitoring finished.")
           running.set(false)
@@ -72,7 +72,7 @@ extends Logging {
 
   def pullWorkItemWhile(
     continue: => Boolean
-  )(implicit ec: ExecutionContext): Future[Option[WorkItem[JobData]]] =
+  )(using ec: ExecutionContext): Future[Option[WorkItem[JobData]]] =
     if (continue) {
       jobMonitoringService.getNextJobToCheck
     }
@@ -93,7 +93,7 @@ extends Logging {
           case true =>
             logger.info(s"Job monitor: Job ${workItem.id} has finished.")
 
-            implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = job.sessionId.map(SessionId.apply))
+            given HeaderCarrier = HeaderCarrier().copy(sessionId = job.sessionId.map(SessionId.apply))
 
             for {
               _ <- jobMonitoringService.markAsFinished(workItem.id)
@@ -112,7 +112,7 @@ extends Logging {
                     logger.debug(
                       s"Sending email $emailTemplateName to ${job.email.getOrElse("")} for agent ${job.agencyName}"
                     )
-                    implicit val hc: HeaderCarrier = HeaderCarrier()
+                    given HeaderCarrier = HeaderCarrier()
                     emailConnector
                       .sendEmail(
                         EmailInformation(

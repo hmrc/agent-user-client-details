@@ -20,8 +20,6 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.crypto.Sensitive.SensitiveString
 
-import scala.util.Success
-
 class Es3CacheSpec
 extends AnyWordSpec
 with Matchers {
@@ -39,15 +37,15 @@ with Matchers {
 
     "return Es3Cache when clients are empty" in {
       val cache = Es3Cache("whatever", Nil)
-      Es3Cache.split(cache, 20) shouldBe Seq(cache)
+      Es3Cache.split(cache, 20).shouldBe(Seq(cache))
     }
 
     "return a sequence of Es3Caches when client count is greater than split group size parameter" in {
       val cache = Es3Cache("whatever", clients)
-      Es3Cache.split(cache, 10).toList shouldBe Seq(
+      Es3Cache.split(cache, 10).toList.shouldBe(Seq(
         cache.copy(clients = clients.take(10)),
         cache.copy(clients = clients.takeRight(5))
-      )
+      ))
     }
   }
   "merge()" should {
@@ -59,8 +57,8 @@ with Matchers {
         cache.copy(clients = clients.take(10)),
         cache.copy(clients = clients.takeRight(5))
       )
-      Es3Cache.merge(caches).get.clients.size shouldBe clients.size
-      Es3Cache.merge(caches).get.clients shouldBe clients
+      Es3Cache.merge(caches).get.clients.size.shouldBe(clients.size)
+      Es3Cache.merge(caches).get.clients.shouldBe(clients)
     }
   }
 

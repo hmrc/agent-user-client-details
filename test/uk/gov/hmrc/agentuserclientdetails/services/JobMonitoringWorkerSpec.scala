@@ -94,17 +94,17 @@ with MockFactory {
     "mark the job as completed and send the email when the job is completed and sending email is enabled" in {
       val email = stub[EmailConnector]
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(Failed, ToDo)),
@@ -114,7 +114,7 @@ with MockFactory {
           Future.successful(Seq.empty) // No outstanding items
         )
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(PermanentlyFailed)),
@@ -124,7 +124,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -139,7 +139,7 @@ with MockFactory {
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_success"),
           *,
@@ -147,7 +147,7 @@ with MockFactory {
         )
         .once()
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -155,17 +155,17 @@ with MockFactory {
     "mark the job as completed and send the email when the job is completed and sending email is enabled (welsh)" in {
       val email = stub[EmailConnector]
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(Failed, ToDo)),
@@ -175,7 +175,7 @@ with MockFactory {
           Future.successful(Seq.empty) // No outstanding items
         )
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(PermanentlyFailed)),
@@ -185,7 +185,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -201,7 +201,7 @@ with MockFactory {
       jmw.processItem(workItemWithLanguageSetToWelsh).futureValue // Welsh language preference
 
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_success_cy"),
           *,
@@ -209,7 +209,7 @@ with MockFactory {
         )
         .once()
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -217,17 +217,17 @@ with MockFactory {
     "mark the job as completed but don't send the email when the job is completed and sending email is disabled" in {
       val email = stub[EmailConnector]
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(Failed, ToDo)),
@@ -239,7 +239,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -256,11 +256,11 @@ with MockFactory {
       jmw.processItem(workItemWithEmailDisabled).futureValue
 
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .verify(*, *, *)
         .never()
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -268,17 +268,17 @@ with MockFactory {
     "not mark the job as completed and don't send the email when the job is NOT completed" in {
       val email = stub[EmailConnector]
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsNotFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsNotFinished(_: ObjectId)(using _: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(Failed, ToDo)),
@@ -294,7 +294,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -309,15 +309,15 @@ with MockFactory {
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .verify(*, *, *)
         .never()
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .verify(jobId, *)
         .never()
       (jms
-        .markAsNotFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsNotFinished(_: ObjectId)(using _: ExecutionContext))
         .verify(jobId, *)
         .once()
     }
@@ -325,17 +325,17 @@ with MockFactory {
     "mark the job as completed and send the 'partial failure' email when there have been any failures" in {
       val email = stub[EmailConnector]
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val jms = stub[JobMonitoringService]
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .when(*, *)
         .returns(Future.successful(UpdateResult.acknowledged(1, 1, null)))
       val fnwis = stub[FriendlyNameWorkItemService]
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(Failed, ToDo)),
@@ -345,7 +345,7 @@ with MockFactory {
           Future.successful(Seq.empty) // No outstanding items
         )
       (fnwis
-        .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+        .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
         .when(
           groupId,
           Some(Seq(PermanentlyFailed)),
@@ -359,7 +359,7 @@ with MockFactory {
 
       val es3CacheService = stub[ES3CacheService]
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(groupId, *, *)
         .returns(Future.successful(Some(())))
 
@@ -374,7 +374,7 @@ with MockFactory {
       jmw.processItem(jobMonitoringWorkItem).futureValue
 
       (email
-        .sendEmail(_: EmailInformation)(_: HeaderCarrier, _: ExecutionContext))
+        .sendEmail(_: EmailInformation)(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           argThat((ei: EmailInformation) => ei.templateId == "agent_permissions_some_failed"),
           *,
@@ -382,7 +382,7 @@ with MockFactory {
         )
         .once()
       (jms
-        .markAsFinished(_: ObjectId)(_: ExecutionContext))
+        .markAsFinished(_: ObjectId)(using _: ExecutionContext))
         .verify(jobId, *)
         .once()
     }

@@ -36,14 +36,14 @@ trait ES3CacheService {
 
   def fetchClientsAndPoupluateCacheIfEmpty(
     groupId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     executionContext: ExecutionContext
   ): Future[Seq[Client]]
 
   def refreshIfGroupIdExist(
     groupId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     executionContext: ExecutionContext
   ): Future[Option[Unit]]
@@ -60,7 +60,7 @@ with Logging {
 
   override def fetchClientsAndPoupluateCacheIfEmpty(
     groupId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     executionContext: ExecutionContext
   ): Future[Seq[Client]] = {
@@ -81,14 +81,14 @@ with Logging {
 
   override def refreshIfGroupIdExist(
     groupId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     executionContext: ExecutionContext
   ): Future[Option[Unit]] = es3CacheRepository
     .get(groupId)
     .map(_.map(_ => fetchEs3ClientsAndPersist(groupId)).map(_ => ()))
 
-  private def fetchEs3ClientsAndPersist(groupId: String)(implicit
+  private def fetchEs3ClientsAndPersist(groupId: String)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Es3Cache] =

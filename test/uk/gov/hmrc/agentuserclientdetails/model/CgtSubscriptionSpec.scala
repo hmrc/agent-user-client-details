@@ -29,11 +29,11 @@ extends BaseSpec {
     val json = Json.obj("firstName" -> "First", "lastName" -> "Last")
 
     "read from JSON" in {
-      json.as[IndividualName] shouldBe model
+      json.as[IndividualName].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 
@@ -43,11 +43,11 @@ extends BaseSpec {
     val json = Json.obj("name" -> "Org")
 
     "read from JSON" in {
-      json.as[OrganisationName] shouldBe model
+      json.as[OrganisationName].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 
@@ -63,11 +63,11 @@ extends BaseSpec {
       )
 
       "read from JSON" in {
-        json.as[TypeOfPersonDetails] shouldBe model
+        json.as[TypeOfPersonDetails].shouldBe(model)
       }
 
       "write to JSON" in {
-        Json.toJson(model) shouldBe json
+        Json.toJson(model).shouldBe(json)
       }
     }
 
@@ -76,11 +76,11 @@ extends BaseSpec {
       val json = Json.obj("typeOfPerson" -> "Trustee", "organisationName" -> "Org")
 
       "read from JSON" in {
-        json.as[TypeOfPersonDetails] shouldBe model
+        json.as[TypeOfPersonDetails].shouldBe(model)
       }
 
       "write to JSON" in {
-        Json.toJson(model) shouldBe json
+        Json.toJson(model).shouldBe(json)
       }
     }
 
@@ -100,11 +100,11 @@ extends BaseSpec {
     val json = Json.obj("typeOfPersonDetails" -> Json.toJson(typeOfPerson))
 
     "read from JSON" in {
-      json.as[SubscriptionDetails] shouldBe model
+      json.as[SubscriptionDetails].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 
@@ -116,11 +116,11 @@ extends BaseSpec {
     val json = Json.obj("subscriptionDetails" -> Json.toJson(subscriptionDetails))
 
     "read from JSON" in {
-      json.as[CgtSubscription] shouldBe model
+      json.as[CgtSubscription].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 

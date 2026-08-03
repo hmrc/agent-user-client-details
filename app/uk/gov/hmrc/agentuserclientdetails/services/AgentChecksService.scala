@@ -26,7 +26,7 @@ import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSize
 import uk.gov.hmrc.agentuserclientdetails.repositories.AgentSizeRepository
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -53,7 +53,7 @@ extends Logging {
     Deferred
   )
 
-  def getAgentSize(arn: Arn)(implicit
+  def getAgentSize(arn: Arn)(using
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Option[AgentSize]] =
@@ -69,7 +69,7 @@ extends Logging {
             }
         } yield maybeAgentSize
     }
-  def userCheck(arn: Arn)(implicit
+  def userCheck(arn: Arn)(using
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Int] =
@@ -82,7 +82,7 @@ extends Logging {
         }
     } yield groupUsers.size
 
-  def outstandingWorkItemsExist(arn: Arn)(implicit
+  def outstandingWorkItemsExist(arn: Arn)(using
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Boolean] =
@@ -100,7 +100,7 @@ extends Logging {
 
   def outstandingAssignmentsWorkItemsExist(
     arn: Arn
-  )(implicit ec: ExecutionContext): Future[Boolean] =
+  )(using ec: ExecutionContext): Future[Boolean] =
     for {
       workItems <- assignmentsWorkItemService.queryBy(arn)
     } yield workItems match {
@@ -108,7 +108,7 @@ extends Logging {
       case _ => false
     }
 
-  def getTeamMembers(arn: Arn)(implicit
+  def getTeamMembers(arn: Arn)(using
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Seq[UserDetails]] =
@@ -125,7 +125,7 @@ extends Logging {
     refreshedDateTime: LocalDateTime
   ): Boolean = refreshedDateTime.isAfter(LocalDateTime.now().minusSeconds(appConfig.agentsizeRefreshDuration.toSeconds))
 
-  private def fetchClientCount(arn: Arn)(implicit
+  private def fetchClientCount(arn: Arn)(using
     ec: ExecutionContext,
     hc: HeaderCarrier
   ): Future[Option[Int]] =
@@ -144,7 +144,7 @@ extends Logging {
   private def saveAgentSize(
     arn: Arn,
     clientCount: Int
-  )(implicit ec: ExecutionContext): Future[Option[AgentSize]] = {
+  )(using ec: ExecutionContext): Future[Option[AgentSize]] = {
     val agentSize = AgentSize(
       arn,
       clientCount,

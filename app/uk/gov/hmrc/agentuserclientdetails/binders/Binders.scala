@@ -20,9 +20,6 @@ import uk.gov.hmrc.agentuserclientdetails.model.Arn
 
 import scala.reflect.ClassTag
 
-object Binders {
+object Binders:
 
-  implicit object ArnBinder
-  extends SimpleObjectBinder[Arn](Arn.apply, _.value)
-
-}
+  given ArnBinder: SimpleObjectBinder[Arn] = SimpleObjectBinder[Arn](Arn.apply, _.value)

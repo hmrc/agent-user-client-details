@@ -24,7 +24,7 @@ case class Utr(value: String)
 extends TaxIdentifier
 with TrustTaxIdentifier
 
-object Utr {
+object Utr:
 
   private val utrPattern = "^\\d{10}$".r
 
@@ -34,7 +34,5 @@ object Utr {
       case _ => false
     }
 
-  implicit val utrReads: SimpleObjectReads[Utr] = new SimpleObjectReads[Utr]("value", Utr.apply)
-  implicit val utrWrites: SimpleObjectWrites[Utr] = new SimpleObjectWrites[Utr](_.value)
-
-}
+  given utrReads: SimpleObjectReads[Utr] = new SimpleObjectReads[Utr]("value", Utr.apply)
+  given utrWrites: SimpleObjectWrites[Utr] = new SimpleObjectWrites[Utr](_.value)

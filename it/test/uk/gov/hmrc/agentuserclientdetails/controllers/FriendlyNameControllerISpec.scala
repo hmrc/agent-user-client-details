@@ -60,10 +60,10 @@ with AuthorisationMockSupport {
   lazy val wir: FriendlyNameWorkItemRepository = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
-  implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
-  implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
+  given AuthConnector = mock[AuthConnector]
+  given AuthAction = app.injector.instanceOf[AuthAction]
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
   val testArn = Arn("BARN9706518")
@@ -83,7 +83,7 @@ with AuthorisationMockSupport {
 
   override def moduleOverrides: AbstractModule =
     new AbstractModule {
-      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(summon[AuthConnector])
     }
 
   override def beforeEach(): Unit = {
@@ -96,7 +96,7 @@ with AuthorisationMockSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
@@ -104,7 +104,7 @@ with AuthorisationMockSupport {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
@@ -116,16 +116,16 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
-      status(result) shouldBe 200
-      contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq.empty))
-      contentAsJson(result) \ "permanentlyFailed" shouldBe JsDefined(JsArray(Seq.empty))
-      wis.collectStats.futureValue.values.sum shouldBe 0
+      status(result).shouldBe(200)
+      (contentAsJson(result) \ "delayed").shouldBe(JsDefined(JsArray(Seq.empty)))
+      (contentAsJson(result) \ "permanentlyFailed").shouldBe(JsDefined(JsArray(Seq.empty)))
+      wis.collectStats.futureValue.values.sum.shouldBe(0)
     }
     "respond with 200 status if some of the requests permanently failed and there is no further work outstanding" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
@@ -133,7 +133,7 @@ with AuthorisationMockSupport {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(
           *,
           client4.enrolmentKey,
@@ -147,7 +147,7 @@ with AuthorisationMockSupport {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
@@ -159,18 +159,18 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
-      status(result) shouldBe 200
-      contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq.empty))
-      contentAsJson(result) \ "permanentlyFailed" shouldBe JsDefined(
-        JsArray(Seq(Json.toJson(client4)))
+      status(result).shouldBe(200)
+      (contentAsJson(result) \ "delayed").shouldBe(JsDefined(JsArray(Seq.empty)))
+      (contentAsJson(result) \ "permanentlyFailed").shouldBe(
+        JsDefined(JsArray(Seq(Json.toJson(client4))))
       )
-      wis.collectStats.futureValue.values.sum shouldBe 0
+      wis.collectStats.futureValue.values.sum.shouldBe(0)
     }
     "respond with 202 status if some of the requests temporarily failed and work items for the failed item should be created" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
@@ -178,7 +178,7 @@ with AuthorisationMockSupport {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(
           *,
           client2.enrolmentKey,
@@ -192,7 +192,7 @@ with AuthorisationMockSupport {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
@@ -204,16 +204,16 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
-      status(result) shouldBe 202
-      contentAsJson(result) \ "delayed" shouldBe JsDefined(JsArray(Seq(Json.toJson(client2))))
-      contentAsJson(result) \ "permanentlyFailed" shouldBe JsDefined(JsArray(Seq.empty))
-      wis.collectStats.futureValue.values.sum shouldBe 1
+      status(result).shouldBe(202)
+      (contentAsJson(result) \ "delayed").shouldBe(JsDefined(JsArray(Seq(Json.toJson(client2)))))
+      (contentAsJson(result) \ "permanentlyFailed").shouldBe(JsDefined(JsArray(Seq.empty)))
+      wis.collectStats.futureValue.values.sum.shouldBe(1)
     }
     "respond with 202 status if the request has too many enrolments to process and add work items to the repository" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
@@ -221,7 +221,7 @@ with AuthorisationMockSupport {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("POST", "").withBody(Json.toJson(Seq.fill(100)(client1))) // 100 enrolments to process
@@ -233,18 +233,18 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateFriendlyName(testArn)(request: Request[JsValue])
-      status(result) shouldBe 202
-      contentAsJson(result) \ "delayed" shouldBe JsDefined(
-        JsArray(Seq.fill(100)(Json.toJson(client1)))
+      status(result).shouldBe(202)
+      (contentAsJson(result) \ "delayed").shouldBe(
+        JsDefined(JsArray(Seq.fill(100)(Json.toJson(client1))))
       )
-      contentAsJson(result) \ "permanentlyFailed" shouldBe JsDefined(JsArray(Seq.empty))
-      wis.collectStats.futureValue.values.sum shouldBe 100
+      (contentAsJson(result) \ "permanentlyFailed").shouldBe(JsDefined(JsArray(Seq.empty)))
+      wis.collectStats.futureValue.values.sum.shouldBe(100)
     }
     "respond with 400 status if the request is malformed" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       val request = FakeRequest("POST", "").withBody(Json.obj("someJson" -> JsNumber(0xbad)))
@@ -256,13 +256,13 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateFriendlyName(testArn)(request)
-      status(result) shouldBe 400
+      status(result).shouldBe(400)
     }
     "respond with 404 status if the groupId provided is unknown" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(None))
       val request = FakeRequest("POST", "").withBody(Json.toJson(clientsWithFriendlyNames))
@@ -274,7 +274,7 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateFriendlyName(testArn)(request)
-      status(result) shouldBe 404
+      status(result).shouldBe(404)
     }
   }
 
@@ -285,7 +285,7 @@ with AuthorisationMockSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
       (esp
@@ -293,7 +293,7 @@ with AuthorisationMockSupport {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
       val request = FakeRequest("PUT", "").withBody(Json.parse(friendlyNameRequest))
@@ -305,7 +305,7 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateOneFriendlyName(testArn)(request)
-      status(result) shouldBe 204
+      status(result).shouldBe(204)
     }
 
     "respond 400 Bad Request when something wrong with request" in {
@@ -314,7 +314,7 @@ with AuthorisationMockSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val esp = stub[EnrolmentStoreProxyConnector]
       (esp
-        .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+        .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
         .when(testArn, *, *)
         .returns(Future.successful(Some(testGroupId)))
 
@@ -327,7 +327,7 @@ with AuthorisationMockSupport {
           appConfig
         )
       val result = fnc.updateOneFriendlyName(testArn)(request)
-      status(result) shouldBe 400
+      status(result).shouldBe(400)
 
     }
   }

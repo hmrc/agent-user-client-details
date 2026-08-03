@@ -38,7 +38,7 @@ with MockFactory {
 
         val desUrl = "http://localhost:9009/registration/personal-details/arn/HARN000123"
 
-        implicit val hc: HeaderCarrier =
+        given HeaderCarrier =
           new HeaderCarrier(
             authorization = Some(Authorization("Bearer session-xyz")),
             sessionId = Option(SessionId("testSession")),
@@ -54,23 +54,23 @@ with MockFactory {
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
 
-        explicitHeaders should contain key "CorrelationId"
-        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
-        explicitHeaders should contain("Environment" -> "desEnv")
-        explicitHeaders should not contain (HeaderNames.authorisation)
-        explicitHeaders should not contain (HeaderNames.xSessionId)
-        explicitHeaders should not contain (HeaderNames.xRequestId)
+        explicitHeaders.should(contain.key("CorrelationId"))
+        UUID.fromString(explicitHeaders("CorrelationId")).should(not.be(null))
+        explicitHeaders.should(contain("Environment" -> "desEnv"))
+        explicitHeaders.should(not(contain(HeaderNames.authorisation)))
+        explicitHeaders.should(not(contain(HeaderNames.xSessionId)))
+        explicitHeaders.should(not(contain(HeaderNames.xRequestId)))
 
-        headerCarrier.sessionId.get.value shouldBe "testSession"
-        headerCarrier.requestId.get.value shouldBe "testRequestId"
-        headerCarrier.authorization.get.value shouldBe "Bearer desToken"
+        headerCarrier.sessionId.get.value.shouldBe("testSession")
+        headerCarrier.requestId.get.value.shouldBe("testRequestId")
+        headerCarrier.authorization.get.value.shouldBe("Bearer desToken")
       }
 
       "service url is external" in new TestScope {
 
         val desUrl = "https://des.ws.ibt.hmrc.gov.uk/registration/personal-details/arn/HARN000123"
 
-        implicit val hc: HeaderCarrier =
+        given HeaderCarrier =
           new HeaderCarrier(
             authorization = Some(Authorization("Bearer session-xyz")),
             sessionId = Option(SessionId("testSession")),
@@ -86,14 +86,14 @@ with MockFactory {
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
 
-        explicitHeaders should contain key "CorrelationId"
-        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
-        explicitHeaders should contain("Environment" -> "desEnv")
-        explicitHeaders should contain(HeaderNames.authorisation -> "Bearer desToken")
-        explicitHeaders should contain(HeaderNames.xSessionId -> "testSession")
-        explicitHeaders should contain(HeaderNames.xRequestId -> "testRequestId")
+        explicitHeaders.should(contain.key("CorrelationId"))
+        UUID.fromString(explicitHeaders("CorrelationId")).should(not.be(null))
+        explicitHeaders.should(contain("Environment" -> "desEnv"))
+        explicitHeaders.should(contain(HeaderNames.authorisation -> "Bearer desToken"))
+        explicitHeaders.should(contain(HeaderNames.xSessionId -> "testSession"))
+        explicitHeaders.should(contain(HeaderNames.xRequestId -> "testRequestId"))
 
-        headerCarrier.authorization.get.value shouldBe "Bearer session-xyz"
+        headerCarrier.authorization.get.value.shouldBe("Bearer session-xyz")
 
       }
     }
@@ -103,7 +103,7 @@ with MockFactory {
 
         val ifUrl = "http://localhost:9009/trust-known-fact-check/UTR/1234567890"
 
-        implicit val hc: HeaderCarrier =
+        given HeaderCarrier =
           new HeaderCarrier(
             authorization = Some(Authorization("Bearer session-xyz")),
             sessionId = Option(SessionId("testSession")),
@@ -119,23 +119,23 @@ with MockFactory {
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
 
-        explicitHeaders should contain key "CorrelationId"
-        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
-        explicitHeaders should contain("Environment" -> "IFEnv")
-        explicitHeaders should not contain (HeaderNames.authorisation)
-        explicitHeaders should not contain (HeaderNames.xSessionId)
-        explicitHeaders should not contain (HeaderNames.xRequestId)
+        explicitHeaders.should(contain.key("CorrelationId"))
+        UUID.fromString(explicitHeaders("CorrelationId")).should(not.be(null))
+        explicitHeaders.should(contain("Environment" -> "IFEnv"))
+        explicitHeaders.should(not(contain(HeaderNames.authorisation)))
+        explicitHeaders.should(not(contain(HeaderNames.xSessionId)))
+        explicitHeaders.should(not(contain(HeaderNames.xRequestId)))
 
-        headerCarrier.sessionId.get.value shouldBe "testSession"
-        headerCarrier.requestId.get.value shouldBe "testRequestId"
-        headerCarrier.authorization.get.value shouldBe "Bearer API1495"
+        headerCarrier.sessionId.get.value.shouldBe("testSession")
+        headerCarrier.requestId.get.value.shouldBe("testRequestId")
+        headerCarrier.authorization.get.value.shouldBe("Bearer API1495")
       }
 
       "service url is external" in new TestScope {
 
         val ifUrl = "https://ifs.ws.ibt.hmrc.gov.uk/trust-known-fact-check/UTR/1234567890"
 
-        implicit val hc: HeaderCarrier =
+        given HeaderCarrier =
           new HeaderCarrier(
             authorization = Some(Authorization("Bearer session-xyz")),
             sessionId = Option(SessionId("testSession")),
@@ -151,14 +151,14 @@ with MockFactory {
         val explicitHeaders: Map[String, String] = headersConfig.explicitHeaders.toMap
         val headerCarrier: HeaderCarrier = headersConfig.hc
 
-        explicitHeaders should contain key "CorrelationId"
-        UUID.fromString(explicitHeaders("CorrelationId")) should not be null
-        explicitHeaders should contain("Environment" -> "IFEnv")
-        explicitHeaders should contain(HeaderNames.authorisation -> "Bearer API1495")
-        explicitHeaders should contain(HeaderNames.xSessionId -> "testSession")
-        explicitHeaders should contain(HeaderNames.xRequestId -> "testRequestId")
+        explicitHeaders.should(contain.key("CorrelationId"))
+        UUID.fromString(explicitHeaders("CorrelationId")).should(not.be(null))
+        explicitHeaders.should(contain("Environment" -> "IFEnv"))
+        explicitHeaders.should(contain(HeaderNames.authorisation -> "Bearer API1495"))
+        explicitHeaders.should(contain(HeaderNames.xSessionId -> "testSession"))
+        explicitHeaders.should(contain(HeaderNames.xRequestId -> "testRequestId"))
 
-        headerCarrier.authorization.get.value shouldBe "Bearer session-xyz"
+        headerCarrier.authorization.get.value.shouldBe("Bearer session-xyz")
 
       }
 
@@ -169,15 +169,15 @@ with MockFactory {
 
         val ifUrl = "http://localhost:9009/trust-known-fact-check/UTR/1234567890"
 
-        implicit val hc: HeaderCarrier = new HeaderCarrier()
+        given HeaderCarrier = new HeaderCarrier()
 
-        an[RuntimeException] shouldBe thrownBy {
+        an[RuntimeException].shouldBe(thrownBy {
           underTest.headersConfig(
             viaIF = true,
             ifUrl,
             "unknown_API"
           )
-        }
+        })
       }
     }
   }

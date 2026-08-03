@@ -20,7 +20,7 @@ import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.PptRef
 import uk.gov.hmrc.agentuserclientdetails.connectors.IfConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
-import uk.gov.hmrc.agentuserclientdetails.model._
+import uk.gov.hmrc.agentuserclientdetails.model.*
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
@@ -33,20 +33,20 @@ extends IfConnector {
 
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = Future.successful(Some("Trust Client"))
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[PptSubscription]] = Future.successful(Some(PptSubscription("PPT Client")))
 
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[TradingDetails]] =
@@ -63,19 +63,19 @@ extends IfConnector {
 
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[PptSubscription]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[TradingDetails]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
@@ -87,19 +87,19 @@ extends IfConnector {
 
   def getTrustName(
     trustTaxIdentifier: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = Future.successful(None)
   def getPptSubscription(
     pptRef: PptRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[PptSubscription]] = Future.successful(None)
   def getTradingDetailsForMtdItId(
     mtdId: MtdItId
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[TradingDetails]] = Future.successful(None)

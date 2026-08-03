@@ -51,7 +51,7 @@ extends Logging {
     viaIF: Boolean,
     url: String,
     apiName: String
-  )(implicit
+  )(using
     hc: HeaderCarrier
   ): HeadersConfig = {
 

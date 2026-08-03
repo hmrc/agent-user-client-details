@@ -24,10 +24,11 @@ import uk.gov.hmrc.agentuserclientdetails.BaseSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.UsersGroupsSearchConnector
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 import uk.gov.hmrc.agentuserclientdetails.repositories.*
+import uk.gov.hmrc.agentuserclientdetails.repositories.UpsertType.*
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
 import uk.gov.hmrc.http.HeaderCarrier
@@ -43,8 +44,8 @@ import scala.concurrent.Future
 class AgentChecksServiceSpec
 extends BaseSpec {
 
-  implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  given HeaderCarrier = HeaderCarrier()
 
   val refreshdurationConfigKey = "agentsize.refreshduration"
 
@@ -115,7 +116,7 @@ extends BaseSpec {
 
         mockAgentSizeRepositoryGet(Some(agentSize))(mockAgentSizeRepository)
 
-        agentChecksService.getAgentSize(arn).futureValue shouldBe Some(agentSize)
+        agentChecksService.getAgentSize(arn).futureValue.shouldBe(Some(agentSize))
       }
     }
 
@@ -128,7 +129,7 @@ extends BaseSpec {
             mockAgentSizeRepositoryGet(None)(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(None)(mockEnrolmentStoreProxyConnector)
 
-            agentChecksService.getAgentSize(arn).futureValue shouldBe None
+            agentChecksService.getAgentSize(arn).futureValue.shouldBe(None)
           }
         }
 
@@ -140,8 +141,8 @@ extends BaseSpec {
             mockAgentSizeRepositoryUpsert(Some(RecordInserted))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
-            agentSize.arn shouldBe arn
-            agentSize.clientCount shouldBe 0
+            agentSize.arn.shouldBe(arn)
+            agentSize.clientCount.shouldBe(0)
           }
         }
 
@@ -160,8 +161,8 @@ extends BaseSpec {
             mockAgentSizeRepositoryUpsert(Some(RecordInserted))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
-            agentSize.arn shouldBe arn
-            agentSize.clientCount shouldBe 4
+            agentSize.arn.shouldBe(arn)
+            agentSize.clientCount.shouldBe(4)
           }
         }
 
@@ -176,7 +177,7 @@ extends BaseSpec {
             mockAgentSizeRepositoryGet(Some(buildAgentSize(lastRefreshedAt)))(mockAgentSizeRepository)
             mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(None)(mockEnrolmentStoreProxyConnector)
 
-            agentChecksService.getAgentSize(arn).futureValue shouldBe None
+            agentChecksService.getAgentSize(arn).futureValue.shouldBe(None)
           }
         }
 
@@ -188,8 +189,8 @@ extends BaseSpec {
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
-            agentSize.arn shouldBe arn
-            agentSize.clientCount shouldBe 0
+            agentSize.arn.shouldBe(arn)
+            agentSize.clientCount.shouldBe(0)
           }
         }
 
@@ -208,8 +209,8 @@ extends BaseSpec {
             mockAgentSizeRepositoryUpsert(Some(RecordUpdated))(mockAgentSizeRepository)
 
             val agentSize: AgentSize = agentChecksService.getAgentSize(arn).futureValue.get
-            agentSize.arn shouldBe arn
-            agentSize.clientCount shouldBe 4
+            agentSize.arn.shouldBe(arn)
+            agentSize.clientCount.shouldBe(4)
           }
         }
 
@@ -224,7 +225,7 @@ extends BaseSpec {
       "return nil" in new TestScope {
         mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(None)(mockEnrolmentStoreProxyConnector)
 
-        agentChecksService.userCheck(arn).futureValue shouldBe 0
+        agentChecksService.userCheck(arn).futureValue.shouldBe(0)
       }
     }
 
@@ -235,7 +236,7 @@ extends BaseSpec {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
           mockUsersGroupsSearchConnectorGetGroupUsers(Seq.empty)(mockUsersGroupsSearchConnector)
 
-          agentChecksService.userCheck(arn).futureValue shouldBe 0
+          agentChecksService.userCheck(arn).futureValue.shouldBe(0)
         }
       }
 
@@ -249,7 +250,7 @@ extends BaseSpec {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
           mockUsersGroupsSearchConnectorGetGroupUsers(seqUserDetails)(mockUsersGroupsSearchConnector)
 
-          agentChecksService.userCheck(arn).futureValue shouldBe seqUserDetails.size
+          agentChecksService.userCheck(arn).futureValue.shouldBe(seqUserDetails.size)
         }
       }
     }
@@ -262,7 +263,7 @@ extends BaseSpec {
       "return false" in new TestScope {
         mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(None)(mockEnrolmentStoreProxyConnector)
 
-        agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe false
+        agentChecksService.outstandingWorkItemsExist(arn).futureValue.shouldBe(false)
       }
     }
 
@@ -283,7 +284,7 @@ extends BaseSpec {
           mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(Some(groupId))(mockEnrolmentStoreProxyConnector)
           mockWorkItemServiceQuery(Seq.empty)(mockWorkItemService)
 
-          agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe false
+          agentChecksService.outstandingWorkItemsExist(arn).futureValue.shouldBe(false)
         }
       }
 
@@ -297,7 +298,7 @@ extends BaseSpec {
           ))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
-          agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe false
+          agentChecksService.outstandingWorkItemsExist(arn).futureValue.shouldBe(false)
         }
       }
 
@@ -309,7 +310,7 @@ extends BaseSpec {
             .map(buildWorkItem(FriendlyNameWorkItem(groupId, sensitiveClient), _))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
-          agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
+          agentChecksService.outstandingWorkItemsExist(arn).futureValue.shouldBe(true)
         }
       }
 
@@ -322,7 +323,7 @@ extends BaseSpec {
           ))
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
-          agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
+          agentChecksService.outstandingWorkItemsExist(arn).futureValue.shouldBe(true)
         }
       }
 
@@ -334,7 +335,7 @@ extends BaseSpec {
           )
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
-          agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
+          agentChecksService.outstandingWorkItemsExist(arn).futureValue.shouldBe(true)
         }
       }
 
@@ -346,7 +347,7 @@ extends BaseSpec {
           )
           mockWorkItemServiceQuery(workItems)(mockWorkItemService)
 
-          agentChecksService.outstandingWorkItemsExist(arn).futureValue shouldBe true
+          agentChecksService.outstandingWorkItemsExist(arn).futureValue.shouldBe(true)
         }
       }
     }
@@ -367,7 +368,7 @@ extends BaseSpec {
       "return false" in new TestScope {
         mockAssignmentsWorkItemServiceQuery(Seq.empty)(mockAssignmentsWorkItemService)
 
-        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe false
+        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue.shouldBe(false)
       }
     }
 
@@ -386,7 +387,7 @@ extends BaseSpec {
         )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
-        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe false
+        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue.shouldBe(false)
       }
     }
 
@@ -405,7 +406,7 @@ extends BaseSpec {
         )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
-        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
+        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue.shouldBe(true)
       }
     }
 
@@ -424,7 +425,7 @@ extends BaseSpec {
         )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
-        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
+        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue.shouldBe(true)
       }
     }
 
@@ -443,7 +444,7 @@ extends BaseSpec {
         )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
-        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
+        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue.shouldBe(true)
       }
     }
 
@@ -462,7 +463,7 @@ extends BaseSpec {
         )
         mockAssignmentsWorkItemServiceQuery(workItems)(mockAssignmentsWorkItemService)
 
-        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue shouldBe true
+        agentChecksService.outstandingAssignmentsWorkItemsExist(arn).futureValue.shouldBe(true)
       }
     }
 
@@ -474,7 +475,7 @@ extends BaseSpec {
       "return no team members" in new TestScope {
         mockEnrolmentStoreProxyConnectorGetPrincipalGroupId(None)(mockEnrolmentStoreProxyConnector)
 
-        agentChecksService.getTeamMembers(arn).futureValue shouldBe empty
+        agentChecksService.getTeamMembers(arn).futureValue.shouldBe(empty)
       }
     }
 
@@ -490,7 +491,7 @@ extends BaseSpec {
 
           mockUsersGroupsSearchConnectorGetGroupUsers(seqUserDetails)(mockUsersGroupsSearchConnector)
 
-          agentChecksService.getTeamMembers(arn).futureValue shouldBe seqUserDetails
+          agentChecksService.getTeamMembers(arn).futureValue.shouldBe(seqUserDetails)
         }
       }
     }
@@ -504,7 +505,7 @@ extends BaseSpec {
     maybeGroupId: Option[String]
   )(mockEnrolmentStoreProxyConnector: EnrolmentStoreProxyConnector) =
     (mockEnrolmentStoreProxyConnector
-      .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(arn, *, *)
       .returning(Future.successful(maybeGroupId))
 
@@ -512,7 +513,7 @@ extends BaseSpec {
     clients: Seq[Client]
   )(mockES3CacheService: ES3CacheService) =
     (mockES3CacheService
-      .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .fetchClientsAndPoupluateCacheIfEmpty(_: String)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(groupId, *, *)
       .returning(Future.successful(clients))
 
@@ -524,7 +525,7 @@ extends BaseSpec {
     seqUserDetail: Seq[UserDetails]
   )(mockUsersGroupsSearchConnector: UsersGroupsSearchConnector) =
     (mockUsersGroupsSearchConnector
-      .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getGroupUsers(_: String)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(groupId, *, *)
       .returning(Future.successful(seqUserDetail))
 
@@ -532,7 +533,7 @@ extends BaseSpec {
     workItems: Seq[WorkItem[FriendlyNameWorkItem]]
   )(mockWorkItemService: FriendlyNameWorkItemService) =
     (mockWorkItemService
-      .query(_: String, _: Option[Seq[ProcessingStatus]])(_: ExecutionContext))
+      .query(_: String, _: Option[Seq[ProcessingStatus]])(using _: ExecutionContext))
       .expects(
         groupId,
         None,
@@ -544,7 +545,7 @@ extends BaseSpec {
     workItems: Seq[WorkItem[AssignmentWorkItem]]
   )(mockAssignmentsWorkItemService: AssignmentsWorkItemService) =
     (mockAssignmentsWorkItemService
-      .queryBy(_: Arn)(_: ExecutionContext))
+      .queryBy(_: Arn)(using _: ExecutionContext))
       .expects(arn, *)
       .returning(Future.successful(workItems))
 

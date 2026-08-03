@@ -36,7 +36,7 @@ extends BaseSpec {
     s"return $Forbidden" in new TestScope {
       mockAuthActionGetAuthorisedAgent(None)
 
-      authorisedAgentSupport.withAuthorisedAgent()(body).futureValue shouldBe Forbidden
+      authorisedAgentSupport.withAuthorisedAgent()(body).futureValue.shouldBe(Forbidden)
     }
   }
 
@@ -44,7 +44,7 @@ extends BaseSpec {
     s"return $Ok" in new TestScope {
       mockAuthActionGetAuthorisedAgent(Some(AuthorisedAgent(arn)))
 
-      authorisedAgentSupport.withAuthorisedAgent()(body).futureValue shouldBe Ok
+      authorisedAgentSupport.withAuthorisedAgent()(body).futureValue.shouldBe(Ok)
     }
   }
 
@@ -52,9 +52,9 @@ extends BaseSpec {
 
     val body: AuthorisedAgent => Future[Result] = _ => Future successful Ok
 
-    implicit val mockAuthAction: AuthAction = mock[AuthAction]
-    implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("", "")
-    implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.global
+    given AuthAction = mock[AuthAction]
+    given FakeRequest[AnyContentAsEmpty.type] = FakeRequest("", "")
+    given ExecutionContext = scala.concurrent.ExecutionContext.global
     val authorisedAgentSupport: AuthorisedAgentSupport = new AuthorisedAgentSupport {}
 
     val arn: Arn = Arn("KARN0762398")
@@ -67,8 +67,8 @@ extends BaseSpec {
       Request[?],
       Future[Option[AuthorisedAgent]]
     ] =
-      (mockAuthAction
-        .getAuthorisedAgent(_: Boolean)(_: ExecutionContext, _: Request[?]))
+      (summon[AuthAction]
+        .getAuthorisedAgent(_: Boolean)(using _: ExecutionContext, _: Request[?]))
         .expects(*, *, *)
         .returning(Future.successful(maybeAuthorisedAgent))
 

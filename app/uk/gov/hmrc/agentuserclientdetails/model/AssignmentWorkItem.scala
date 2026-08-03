@@ -32,29 +32,22 @@ case class AssignmentWorkItem(
   sessionId: Option[String] = None // Only required for local testing against stubs. Always set to None for QA/Prod
 )
 
-object AssignmentWorkItem {
-  implicit val format: Format[AssignmentWorkItem] = Json.format[AssignmentWorkItem]
-}
+object AssignmentWorkItem:
+  given format: Format[AssignmentWorkItem] = Json.format[AssignmentWorkItem]
 
-sealed trait Operation
-case object Assign
-extends Operation
-case object Unassign
-extends Operation
+enum Operation:
+  case Assign, Unassign
 
-object Operation {
-  implicit val format: Format[Operation] =
-    new Format[Operation] {
+object Operation:
+  given format: Format[Operation] =
+    new Format[Operation]:
       def writes(o: Operation): JsValue =
-        o match {
+        o match
           case Assign => JsString("assign")
           case Unassign => JsString("unassign")
-        }
+
       def reads(json: JsValue): JsResult[Operation] =
-        json match {
+        json match
           case JsString("assign") => JsSuccess(Assign)
           case JsString("unassign") => JsSuccess(Unassign)
           case x => JsError("unexpected value for Operation: " + x.toString)
-        }
-    }
-}

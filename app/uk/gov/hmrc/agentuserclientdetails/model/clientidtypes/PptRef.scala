@@ -23,7 +23,7 @@ import uk.gov.hmrc.domain.TaxIdentifier
 case class PptRef(value: String)
 extends TaxIdentifier
 
-object PptRef {
+object PptRef:
 
   private val pattern = "X[A-Z]PPT000[0-9]{7}".r
 
@@ -33,7 +33,5 @@ object PptRef {
       case _ => false
     }
 
-  implicit val reads: SimpleObjectReads[PptRef] = new SimpleObjectReads[PptRef]("value", PptRef.apply)
-  implicit val writes: SimpleObjectWrites[PptRef] = new SimpleObjectWrites[PptRef](_.value)
-
-}
+  given reads: SimpleObjectReads[PptRef] = new SimpleObjectReads[PptRef]("value", PptRef.apply)
+  given writes: SimpleObjectWrites[PptRef] = new SimpleObjectWrites[PptRef](_.value)

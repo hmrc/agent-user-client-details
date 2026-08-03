@@ -38,7 +38,7 @@ import scala.util.Try
 
 @ImplementedBy(classOf[CitizenDetailsConnectorImpl])
 trait CitizenDetailsConnector {
-  def getCitizenDetails(nino: Nino)(implicit
+  def getCitizenDetails(nino: Nino)(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[Citizen]]
@@ -49,7 +49,7 @@ class CitizenDetailsConnectorImpl @Inject() (
   appConfig: AppConfig,
   http: HttpClientV2,
   val metrics: Metrics
-)(implicit
+)(using
   val ec: ExecutionContext
 )
 extends CitizenDetailsConnector
@@ -57,7 +57,7 @@ with Logging {
 
   private val baseUrl = appConfig.citizenDetailsBaseUrl
 
-  def getCitizenDetails(nino: Nino)(implicit
+  def getCitizenDetails(nino: Nino)(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[Citizen]] = http

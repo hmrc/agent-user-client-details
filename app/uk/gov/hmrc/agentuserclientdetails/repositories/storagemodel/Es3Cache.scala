@@ -16,7 +16,7 @@
 
 package uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel
 
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
@@ -32,8 +32,8 @@ case class Es3Cache(
 object Es3Cache {
 
   val ClientCountField: String = "clientCount"
-  implicit val dtf: Format[Instant] = MongoJavatimeFormats.instantFormat
-  def format(implicit crypto: Encrypter & Decrypter): Format[Es3Cache] = Json.format[Es3Cache]
+  given dtf: Format[Instant] = MongoJavatimeFormats.instantFormat
+  def format(using crypto: Encrypter & Decrypter): Format[Es3Cache] = Json.format[Es3Cache]
 
   def merge(es3Caches: Seq[Es3Cache]): Option[Es3Cache] = {
     es3Caches.headOption.map { head =>

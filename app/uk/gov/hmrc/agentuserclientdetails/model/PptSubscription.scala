@@ -16,24 +16,25 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class PptSubscription(customerName: String)
 
 object PptSubscription {
 
-  implicit def reads(json: JsValue): JsResult[PptSubscription] =
-    (json \ "legalEntityDetails" \ "customerDetails" \ "customerType").as[String] match {
-      case "Individual" =>
-        val firstName = (json \ "legalEntityDetails" \ "customerDetails" \ "individualDetails" \ "firstName").as[String]
-        val lastName = (json \ "legalEntityDetails" \ "customerDetails" \ "individualDetails" \ "lastName").as[String]
+  given reads: Reads[PptSubscription] =
+    json =>
+      (json \ "legalEntityDetails" \ "customerDetails" \ "customerType").as[String] match {
+        case "Individual" =>
+          val firstName = (json \ "legalEntityDetails" \ "customerDetails" \ "individualDetails" \ "firstName").as[String]
+          val lastName = (json \ "legalEntityDetails" \ "customerDetails" \ "individualDetails" \ "lastName").as[String]
 
-        JsSuccess(PptSubscription(s"$firstName $lastName"))
+          JsSuccess(PptSubscription(s"$firstName $lastName"))
 
-      case "Organisation" =>
-        val organisationName = (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
-        JsSuccess(PptSubscription(organisationName))
+        case "Organisation" =>
+          val organisationName = (json \ "legalEntityDetails" \ "customerDetails" \ "organisationDetails" \ "organisationName").as[String]
+          JsSuccess(PptSubscription(organisationName))
 
-      case e => JsError(s"unknown customerType $e")
-    }
+        case e => JsError(s"unknown customerType $e")
+      }
 }

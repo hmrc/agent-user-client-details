@@ -39,7 +39,7 @@ extends BaseSpec {
           )
         )
       )
-      PptSubscription.reads(json).get shouldBe model
+      json.as[PptSubscription].shouldBe(model)
     }
 
     "read from JSON when customer type is Organisation" in {
@@ -53,7 +53,7 @@ extends BaseSpec {
           )
         )
       )
-      PptSubscription.reads(json).get shouldBe model
+      json.as[PptSubscription].shouldBe(model)
     }
 
     "fail to read from JSON when customer type is not recognised" in {
@@ -64,7 +64,7 @@ extends BaseSpec {
           )
         )
       )
-      PptSubscription.reads(json) shouldBe JsError("unknown customerType Anon")
+      PptSubscription.reads.reads(json).shouldBe(JsError("unknown customerType Anon"))
     }
   }
 }

@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.functional.syntax.*
+import play.api.libs.json.*
 
 case class CustomerDetailsNotFound()
 extends Exception
@@ -42,9 +42,8 @@ case class VatIndividual(
   ).flatten.map(_.trim).filter(_.nonEmpty).mkString(" ")
 }
 
-object VatCustomerDetails {
-  implicit val format: Format[VatCustomerDetails] = Json.format[VatCustomerDetails]
-}
+object VatCustomerDetails:
+  given format: Format[VatCustomerDetails] = Json.format[VatCustomerDetails]
 
 object VatIndividual {
 
@@ -63,9 +62,9 @@ object VatIndividual {
     "0012" -> "Dame"
   )
 
-  implicit val writes: OWrites[VatIndividual] = Json.writes[VatIndividual]
+  given writes: OWrites[VatIndividual] = Json.writes[VatIndividual]
 
-  implicit val reads: Reads[VatIndividual] =
+  given reads: Reads[VatIndividual] =
     (
       (JsPath \ "title").readNullable[String].map(title => titles.get(title.getOrElse(""))) and
         (JsPath \ "firstName").readNullable[String] and

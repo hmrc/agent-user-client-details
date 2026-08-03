@@ -4,10 +4,11 @@ import play.sbt.routes.RoutesKeys
 val appName = "agent-user-client-details"
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "3.6.1"
+ThisBuild / scalaVersion := "3.7.4"
 
 val scalaCOptions = Seq(
   "-feature",
+  "-Werror",
   "-language:implicitConversions",
   "-Wconf:src=target/.*:s", // silence warnings from compiled files
   "-Wconf:src=Routes/.*:s", // silence warnings from routes files
@@ -21,7 +22,9 @@ lazy val root = (project in file("."))
     organization := "uk.gov.hmrc",
     PlayKeys.playDefaultPort := 9449,
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
-    routesImport ++= Seq("uk.gov.hmrc.agentuserclientdetails.binders.Binders._"),
+    routesImport ++= Seq(
+      "uk.gov.hmrc.agentuserclientdetails.binders.Binders.given"
+    ),
     scalacOptions ++= scalaCOptions,
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
@@ -51,4 +54,3 @@ lazy val it = project
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true
   )
-

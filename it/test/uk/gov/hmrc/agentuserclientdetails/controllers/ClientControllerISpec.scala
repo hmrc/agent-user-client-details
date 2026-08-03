@@ -23,8 +23,6 @@ import org.scalamock.handlers.CallHandler2
 import org.scalamock.handlers.CallHandler3
 import play.api.http.HttpEntity.NoEntity
 import play.api.http.Status
-import play.api.http.Status.NO_CONTENT
-import play.api.http.Status.OK
 import play.api.libs.json.Json
 import play.api.mvc.ControllerComponents
 import play.api.test.FakeRequest
@@ -33,7 +31,6 @@ import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.status
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.connectors.*
 import uk.gov.hmrc.agentuserclientdetails.model.*
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
@@ -47,15 +44,13 @@ import uk.gov.hmrc.agentuserclientdetails.stubs.EnrolmentStoreProxyConnectorStub
 import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 
-import java.net.URL
 import java.time.Instant
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import ch.qos.logback.classic.Level
@@ -63,7 +58,7 @@ import ch.qos.logback.classic.{Logger => LBLogger}
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import org.slf4j.LoggerFactory
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 class ClientControllerISpec
 extends AuthorisationMockSupport
@@ -78,13 +73,13 @@ with MongoSupport {
   lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
-  implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
-  implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
+  given mockAuthConnector: AuthConnector = mock[AuthConnector]
+  given AuthAction = app.injector.instanceOf[AuthAction]
 
   lazy val jobMonitoringRepository = new JobMonitoringRepository(mongoComponent, config)
   lazy val jobMonitoringService = new JobMonitoringServiceImpl(jobMonitoringRepository, appConfig)
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val anotherTestGroupId = "8R6G-J5B5-0U1Q-N8R2"
   val testArn = Arn("BARN9706518")
@@ -152,7 +147,7 @@ with MongoSupport {
       Future[Option[AgentDetailsDesResponse]]
     ] = {
 
-      (mockAgentRecordService.getAgentDetails(_: Arn)(_: HeaderCarrier))
+      (mockAgentRecordService.getAgentDetails(_: Arn)(using _: HeaderCarrier))
         .expects(*, *).returning(Future.successful(agentDetailsResponse))
     }
 
@@ -165,7 +160,7 @@ with MongoSupport {
       Future[Seq[Client]]
     ] =
       (es3CacheService
-        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.successful(clients))
 
@@ -178,7 +173,7 @@ with MongoSupport {
       Future[Seq[Client]]
     ] =
       (es3CacheService
-        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future.failed(errorResponse))
 
@@ -191,7 +186,7 @@ with MongoSupport {
       Future[Option[Unit]]
     ] =
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(*, *, *)
         .returning(Future successful result)
 
@@ -206,9 +201,9 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClient(testArn, client2.enrolmentKey)(request)
-      status(result) shouldBe 200
+      status(result).shouldBe(200)
       val actualClient = Json.fromJson[Client](contentAsJson(result)).get
-      actualClient shouldBe client2
+      actualClient.shouldBe(client2)
 
     }
 
@@ -219,7 +214,7 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClient(testArn, "whatever")(request).futureValue
-      result.header.status shouldBe Status.NOT_FOUND
+      result.header.status.shouldBe(Status.NOT_FOUND)
     }
   }
 
@@ -231,10 +226,10 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
-      result.header.status shouldBe 200
+      result.header.status.shouldBe(200)
 
       // Do not create a job monitoring item if there was no work to be done.
-      jobMonitoringService.getNextJobToCheck.futureValue shouldBe None
+      jobMonitoringService.getNextJobToCheck.futureValue.shouldBe(None)
     }
 
     "Allow Assistant credential role " in new TestScope {
@@ -244,17 +239,17 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
-      result.header.status shouldBe 200
+      result.header.status.shouldBe(200)
 
       // Do not create a job monitoring item if there was no work to be done.
-      jobMonitoringService.getNextJobToCheck.futureValue shouldBe None
+      jobMonitoringService.getNextJobToCheck.futureValue.shouldBe(None)
     }
 
     "respond with 400 status if given an ARN in invalid format" in new TestScope {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       val request = FakeRequest("GET", "")
       val result = controller.getClients(badArn)(request).futureValue
-      result.header.status shouldBe Status.BAD_REQUEST
+      result.header.status.shouldBe(Status.BAD_REQUEST)
     }
 
     "respond with 404 status if given a valid but non-existent ARN" in new TestScope {
@@ -262,7 +257,7 @@ with MongoSupport {
       mockGetPrincipalGroupIdSuccess(None)
       val request = FakeRequest("GET", "")
       val result = controller.getClients(unknownArn)(request).futureValue
-      result.header.status shouldBe Status.NOT_FOUND
+      result.header.status.shouldBe(Status.NOT_FOUND)
     }
 
     "respond with 404 status if the groupId associated with the arn is unknown" in new TestScope {
@@ -272,7 +267,7 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
-      result.header.status shouldBe 404
+      result.header.status.shouldBe(404)
     }
 
     "respond with 202 status if any of the retrieved enrolments don't have a friendly name" in new TestScope {
@@ -283,7 +278,7 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
-      result.header.status shouldBe 202
+      result.header.status.shouldBe(202)
 
       // Create a job monitoring item if there was any work to be done, which should contain all the enrolment keys for which there was no name.
       // The option to send email should be OFF as we did not explicitly ask for it in the request
@@ -305,7 +300,7 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn, sendEmail = Some(true))(request).futureValue
-      result.header.status shouldBe 202
+      result.header.status.shouldBe(202)
 
       // Create a job monitoring item with the language preference for the email set to welsh
       val maybeJob = jobMonitoringService.getNextJobToCheck.futureValue
@@ -328,7 +323,7 @@ with MongoSupport {
           sendEmail = Some(true),
           lang = Some("cy")
         )(request).futureValue
-      result.header.status shouldBe 202
+      result.header.status.shouldBe(202)
 
       // Create a job monitoring item with the language preference for the email set to welsh
       val maybeJob = jobMonitoringService.getNextJobToCheck.futureValue
@@ -354,10 +349,10 @@ with MongoSupport {
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithoutSomeFriendlyNames)
       val request = FakeRequest("GET", "")
       val result = controller.getClients(testArn)(request).futureValue
-      result.header.status shouldBe 200
+      result.header.status.shouldBe(200)
 
       // Do not create a job monitoring item if there was no work to be done.
-      jobMonitoringService.getNextJobToCheck.futureValue shouldBe None
+      jobMonitoringService.getNextJobToCheck.futureValue.shouldBe(None)
     }
   }
 
@@ -368,8 +363,8 @@ with MongoSupport {
       mockES3CacheServiceGetCachedClientsForGroupIdWithoutException(clientsWithFriendlyNames)
       val request = FakeRequest("GET", "")
       val result = controller.getClientListStatus(testArn)(request).futureValue
-      result.header.status shouldBe 200
-      result.body shouldBe NoEntity
+      result.header.status.shouldBe(200)
+      result.body.shouldBe(NoEntity)
     }
 
     "respond with 202 status if some of the retrieved enrolments have friendly names" in new TestScope {
@@ -380,8 +375,8 @@ with MongoSupport {
 
       val request = FakeRequest("GET", "")
       val result = controller.getClientListStatus(testArn)(request).futureValue
-      result.header.status shouldBe 202
-      result.body shouldBe NoEntity
+      result.header.status.shouldBe(202)
+      result.body.shouldBe(NoEntity)
     }
   }
 
@@ -397,7 +392,7 @@ with MongoSupport {
         )
         .futureValue
       val result = controller.cleanupWorkItems(request).futureValue
-      result.header.status shouldBe 200
+      result.header.status.shouldBe(200)
     }
   }
 
@@ -413,8 +408,8 @@ with MongoSupport {
         )
         .futureValue
       val result = controller.getWorkItemStats(request)
-      result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[Map[String, Int]].values.sum shouldBe 1
+      result.futureValue.header.status.shouldBe(200)
+      contentAsJson(result).as[Map[String, Int]].values.sum.shouldBe(1)
     }
   }
 
@@ -444,8 +439,8 @@ with MongoSupport {
         )
         .futureValue
       val result = controller.getOutstandingWorkItemsForGroupId(testGroupId)(request)
-      result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[Seq[Client]].toSet shouldBe Set(client1)
+      result.futureValue.header.status.shouldBe(200)
+      contentAsJson(result).as[Seq[Client]].toSet.shouldBe(Set(client1))
     }
 
   }
@@ -542,8 +537,8 @@ with MongoSupport {
       val result = controller.getTaxServiceClientCount(testArn)(request)
 
       // then
-      result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[Map[String, Int]] shouldBe Map(
+      result.futureValue.header.status.shouldBe(200)
+      contentAsJson(result).as[Map[String, Int]].shouldBe(Map(
         "HMRC-MTD-VAT" -> countVatClients,
         "HMRC-CGT-PD" -> countCgtClients,
         "HMRC-PPT-ORG" -> countPptClients,
@@ -552,7 +547,7 @@ with MongoSupport {
         "HMRC-TERSNT-ORG" -> countNonTaxableTrustClients,
         "HMRC-CBC-ORG" -> countCbcEnrolments,
         "HMRC-CBC-NONUK-ORG" -> countCbcNonUkEnrolments
-      )
+      ))
     }
   }
 
@@ -565,7 +560,7 @@ with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
       (es3CacheService
-        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -584,8 +579,8 @@ with MongoSupport {
         )(request)
 
       // then
-      result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[PaginatedList[Client]] shouldBe PaginatedList(
+      result.futureValue.header.status.shouldBe(200)
+      contentAsJson(result).as[PaginatedList[Client]].shouldBe(PaginatedList(
         pageContent = clients.take(15),
         paginationMetaData = PaginationMetaData(
           false,
@@ -596,7 +591,7 @@ with MongoSupport {
           1,
           15
         )
-      )
+      ))
     }
 
     "return 200 Ok when only a few match by enrolment key tax reference" in new TestScope {
@@ -606,7 +601,7 @@ with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
       (es3CacheService
-        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -626,8 +621,8 @@ with MongoSupport {
         )(request)
 
       // then
-      result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[PaginatedList[Client]] shouldBe PaginatedList(
+      result.futureValue.header.status.shouldBe(200)
+      contentAsJson(result).as[PaginatedList[Client]].shouldBe(PaginatedList(
         pageContent = Seq(clients(0), clients(10)),
         paginationMetaData = PaginationMetaData(
           true,
@@ -638,7 +633,7 @@ with MongoSupport {
           1,
           2
         )
-      )
+      ))
     }
 
     "return 200 Ok when only a few match the name" in new TestScope {
@@ -653,7 +648,7 @@ with MongoSupport {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
       (es3CacheService
-        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .fetchClientsAndPoupluateCacheIfEmpty(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -673,8 +668,8 @@ with MongoSupport {
         )(request)
 
       // then
-      result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[PaginatedList[Client]] shouldBe PaginatedList(
+      result.futureValue.header.status.shouldBe(200)
+      contentAsJson(result).as[PaginatedList[Client]].shouldBe(PaginatedList(
         pageContent = Seq(clients(1), clients(2)),
         paginationMetaData = PaginationMetaData(
           true,
@@ -685,7 +680,7 @@ with MongoSupport {
           1,
           2
         )
-      )
+      ))
     }
   }
 
@@ -697,13 +692,13 @@ with MongoSupport {
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
 
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
           *
         )
-        .returning(Future.successful(Some(testGroupId)))
+        .returning(Future.successful(Some(())))
 
       val logger = LoggerFactory.getLogger(classOf[ClientController]).asInstanceOf[LBLogger]
       val listAppender = new ListAppender[ILoggingEvent]()
@@ -713,7 +708,7 @@ with MongoSupport {
       try {
         val request = FakeRequest("PUT", "")
         val result = controller.cacheRefresh(testArn)(request).futureValue
-        result.header.status shouldBe Status.NO_CONTENT
+        result.header.status.shouldBe(Status.NO_CONTENT)
 
         eventually {
           val events = listAppender.list.asScala.toList
@@ -722,7 +717,7 @@ with MongoSupport {
             e.getFormattedMessage.contains(s"Refresh completed for $testGroupId")
           }
 
-          matched shouldBe true
+          matched.shouldBe(true)
         }
       }
       finally {
@@ -738,7 +733,7 @@ with MongoSupport {
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
 
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -754,7 +749,7 @@ with MongoSupport {
       try {
         val request = FakeRequest("PUT", "")
         val result = controller.cacheRefresh(testArn)(request).futureValue
-        result.header.status shouldBe Status.NO_CONTENT
+        result.header.status.shouldBe(Status.NO_CONTENT)
 
         eventually {
           val events = listAppender.list.asScala.toList
@@ -763,7 +758,7 @@ with MongoSupport {
             e.getFormattedMessage.contains(s"Cache refreshed trigger for non-existent group ID $testGroupId")
           }
 
-          matched shouldBe true
+          matched.shouldBe(true)
         }
       }
       finally {
@@ -779,7 +774,7 @@ with MongoSupport {
       mockGetPrincipalGroupIdSuccess(Some(testGroupId))
 
       (es3CacheService
-        .refreshIfGroupIdExist(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .refreshIfGroupIdExist(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(
           testGroupId,
           *,
@@ -789,7 +784,7 @@ with MongoSupport {
 
       val request = FakeRequest("PUT", "")
       val result = controller.cacheRefresh(testArn)(request).futureValue
-      result.header.status shouldBe Status.NO_CONTENT
+      result.header.status.shouldBe(Status.NO_CONTENT)
     }
 
     "return 500 when esp throws an error" in new TestScope {
@@ -799,7 +794,7 @@ with MongoSupport {
 
       val request = FakeRequest("PUT", "")
       val result = controller.cacheRefresh(testArn)(request)
-      result.futureValue.header.status shouldBe 500
+      result.futureValue.header.status.shouldBe(500)
     }
   }
 
@@ -811,8 +806,8 @@ with MongoSupport {
       mockGetAgencyDetails(Some(testAgencyDetails))
 
       val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
-      result.futureValue.header.status shouldBe 200
-      contentAsJson(result).as[AgencyDetails] shouldBe agencyDetails
+      result.futureValue.header.status.shouldBe(200)
+      contentAsJson(result).as[AgencyDetails].shouldBe(agencyDetails)
     }
 
     "return 404 when agency details not found" in new TestScope {
@@ -820,7 +815,7 @@ with MongoSupport {
       mockGetAgencyDetails(None)
 
       val result = controller.getAgencyDetails(testArn)(FakeRequest("GET", ""))
-      result.futureValue.header.status shouldBe 404
+      result.futureValue.header.status.shouldBe(404)
     }
   }
 

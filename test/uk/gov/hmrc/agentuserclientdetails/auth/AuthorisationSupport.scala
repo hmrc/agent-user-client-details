@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentuserclientdetails.auth
 
 import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentuserclientdetails.BaseSpec
-import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.Name
 import uk.gov.hmrc.auth.core.retrieve.Retrieval
@@ -66,27 +66,27 @@ with MockFactory {
 
   type GrantAccess = Enrolments ~ Option[CredentialRole]
 
-  def mockAuthResponseWithoutException(response: GrantAccess)(implicit authConnector: AuthConnector): Unit =
+  def mockAuthResponseWithoutException(response: GrantAccess)(using authConnector: AuthConnector): Unit =
     (authConnector
-      .authorise(_: Predicate, _: Retrieval[GrantAccess])(_: HeaderCarrier, _: ExecutionContext))
+      .authorise(_: Predicate, _: Retrieval[GrantAccess])(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
       .returning(Future successful response)
 
-  def mockAuthResponseWithException(exceptionToReturn: Exception)(implicit authConnector: AuthConnector): Unit =
+  def mockAuthResponseWithException(exceptionToReturn: Exception)(using authConnector: AuthConnector): Unit =
     (authConnector
-      .authorise(_: Predicate, _: Retrieval[GrantAccess])(_: HeaderCarrier, _: ExecutionContext))
+      .authorise(_: Predicate, _: Retrieval[GrantAccess])(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
       .returning(Future failed exceptionToReturn)
 
-  def mockSimpleAuthResponseWithoutException()(implicit authConnector: AuthConnector): Unit =
+  def mockSimpleAuthResponseWithoutException()(using authConnector: AuthConnector): Unit =
     (authConnector
-      .authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))
+      .authorise(_: Predicate, _: Retrieval[Unit])(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
       .returning(Future.successful(()))
 
-  def mockSimpleAuthResponseWithException(exceptionToReturn: Exception)(implicit authConnector: AuthConnector): Unit =
+  def mockSimpleAuthResponseWithException(exceptionToReturn: Exception)(using authConnector: AuthConnector): Unit =
     (authConnector
-      .authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))
+      .authorise(_: Predicate, _: Retrieval[Unit])(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
       .returning(Future failed exceptionToReturn)
 

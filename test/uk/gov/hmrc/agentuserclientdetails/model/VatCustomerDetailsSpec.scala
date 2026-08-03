@@ -45,15 +45,15 @@ extends BaseSpec {
   "VatIndividual" should {
 
     "read from JSON" in {
-      vatIndividualJson.as[VatIndividual] shouldBe vatIndividualModel
+      vatIndividualJson.as[VatIndividual].shouldBe(vatIndividualModel)
     }
 
     "write to JSON" in {
-      Json.toJson(vatIndividualModel) shouldBe vatIndividualJsonWrites
+      Json.toJson(vatIndividualModel).shouldBe(vatIndividualJsonWrites)
     }
 
     "return a single individual name comprising of all name fields" in {
-      vatIndividualModel.name shouldBe "Mr First Middle Last"
+      vatIndividualModel.name.shouldBe("Mr First Middle Last")
     }
   }
 
@@ -76,11 +76,11 @@ extends BaseSpec {
     )
 
     "read from JSON" in {
-      json.as[VatCustomerDetails] shouldBe model
+      json.as[VatCustomerDetails].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe jsonWrites
+      Json.toJson(model).shouldBe(jsonWrites)
     }
   }
 

@@ -50,7 +50,7 @@ with MockFactory {
       mockHttpClient,
       metrics
     )
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
   val testNino: Nino = Nino("HC275906A")
 
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
@@ -78,24 +78,24 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, responseJson.toString)
       mockHttpGet(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}")
       mockRequestBuilderExecute(mockResponse)
-      cdConnector.getCitizenDetails(testNino).futureValue shouldBe Some(Citizen(Some("John"), Some("Smith")))
+      cdConnector.getCitizenDetails(testNino).futureValue.shouldBe(Some(Citizen(Some("John"), Some("Smith"))))
     }
 
     "return None when status is 404" in {
       val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
       mockHttpGet(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}")
       mockRequestBuilderExecute(mockResponse)
-      cdConnector.getCitizenDetails(testNino).futureValue shouldBe None
+      cdConnector.getCitizenDetails(testNino).futureValue.shouldBe(None)
     }
 
     "throw an exception when status is unrecognised" in {
       val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR)
       mockHttpGet(url"${appConfig.citizenDetailsBaseUrl}/citizen-details/nino/${testNino.value}")
       mockRequestBuilderExecute(mockResponse)
-      cdConnector.getCitizenDetails(testNino).failed.futureValue shouldBe UpstreamErrorResponse(
+      cdConnector.getCitizenDetails(testNino).failed.futureValue.shouldBe(UpstreamErrorResponse(
         "unexpected error during 'getCitizenDetails', statusCode=500",
         500
-      )
+      ))
     }
   }
 

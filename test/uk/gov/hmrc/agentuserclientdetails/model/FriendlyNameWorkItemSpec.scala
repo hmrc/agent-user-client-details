@@ -27,8 +27,8 @@ import uk.gov.hmrc.crypto.Encrypter
 class FriendlyNameWorkItemSpec
 extends BaseSpec {
 
-  implicit val crypto: Encrypter
-  & Decrypter = aesCrypto
+  given crypto: Encrypter
+    & Decrypter = aesCrypto
 
   "FriendlyNameWorkItem" should {
     val client: Client = Client("HMRC-MTD-VAT~VRN~123456789", "Smith Roberts")
@@ -50,11 +50,11 @@ extends BaseSpec {
     )
 
     "read from JSON" in {
-      json.as[FriendlyNameWorkItem] shouldBe model
+      json.as[FriendlyNameWorkItem].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 

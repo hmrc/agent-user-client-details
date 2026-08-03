@@ -22,7 +22,7 @@ import play.api.test.FakeRequest
 import play.api.Configuration
 import play.api.Environment
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
-import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.*
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -32,7 +32,8 @@ extends AuthorisationSupport {
 
   trait TestScope {
 
-    implicit val mockAuthConnector: AuthConnector = mock[AuthConnector]
+    val mockAuthConnector: AuthConnector = mock[AuthConnector]
+    given AuthConnector = mockAuthConnector
     val mockEnvironment: Environment = mock[Environment]
     val mockConfiguration: Configuration = mock[Configuration]
 
@@ -43,8 +44,8 @@ extends AuthorisationSupport {
         mockConfiguration
       )
 
-    implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-    implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+    given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+    given FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
   }
 
@@ -54,7 +55,7 @@ extends AuthorisationSupport {
       "not return an authorised agent" in new TestScope {
         mockAuthResponseWithoutException(buildUnauthorisedResponseHavingEmptyEnrolments)
 
-        authAction.getAuthorisedAgent().futureValue shouldBe None
+        authAction.getAuthorisedAgent().futureValue.shouldBe(None)
       }
     }
 
@@ -62,7 +63,7 @@ extends AuthorisationSupport {
       "not return an authorised agent" in new TestScope {
         mockAuthResponseWithoutException(buildUnauthorisedResponseHavingIncorrectCredentialRole)
 
-        authAction.getAuthorisedAgent().futureValue shouldBe None
+        authAction.getAuthorisedAgent().futureValue.shouldBe(None)
       }
     }
 
@@ -70,15 +71,15 @@ extends AuthorisationSupport {
       "return a valid authorised agent when assistant credential role is allowed" in new TestScope {
         mockAuthResponseWithoutException(buildAuthorisedResponseHavingAssistantCredentialRole)
 
-        authAction.getAuthorisedAgent(true).futureValue shouldBe Some(
+        authAction.getAuthorisedAgent(true).futureValue.shouldBe(Some(
           AuthorisedAgent(Arn("KARN0762398"))
-        )
+        ))
 
       }
 
       "not return an authorised agent when assistant credential role is not allowed" in new TestScope {
         mockAuthResponseWithoutException(buildAuthorisedResponseHavingAssistantCredentialRole)
-        authAction.getAuthorisedAgent().futureValue shouldBe None
+        authAction.getAuthorisedAgent().futureValue.shouldBe(None)
       }
     }
 
@@ -86,7 +87,7 @@ extends AuthorisationSupport {
       "not return an authorised agent" in new TestScope {
         mockAuthResponseWithException(new RuntimeException("boo boo"))
 
-        authAction.getAuthorisedAgent().futureValue shouldBe None
+        authAction.getAuthorisedAgent().futureValue.shouldBe(None)
       }
     }
   }
@@ -95,7 +96,7 @@ extends AuthorisationSupport {
     "execute code when authorised" in new TestScope {
       mockSimpleAuthResponseWithoutException()
 
-      authAction.simpleAuth(Future.successful(NoContent)).futureValue shouldBe NoContent
+      authAction.simpleAuth(Future.successful(NoContent)).futureValue.shouldBe(NoContent)
     }
 
     "throw exception when authorisation fails" in new TestScope {

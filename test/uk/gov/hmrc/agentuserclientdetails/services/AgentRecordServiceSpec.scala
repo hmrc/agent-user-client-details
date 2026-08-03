@@ -32,7 +32,7 @@ extends BaseSpec {
 
     val arn: Arn = Arn("KARN1234567")
 
-    implicit val hc: HeaderCarrier = HeaderCarrier()
+    given HeaderCarrier = HeaderCarrier()
 
     val mockAgentServicesAccountConnector: AgentServicesAccountConnector = mock[AgentServicesAccountConnector]
 
@@ -48,9 +48,9 @@ extends BaseSpec {
 
       val agencyDetails = Some(AgentDetailsDesResponse(Some(AgencyDetails(Some("Agency Name"), Some("agency@email.com")))))
 
-      (mockAgentServicesAccountConnector.getAgentDetails(_: HeaderCarrier)).expects(*).returning(Future.successful(agencyDetails))
+      (mockAgentServicesAccountConnector.getAgentDetails(using _: HeaderCarrier)).expects(*).returning(Future.successful(agencyDetails))
 
-      agentRecordService.getAgentDetails(arn).futureValue shouldBe agencyDetails
+      agentRecordService.getAgentDetails(arn).futureValue.shouldBe(agencyDetails)
     }
   }
 

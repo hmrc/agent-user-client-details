@@ -45,10 +45,10 @@ with BeforeAndAfterEach {
   protected lazy val conf: Configuration = GuiceApplicationBuilder().configuration
   protected lazy val env: Environment = GuiceApplicationBuilder().environment
 
-  implicit lazy val materializer: Materializer = app.injector.instanceOf[Materializer]
+  given Materializer = app.injector.instanceOf[Materializer]
 
-  implicit lazy val crypto: Encrypter
-  & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
+  given crypto: Encrypter
+    & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
 
   /** Child classes can override per their requirements
     */

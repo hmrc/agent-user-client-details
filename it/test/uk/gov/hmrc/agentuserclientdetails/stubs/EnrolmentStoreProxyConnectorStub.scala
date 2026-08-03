@@ -39,7 +39,7 @@ extends MockFactory { suite: TestSuite =>
     Future[Option[String]]
   ] =
     (mockEnrolmentStoreProxyConnector
-      .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.successful(groupId))
 
@@ -50,7 +50,7 @@ extends MockFactory { suite: TestSuite =>
     Future[Option[String]]
   ] =
     (mockEnrolmentStoreProxyConnector
-      .getPrincipalGroupIdFor(_: Arn)(_: HeaderCarrier, _: ExecutionContext))
+      .getPrincipalGroupIdFor(_: Arn)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.failed(ex))
 
@@ -61,7 +61,7 @@ extends MockFactory { suite: TestSuite =>
     Future[Seq[Enrolment]]
   ] =
     (mockEnrolmentStoreProxyConnector
-      .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getEnrolmentsForGroupId(_: String)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.successful(enrolments))
 
@@ -72,7 +72,7 @@ extends MockFactory { suite: TestSuite =>
     Future[Seq[Enrolment]]
   ] =
     (mockEnrolmentStoreProxyConnector
-      .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getEnrolmentsForGroupId(_: String)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.failed(ex))
 
@@ -81,7 +81,7 @@ extends MockFactory { suite: TestSuite =>
     HeaderCarrier,
     ExecutionContext,
     Future[Seq[Enrolment]]
-  ] = (mockEnrolmentStoreProxyConnector.getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
+  ] = (mockEnrolmentStoreProxyConnector.getEnrolmentsAssignedToUser(_: String)(using _: HeaderCarrier, _: ExecutionContext))
     .expects(*, *, *)
     .returns(Future.successful(enrolments))
 
@@ -90,7 +90,7 @@ extends MockFactory { suite: TestSuite =>
     HeaderCarrier,
     ExecutionContext,
     Future[Seq[Enrolment]]
-  ] = (mockEnrolmentStoreProxyConnector.getEnrolmentsAssignedToUser(_: String)(_: HeaderCarrier, _: ExecutionContext))
+  ] = (mockEnrolmentStoreProxyConnector.getEnrolmentsAssignedToUser(_: String)(using _: HeaderCarrier, _: ExecutionContext))
     .expects(*, *, *)
     .returns(Future.failed(ex))
 

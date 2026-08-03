@@ -28,9 +28,9 @@ import play.api.test.Helpers.*
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Enrolment
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Identifier
@@ -71,10 +71,11 @@ with BeforeAndAfterEach {
     Seq(Identifier("VRN", "123456789"))
   )
 
-  implicit val mockAuthConnector: AuthConnector = mock[AuthConnector]
-  implicit val cc: ControllerComponents = app.injector.instanceOf[ControllerComponents]
-  implicit val ec: ExecutionContext = app.injector.instanceOf[ExecutionContext]
-  implicit val authAction: AuthAction = app.injector.instanceOf[AuthAction]
+  val mockAuthConnector: AuthConnector = mock[AuthConnector]
+  given AuthConnector = mockAuthConnector
+  given ControllerComponents = app.injector.instanceOf[ControllerComponents]
+  given ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given AuthAction = app.injector.instanceOf[AuthAction]
   val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   val agentSizeRepository: AgentSizeRepository = app.injector.instanceOf[AgentSizeRepository]
   val es3CacheRepository: Es3CacheRepository = app.injector.instanceOf[Es3CacheRepository]
@@ -131,7 +132,7 @@ with BeforeAndAfterEach {
         mockGetPrincipalGroupIdSuccess(None)
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe NOT_FOUND
+        status(result).shouldBe(NOT_FOUND)
       }
     }
 
@@ -142,8 +143,8 @@ with BeforeAndAfterEach {
         mockGetEnrolmentsForGroupIdSuccess(Seq())
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe OK
-        extractClientCountFrom(contentAsString(result)) shouldBe 0
+        status(result).shouldBe(OK)
+        extractClientCountFrom(contentAsString(result)).shouldBe(0)
       }
     }
 
@@ -154,8 +155,8 @@ with BeforeAndAfterEach {
         es3CacheRepository.put(groupId, Seq(vatEnrolment)).futureValue
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe OK
-        extractClientCountFrom(contentAsString(result)) shouldBe 1
+        status(result).shouldBe(OK)
+        extractClientCountFrom(contentAsString(result)).shouldBe(1)
       }
     }
 
@@ -165,8 +166,8 @@ with BeforeAndAfterEach {
         agentSizeRepository.upsert(agentSize).futureValue
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe OK
-        extractClientCountFrom(contentAsString(result)) shouldBe clientCount
+        status(result).shouldBe(OK)
+        extractClientCountFrom(contentAsString(result)).shouldBe(clientCount)
       }
     }
 
@@ -180,7 +181,7 @@ with BeforeAndAfterEach {
         ))
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe NOT_FOUND
+        status(result).shouldBe(NOT_FOUND)
       }
     }
 
@@ -194,7 +195,7 @@ with BeforeAndAfterEach {
         ))
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe UNAUTHORIZED
+        status(result).shouldBe(UNAUTHORIZED)
       }
     }
 
@@ -208,7 +209,7 @@ with BeforeAndAfterEach {
         ))
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
 
@@ -218,7 +219,7 @@ with BeforeAndAfterEach {
         mockGetPrincipalGroupIdException(new RuntimeException("boo boo"))
 
         val result: Future[Result] = agentChecksController.getAgentSize(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
   }
@@ -236,7 +237,7 @@ with BeforeAndAfterEach {
         mockGetGroupUsersSuccess(seqUserDetails)
 
         val result: Future[Result] = agentChecksController.userCheck(arn)(FakeRequest())
-        status(result) shouldBe NO_CONTENT
+        status(result).shouldBe(NO_CONTENT)
       }
     }
 
@@ -250,7 +251,7 @@ with BeforeAndAfterEach {
         mockGetGroupUsersSuccess(seqUserDetails)
 
         val result: Future[Result] = agentChecksController.userCheck(arn)(FakeRequest())
-        status(result) shouldBe FORBIDDEN
+        status(result).shouldBe(FORBIDDEN)
       }
     }
 
@@ -264,7 +265,7 @@ with BeforeAndAfterEach {
         ))
 
         val result: Future[Result] = agentChecksController.userCheck(arn)(FakeRequest())
-        status(result) shouldBe NOT_FOUND
+        status(result).shouldBe(NOT_FOUND)
       }
     }
 
@@ -280,7 +281,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.userCheck(arn)(FakeRequest())
-        status(result) shouldBe UNAUTHORIZED
+        status(result).shouldBe(UNAUTHORIZED)
       }
     }
 
@@ -296,7 +297,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.userCheck(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
 
@@ -306,7 +307,7 @@ with BeforeAndAfterEach {
         mockGetPrincipalGroupIdException(new RuntimeException("boo boo"))
 
         val result: Future[Result] = agentChecksController.userCheck(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
   }
@@ -321,7 +322,7 @@ with BeforeAndAfterEach {
         friendlyNameWorkItemRepository.pushNew(workItem).futureValue
 
         val result: Future[Result] = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe OK
+        status(result).shouldBe(OK)
       }
     }
 
@@ -331,7 +332,7 @@ with BeforeAndAfterEach {
         mockGetPrincipalGroupIdSuccess(Some(groupId))
 
         val result: Future[Result] = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe NO_CONTENT
+        status(result).shouldBe(NO_CONTENT)
       }
     }
 
@@ -347,7 +348,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe NOT_FOUND
+        status(result).shouldBe(NOT_FOUND)
       }
     }
 
@@ -363,7 +364,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe UNAUTHORIZED
+        status(result).shouldBe(UNAUTHORIZED)
       }
     }
 
@@ -379,7 +380,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
 
@@ -389,7 +390,7 @@ with BeforeAndAfterEach {
         mockGetPrincipalGroupIdException(new RuntimeException("boo boo"))
 
         val result: Future[Result] = agentChecksController.outstandingWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
   }
@@ -408,7 +409,7 @@ with BeforeAndAfterEach {
         assignmentsWorkItemRepository.pushNew(workItem).futureValue
 
         val result: Future[Result] = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe OK
+        status(result).shouldBe(OK)
       }
     }
 
@@ -417,7 +418,7 @@ with BeforeAndAfterEach {
         mockAuthResponseWithoutException(buildAuthorisedResponse)
 
         val result: Future[Result] = agentChecksController.outstandingAssignmentsWorkItemsExist(arn)(FakeRequest())
-        status(result) shouldBe NO_CONTENT
+        status(result).shouldBe(NO_CONTENT)
       }
     }
   }
@@ -433,8 +434,8 @@ with BeforeAndAfterEach {
         mockGetGroupUsersSuccess(Seq.empty)
 
         val result: Future[Result] = agentChecksController.getTeamMembers(arn)(FakeRequest())
-        status(result) shouldBe OK
-        extractTeamMemberSize(result) shouldBe 0
+        status(result).shouldBe(OK)
+        extractTeamMemberSize(result).shouldBe(0)
       }
     }
 
@@ -446,8 +447,8 @@ with BeforeAndAfterEach {
         mockGetGroupUsersSuccess(teamMembers)
 
         val result: Future[Result] = agentChecksController.getTeamMembers(arn)(FakeRequest())
-        status(result) shouldBe OK
-        extractTeamMemberSize(result) shouldBe teamMembers.size
+        status(result).shouldBe(OK)
+        extractTeamMemberSize(result).shouldBe(teamMembers.size)
       }
     }
 
@@ -463,7 +464,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.getTeamMembers(arn)(FakeRequest())
-        status(result) shouldBe NOT_FOUND
+        status(result).shouldBe(NOT_FOUND)
       }
     }
 
@@ -479,7 +480,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.getTeamMembers(arn)(FakeRequest())
-        status(result) shouldBe UNAUTHORIZED
+        status(result).shouldBe(UNAUTHORIZED)
       }
     }
 
@@ -495,7 +496,7 @@ with BeforeAndAfterEach {
         )
 
         val result: Future[Result] = agentChecksController.getTeamMembers(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
 
@@ -505,7 +506,7 @@ with BeforeAndAfterEach {
         mockGetPrincipalGroupIdException(new RuntimeException("boo boo"))
 
         val result: Future[Result] = agentChecksController.getTeamMembers(arn)(FakeRequest())
-        status(result) shouldBe INTERNAL_SERVER_ERROR
+        status(result).shouldBe(INTERNAL_SERVER_ERROR)
       }
     }
   }

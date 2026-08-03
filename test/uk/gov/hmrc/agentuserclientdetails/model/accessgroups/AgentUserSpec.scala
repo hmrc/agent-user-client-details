@@ -32,11 +32,11 @@ with Matchers {
   val json: JsValue = Json.toJson(testAgentUser)
 
   "AgentUser" should "serialise to JSON" in {
-    json.toString shouldBe """{"id":"foo","name":"Test Agent User"}"""
+    json.toString.shouldBe("""{"id":"foo","name":"Test Agent User"}""")
   }
 
   "AgentUser" should "deserialise from JSON" in {
-    json.as[AgentUser] shouldBe testAgentUser
+    json.as[AgentUser].shouldBe(testAgentUser)
   }
 
 }

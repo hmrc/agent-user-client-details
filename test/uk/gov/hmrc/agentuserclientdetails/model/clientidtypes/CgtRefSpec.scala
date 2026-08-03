@@ -24,35 +24,35 @@ extends AnyFlatSpec
 with Matchers {
 
   it should "be true for a valid CgtRef" in {
-    CgtRef.isValid("XMCGTP123456789") shouldBe true
+    CgtRef.isValid("XMCGTP123456789").shouldBe(true)
   }
 
   it should "be false when CgtRef's character 2 is lowercase" in {
-    CgtRef.isValid("XmCGTP123456789") shouldBe false
+    CgtRef.isValid("XmCGTP123456789").shouldBe(false)
   }
 
   it should "be false when CgtRef's character 1 is not X" in {
-    CgtRef.isValid("ZMCGTP123456789") shouldBe false
+    CgtRef.isValid("ZMCGTP123456789").shouldBe(false)
   }
 
   it should "be false when CgtRef CGTP is lowercase" in {
-    CgtRef.isValid("XMcgtp123456789") shouldBe false
+    CgtRef.isValid("XMcgtp123456789").shouldBe(false)
   }
 
   it should "be false when X[A-Z]CGTP is missing" in {
-    CgtRef.isValid("123456789") shouldBe false
+    CgtRef.isValid("123456789").shouldBe(false)
   }
 
   it should "be false when CgtRef is empty" in {
-    CgtRef.isValid("") shouldBe false
+    CgtRef.isValid("").shouldBe(false)
   }
 
   it should "be false when CgtRef is too short" in {
-    CgtRef.isValid("XMCGTP1234") shouldBe false
+    CgtRef.isValid("XMCGTP1234").shouldBe(false)
   }
 
   it should "be false when CgtRef is too long" in {
-    CgtRef.isValid("XMCGTP1234567890") shouldBe false
+    CgtRef.isValid("XMCGTP1234567890").shouldBe(false)
   }
 
 }

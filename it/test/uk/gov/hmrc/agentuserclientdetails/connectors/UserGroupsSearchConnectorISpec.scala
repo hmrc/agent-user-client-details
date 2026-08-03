@@ -39,10 +39,11 @@ extends BaseIntegrationSpec
 with HttpClientStub
 with MockFactory {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
-  implicit lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given AppConfig = appConfig
 
   val groupId = "2K6H-N1C1-7M7V-O4A3"
 
