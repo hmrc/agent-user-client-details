@@ -24,6 +24,5 @@ case class DesError(
   reason: String
 )
 
-object DesError {
-  implicit val format: Format[DesError] = Json.format[DesError]
-}
+object DesError:
+  given format: Format[DesError] = Json.format[DesError]

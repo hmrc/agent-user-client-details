@@ -39,16 +39,16 @@ with Matchers {
   val json: JsValue = Json.toJson(testClient)
 
   "Client" should "serialise to JSON" in {
-    json.toString shouldBe """{"enrolmentKey":"HMRC-MTD-IT~MTDITID~XX12345","friendlyName":"Test Client"}"""
+    json.toString.shouldBe("""{"enrolmentKey":"HMRC-MTD-IT~MTDITID~XX12345","friendlyName":"Test Client"}""")
   }
 
   "Client" should "deserialise from JSON" in {
-    json.as[Client] shouldBe testClient
+    json.as[Client].shouldBe(testClient)
   }
 
   "Client fromEnrolment" should "create a Client from an Enrolment" in {
     val clientFromEnrolment = Client.fromEnrolment(testEnrolment)
-    clientFromEnrolment shouldBe testClient
+    clientFromEnrolment.shouldBe(testClient)
   }
 
 }

@@ -32,12 +32,12 @@ with Matchers {
       List(Identifier("MTDITID", "XX12345"))
     )
     val json = Json.toJson(enrolment).toString
-    json shouldBe """{"service":"HMRC-MTD-IT","state":"Active","friendlyName":"myName","identifiers":[{"key":"MTDITID","value":"XX12345"}]}"""
+    json.shouldBe("""{"service":"HMRC-MTD-IT","state":"Active","friendlyName":"myName","identifiers":[{"key":"MTDITID","value":"XX12345"}]}""")
   }
 
   "Identifier" should "toString" in {
     val identifier = Identifier("HMRC-MTD-IT", "XX12345")
-    identifier.toString shouldBe "HMRC-MTD-IT~XX12345"
+    identifier.toString.shouldBe("HMRC-MTD-IT~XX12345")
   }
 
 }

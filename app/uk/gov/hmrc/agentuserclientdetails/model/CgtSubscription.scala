@@ -16,22 +16,20 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import play.api.libs.json._
+import play.api.libs.json.*
 
 case class IndividualName(
   firstName: String,
   lastName: String
 )
 
-case object IndividualName {
-  implicit val format: Format[IndividualName] = Json.format[IndividualName]
-}
+case object IndividualName:
+  given format: Format[IndividualName] = Json.format[IndividualName]
 
 case class OrganisationName(name: String)
 
-case object OrganisationName {
-  implicit val format: Format[OrganisationName] = Json.format[OrganisationName]
-}
+case object OrganisationName:
+  given format: Format[OrganisationName] = Json.format[OrganisationName]
 
 case class TypeOfPersonDetails(
   typeOfPerson: String,
@@ -39,7 +37,7 @@ case class TypeOfPersonDetails(
 )
 
 object TypeOfPersonDetails {
-  implicit val format: Format[TypeOfPersonDetails] =
+  given format: Format[TypeOfPersonDetails] =
     new Format[TypeOfPersonDetails] {
       override def writes(tpd: TypeOfPersonDetails): JsValue = {
         val namePart =
@@ -77,12 +75,10 @@ object TypeOfPersonDetails {
 
 case class SubscriptionDetails(typeOfPersonDetails: TypeOfPersonDetails)
 
-object SubscriptionDetails {
-  implicit val format: Format[SubscriptionDetails] = Json.format[SubscriptionDetails]
-}
+object SubscriptionDetails:
+  given format: Format[SubscriptionDetails] = Json.format[SubscriptionDetails]
 
 case class CgtSubscription(subscriptionDetails: SubscriptionDetails)
 
-object CgtSubscription {
-  implicit val format: Format[CgtSubscription] = Json.format[CgtSubscription]
-}
+object CgtSubscription:
+  given format: Format[CgtSubscription] = Json.format[CgtSubscription]

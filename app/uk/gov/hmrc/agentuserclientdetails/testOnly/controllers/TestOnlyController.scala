@@ -66,20 +66,22 @@ class TestOnlyController @Inject() (
   espConnector: EnrolmentStoreProxyConnector,
   es3CacheService: ES3CacheService,
   workItemService: FriendlyNameWorkItemService
-)(implicit
+)(using
   ec: ExecutionContext,
   cc: ControllerComponents
 )
 extends BackendController(cc)
 with Logging {
 
-  def getTradingDetailsForMtdItId(mtdItId: String): Action[AnyContent] = Action.async { implicit request =>
+  def getTradingDetailsForMtdItId(mtdItId: String): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     hipConnector
       .getTradingDetailsForMtdItId(MtdItId(mtdItId))
       .map(response => Ok(response.toString))
   }
 
-  def hipConnectivityTest(hipPath: String): Action[AnyContent] = Action.async { implicit request: Request[AnyContent] =>
+  def hipConnectivityTest(hipPath: String): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     val queryParams: Map[String, String] = request.queryString.view.mapValues(_.headOption.getOrElse("")).toMap
 
     val url: URL =
@@ -93,7 +95,7 @@ with Logging {
 
     httpClient
       .get(url)
-      .setHeader(request.headers.headers *)
+      .setHeader(request.headers.headers*)
       .execute[HttpResponse]
       .map(response => Status(response.status)(response.body))
   }
@@ -114,7 +116,8 @@ with Logging {
     } yield Ok
   }
 
-  def forceRefreshFriendlyNames(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def forceRefreshFriendlyNames(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given Request[AnyContent] = request
     withGroupIdFor(arn) { groupId =>
       forceRefreshFriendlyNamesForGroupIdFn(groupId)
     }
@@ -122,8 +125,8 @@ with Logging {
 
   protected def forceRefreshFriendlyNamesForGroupIdFn(
     groupId: String
-  )(implicit request: RequestHeader): Future[Result] = {
-    def makeWorkItem(client: Client)(implicit hc: HeaderCarrier): FriendlyNameWorkItem = {
+  )(using request: RequestHeader): Future[Result] = {
+    def makeWorkItem(client: Client)(using hc: HeaderCarrier): FriendlyNameWorkItem = {
       val mSessionId: Option[String] =
         if (appConfig.stubsCompatibilityMode)
           hc.sessionId.map(_.value)
@@ -164,7 +167,7 @@ with Logging {
 
   private def withGroupIdFor(arn: Arn)(
     groupIdAction: String => Future[Result]
-  )(implicit request: RequestHeader): Future[Result] =
+  )(using request: RequestHeader): Future[Result] =
     if (!Arn.isValid(arn.value))
       Future.successful(BadRequest("Invalid ARN"))
     else {

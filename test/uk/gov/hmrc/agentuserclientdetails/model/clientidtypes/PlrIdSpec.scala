@@ -25,23 +25,23 @@ with Matchers {
 
   "Pillar2Id" should {
     "be valid if matching the regex" in {
-      PlrId.isValid("XBPLR1234567890") shouldBe true
+      PlrId.isValid("XBPLR1234567890").shouldBe(true)
     }
 
     "invalid if more than 15 characters" in {
-      PlrId.isValid("XBPLR1234567890125637") shouldBe false
+      PlrId.isValid("XBPLR1234567890125637").shouldBe(false)
     }
 
     "invalid if less than 15 characters" in {
-      PlrId.isValid("XBPLR12345") shouldBe false
+      PlrId.isValid("XBPLR12345").shouldBe(false)
     }
 
     "invalid if characters don't match regex" in {
-      PlrId.isValid("Xdefinitely-not") shouldBe false
+      PlrId.isValid("Xdefinitely-not").shouldBe(false)
     }
 
     "invalid if empty" in {
-      PlrId.isValid("") shouldBe false
+      PlrId.isValid("").shouldBe(false)
     }
   }
 }

@@ -18,6 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.google.inject.AbstractModule
 import izumi.reflect.Tag
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status.*
 import play.api.libs.json.JsValue
@@ -33,6 +35,7 @@ import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpException
+import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.NotFoundException
 import uk.gov.hmrc.http.StringContextOps
@@ -41,7 +44,6 @@ import uk.gov.hmrc.http.client.RequestBuilder
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -50,15 +52,40 @@ extends BaseIntegrationSpec
 with HttpClientStub
 with MockFactory {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
-  implicit lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  given AppConfig = appConfig
+  given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
   lazy val esp: EnrolmentStoreProxyConnector = new EnrolmentStoreProxyConnectorImpl(mockHttpClient, metrics)
 
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
   val mockErrorResponse: HttpResponse = HttpResponse(INTERNAL_SERVER_ERROR, "oops")
+
+  private def requestBuilderReturning(response: HttpResponse): RequestBuilder = {
+    val requestBuilder = Mockito.mock(classOf[RequestBuilder])
+    Mockito
+      .when(
+        requestBuilder.withBody(ArgumentMatchers.any[JsValue]())(
+          using
+          ArgumentMatchers.any[BodyWritable[JsValue]](),
+          ArgumentMatchers.any[Tag[JsValue]](),
+          ArgumentMatchers.any[ExecutionContext]()
+        )
+      )
+      .thenReturn(requestBuilder)
+    Mockito
+      .when(
+        requestBuilder.execute(using
+          ArgumentMatchers.any[HttpReads[HttpResponse]](),
+          ArgumentMatchers.any[ExecutionContext]()
+        )
+      )
+      .thenReturn(Future.successful(response))
+    requestBuilder
+  }
 
   override def moduleOverrides: AbstractModule =
     new AbstractModule {
@@ -337,19 +364,11 @@ with MockFactory {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       val mockResponse: HttpResponse = HttpResponse(OK, Json.obj("enrolments" -> Json.toJson(Seq(mtdVatEnrolment, pptEnrolment))).toString)
       val enrolmentKey: String = EnrolmentKey.fromEnrolment(mtdVatEnrolment)
-      mockHttpPut(
-        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name"
+      val requestBuilder = requestBuilderReturning(mockResponse)
+      mockHttpPutReturning(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name",
+        requestBuilder
       )
-      (mockRequestBuilder
-        .withBody(_: JsValue)(
-          using
-          _: BodyWritable[JsValue],
-          _: Tag[JsValue],
-          _: ExecutionContext
-        ))
-        .expects(*, *, *, *)
-        .returns(mockRequestBuilder)
-      mockRequestBuilderExecute(mockResponse)
 
       esp
         .updateEnrolmentFriendlyName(
@@ -363,19 +382,11 @@ with MockFactory {
     "throw an exception when ES19 call returns an unexpected status" in {
       val testGroupId = "2K6H-N1C1-7M7V-O4A3"
       val enrolmentKey: String = EnrolmentKey.fromEnrolment(mtdVatEnrolment)
-      mockHttpPut(
-        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name"
+      val requestBuilder = requestBuilderReturning(mockErrorResponse)
+      mockHttpPutReturning(
+        url"${appConfig.enrolmentStoreProxyUrl}/enrolment-store-proxy/enrolment-store/groups/$testGroupId/enrolments/$enrolmentKey/friendly_name",
+        requestBuilder
       )
-      (mockRequestBuilder
-        .withBody(_: JsValue)(
-          using
-          _: BodyWritable[JsValue],
-          _: Tag[JsValue],
-          _: ExecutionContext
-        ))
-        .expects(*, *, *, *)
-        .returns(mockRequestBuilder)
-      mockRequestBuilderExecute(mockErrorResponse)
 
       esp
         .updateEnrolmentFriendlyName(

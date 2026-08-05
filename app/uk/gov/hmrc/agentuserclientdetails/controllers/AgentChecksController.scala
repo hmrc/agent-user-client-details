@@ -37,7 +37,7 @@ import scala.util.Success
 import scala.util.Try
 
 @Singleton()
-class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(implicit
+class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(using
   authAction: AuthAction,
   cc: ControllerComponents,
   ec: ExecutionContext
@@ -45,7 +45,8 @@ class AgentChecksController @Inject() (agentChecksService: AgentChecksService)(i
 extends BackendController(cc)
 with AuthorisedAgentSupport {
 
-  def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getAgentSize(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       agentChecksService.getAgentSize(arn).map {
         case None => NotFound
@@ -54,7 +55,8 @@ with AuthorisedAgentSupport {
     } transformWith failureHandler
   }
 
-  def userCheck(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def userCheck(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       agentChecksService.userCheck(arn).map { count =>
         if (count > 1)
@@ -65,7 +67,8 @@ with AuthorisedAgentSupport {
     } transformWith failureHandler
   }
 
-  def outstandingWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def outstandingWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       agentChecksService.outstandingWorkItemsExist(arn).map { workItemsExist =>
         if (workItemsExist)
@@ -76,7 +79,8 @@ with AuthorisedAgentSupport {
     } transformWith failureHandler
   }
 
-  def outstandingAssignmentsWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def outstandingAssignmentsWorkItemsExist(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.Request[AnyContent] = request
     withAuthorisedAgent() { _ =>
       agentChecksService.outstandingAssignmentsWorkItemsExist(arn).map { workItemsExist =>
         if (workItemsExist)
@@ -87,7 +91,8 @@ with AuthorisedAgentSupport {
     } transformWith failureHandler
   }
 
-  def getTeamMembers(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def getTeamMembers(arn: Arn): Action[AnyContent] = Action.async { request =>
+    given play.api.mvc.Request[AnyContent] = request
     withAuthorisedAgent(allowStandardUser = true) { _ =>
       agentChecksService.getTeamMembers(arn).map { teamMembers =>
         Ok(Json.toJson(teamMembers))

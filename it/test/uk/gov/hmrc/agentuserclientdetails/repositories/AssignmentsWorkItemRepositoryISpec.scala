@@ -24,13 +24,13 @@ import org.scalamock.scalatest.MockFactory
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.mongo.test.MongoSupport
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
@@ -47,7 +47,7 @@ with MockFactory {
   lazy val wir = AssignmentsWorkItemRepository(config, mongoComponent)
   lazy val wis = new AssignmentsWorkItemServiceImpl(wir, appConfig)
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
   val testUserId = "ABCEDEFGI1234568"
   val enrolmentKey1 = "HMRC-MTD-VAT~VRN~101747641"
   val enrolmentKey2 = "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345"
@@ -130,10 +130,10 @@ with MockFactory {
         )
         .futureValue
       val stats = wis.collectStats.futureValue
-      stats.get(ToDo.name) shouldBe Some(2)
-      stats.get(Succeeded.name) shouldBe Some(1)
-      stats.get(Failed.name) shouldBe Some(1)
-      stats.get(PermanentlyFailed.name) shouldBe None
+      stats.get(ToDo.name).shouldBe(Some(2))
+      stats.get(Succeeded.name).shouldBe(Some(1))
+      stats.get(Failed.name).shouldBe(Some(1))
+      stats.get(PermanentlyFailed.name).shouldBe(None)
     }
   }
 
@@ -183,9 +183,9 @@ with MockFactory {
           Failed
         )
         .futureValue
-      wis.query(Seq(ToDo)).futureValue.length shouldBe 2
-      wis.query(Seq(ToDo, Succeeded)).futureValue.length shouldBe 3
-      wis.query(Seq(Duplicate, PermanentlyFailed)).futureValue.length shouldBe 0
+      wis.query(Seq(ToDo)).futureValue.length.shouldBe(2)
+      wis.query(Seq(ToDo, Succeeded)).futureValue.length.shouldBe(3)
+      wis.query(Seq(Duplicate, PermanentlyFailed)).futureValue.length.shouldBe(0)
     }
   }
 
@@ -236,7 +236,7 @@ with MockFactory {
         )
         .futureValue
 
-      wis.queryBy(testArn).futureValue.length shouldBe 4
+      wis.queryBy(testArn).futureValue.length.shouldBe(4)
     }
   }
 
@@ -291,10 +291,10 @@ with MockFactory {
         )
         .futureValue
       wis.cleanup(Instant.now().plusSeconds(24 * 3600 /* 1 day */ )).futureValue
-      wis.query(Seq(Succeeded)).futureValue.length shouldBe 0
-      wis.query(Seq(Duplicate)).futureValue.length shouldBe 0
-      wis.query(Seq(PermanentlyFailed)).futureValue.length shouldBe 1
-      wis.query(Seq(Failed)).futureValue.length shouldBe 1
+      wis.query(Seq(Succeeded)).futureValue.length.shouldBe(0)
+      wis.query(Seq(Duplicate)).futureValue.length.shouldBe(0)
+      wis.query(Seq(PermanentlyFailed)).futureValue.length.shouldBe(1)
+      wis.query(Seq(Failed)).futureValue.length.shouldBe(1)
     }
     "not remove an item that was recently updated" in {
       wis
@@ -312,7 +312,7 @@ with MockFactory {
       wis
         .cleanup(Instant.now().plusSeconds(60))
         .futureValue // item was updated only 1 minute before the cleanup time, so it should be kept
-      wis.query(Seq(Succeeded)).futureValue.length shouldBe 1
+      wis.query(Seq(Succeeded)).futureValue.length.shouldBe(1)
     }
   }
 
@@ -330,7 +330,7 @@ with MockFactory {
           Succeeded
         )
         .futureValue
-      wir.deleteWorkItems(testArn.value).futureValue shouldBe 1L
+      wir.deleteWorkItems(testArn.value).futureValue.shouldBe(1L)
     }
   }
 

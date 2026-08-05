@@ -183,7 +183,7 @@ object Service {
 
   val reads = new SimpleObjectReads[Service]("id", Service.apply)
   val writes = new SimpleObjectWrites[Service](_.id)
-  implicit val format: Format[Service] = Format(reads, writes)
+  given format: Format[Service] = Format(reads, writes)
 
 }
 

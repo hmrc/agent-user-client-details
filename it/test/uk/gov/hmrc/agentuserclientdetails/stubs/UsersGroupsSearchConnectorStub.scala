@@ -38,7 +38,7 @@ extends MockFactory { suite: TestSuite =>
     Future[Seq[UserDetails]]
   ] =
     (mockUsersGroupsSearchConnector
-      .getGroupUsers(_: String)(_: HeaderCarrier, _: ExecutionContext))
+      .getGroupUsers(_: String)(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *)
       .returning(Future.successful(userDetails))
 

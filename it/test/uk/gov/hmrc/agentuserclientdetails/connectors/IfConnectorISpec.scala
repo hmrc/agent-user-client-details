@@ -48,7 +48,7 @@ with MockFactory {
   lazy val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
   lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
   lazy val desIfHeaders: DesIfHeaders = app.injector.instanceOf[DesIfHeaders]
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
 
   lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
 
@@ -73,7 +73,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getTrustName(testUrn.value).futureValue shouldBe Some("Friendly Trust")
+      ifConnector.getTrustName(testUrn.value).futureValue.shouldBe(Some("Friendly Trust"))
     }
 
     "getTrustName (UTR)" in {
@@ -81,7 +81,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.OK, """{"trustDetails": {"trustName": "Friendly Trust"}}""")
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/UTR/${testUtr.value}")
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getTrustName(testUtr.value).futureValue shouldBe Some("Friendly Trust")
+      ifConnector.getTrustName(testUtr.value).futureValue.shouldBe(Some("Friendly Trust"))
     }
 
     "getPptSubscription (individual)" in {
@@ -102,7 +102,7 @@ with MockFactory {
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Bill Sikes"))
+      ifConnector.getPptSubscription(testPptRef).futureValue.shouldBe(Some(PptSubscription("Bill Sikes")))
     }
 
     "getPptSubscription (organisation)" in {
@@ -122,7 +122,7 @@ with MockFactory {
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getPptSubscription(testPptRef).futureValue shouldBe Some(PptSubscription("Friendly Organisation"))
+      ifConnector.getPptSubscription(testPptRef).futureValue.shouldBe(Some(PptSubscription("Friendly Organisation")))
     }
 
     "getTradingDetailsForMtdItId" in {
@@ -162,9 +162,9 @@ with MockFactory {
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
       mockRequestBuilderExecuteWithHeader(mockResponse)
 
-      ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue should matchPattern {
+      ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue.should(matchPattern {
         case Some(TradingDetails(Nino("ZR987654C"), Some("Surname DADTN"))) =>
-      }
+      })
     }
   }
 
@@ -174,7 +174,7 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getTrustName(testUrn.value).futureValue shouldBe None
+      ifConnector.getTrustName(testUrn.value).futureValue.shouldBe(None)
     }
 
     "a 404 is received for getPptSubscription" in {
@@ -183,14 +183,14 @@ with MockFactory {
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getPptSubscription(testPptRef).futureValue shouldBe None
+      ifConnector.getPptSubscription(testPptRef).futureValue.shouldBe(None)
     }
 
     "a 404 is received for getTradingNameForMtdItId" in {
       val mockResponse: HttpResponse = HttpResponse(Status.NOT_FOUND)
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue shouldBe None
+      ifConnector.getTradingDetailsForMtdItId(testMtdItId).futureValue.shouldBe(None)
     }
   }
 
@@ -200,10 +200,10 @@ with MockFactory {
       val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR, "oops")
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/trusts/agent-known-fact-check/URN/${testUrn.value}")
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getTrustName(testUrn.value).failed.futureValue shouldBe UpstreamErrorResponse(
+      ifConnector.getTrustName(testUrn.value).failed.futureValue.shouldBe(UpstreamErrorResponse(
         "unexpected status during retrieving TrustName, error=oops",
         500
-      )
+      ))
     }
 
     "an unexpected status is received for getPptSubscription" in {
@@ -212,20 +212,20 @@ with MockFactory {
         url"${appConfig.ifPlatformBaseUrl}/plastic-packaging-tax/subscriptions/PPT/${testPptRef.value}/display"
       )
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getPptSubscription(testPptRef).failed.futureValue shouldBe UpstreamErrorResponse(
+      ifConnector.getPptSubscription(testPptRef).failed.futureValue.shouldBe(UpstreamErrorResponse(
         "unexpected error from getPptSubscriptionDisplay: oops",
         500
-      )
+      ))
     }
 
     "an unexpected status is received for getTradingNameForMtdItId" in {
       val mockResponse: HttpResponse = HttpResponse(Status.INTERNAL_SERVER_ERROR)
       mockHttpGet(url"${appConfig.ifPlatformBaseUrl}/registration/business-details/mtdId/${testMtdItId.value}")
       mockRequestBuilderExecuteWithHeader(mockResponse)
-      ifConnector.getTradingDetailsForMtdItId(testMtdItId).failed.futureValue shouldBe UpstreamErrorResponse(
+      ifConnector.getTradingDetailsForMtdItId(testMtdItId).failed.futureValue.shouldBe(UpstreamErrorResponse(
         "unexpected error during 'getTradingNameForMtdItId', statusCode=500",
         500
-      )
+      ))
     }
   }
 

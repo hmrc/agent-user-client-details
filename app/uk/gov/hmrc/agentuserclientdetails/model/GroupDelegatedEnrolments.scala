@@ -27,12 +27,10 @@ case class AssignedClient(
   assignedTo: String
 )
 
-object AssignedClient {
-  implicit val formatAssignedClient: OFormat[AssignedClient] = Json.format[AssignedClient]
-}
+object AssignedClient:
+  given formatAssignedClient: OFormat[AssignedClient] = Json.format[AssignedClient]
 
 case class GroupDelegatedEnrolments(clients: Seq[AssignedClient])
 
-object GroupDelegatedEnrolments {
-  implicit val formatGroupDelegatedEnrolments: OFormat[GroupDelegatedEnrolments] = Json.format[GroupDelegatedEnrolments]
-}
+object GroupDelegatedEnrolments:
+  given formatGroupDelegatedEnrolments: OFormat[GroupDelegatedEnrolments] = Json.format[GroupDelegatedEnrolments]

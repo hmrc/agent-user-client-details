@@ -31,10 +31,10 @@ import play.api.inject.bind
 import play.api.test.PlayRunners
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.AgentUserClientDetailsMain
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameJobData
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 import uk.gov.hmrc.agentuserclientdetails.repositories.JobMonitoringRepository
 import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveClient
 import uk.gov.hmrc.auth.core.AuthConnector
@@ -44,8 +44,8 @@ import uk.gov.hmrc.mongo.test.MongoSupport
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class ScheduledJobsISpec
@@ -58,7 +58,7 @@ with MongoSupport
 with MockFactory
 with PlayRunners {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~101747641"
   val testArn = "BARN9706518"
@@ -89,7 +89,7 @@ with PlayRunners {
   "'friendly name' repository cleanup job" should {
     "clean up the repository periodically" in {
       running(
-        _.configure(configOverrides *)
+        _.configure(configOverrides*)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -102,10 +102,10 @@ with PlayRunners {
           Instant.now(),
           Succeeded
         ).futureValue
-        wis.collectStats.futureValue.values.sum shouldBe 1
+        wis.collectStats.futureValue.values.sum.shouldBe(1)
         // Wait for the scheduled job to be executed
         eventually(Timeout(Span(10, Seconds))) {
-          wis.collectStats.futureValue.values.sum shouldBe 0
+          wis.collectStats.futureValue.values.sum.shouldBe(0)
         }
       }
     }
@@ -114,7 +114,7 @@ with PlayRunners {
   "'assign enrolment' repository cleanup job" should {
     "clean up the repository periodically" in {
       running(
-        _.configure(configOverrides *)
+        _.configure(configOverrides*)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -133,12 +133,12 @@ with PlayRunners {
             Succeeded
           )
           .futureValue
-        wis.collectStats.futureValue.values.sum shouldBe 1
+        wis.collectStats.futureValue.values.sum.shouldBe(1)
 
         val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
 
         eventually(Timeout(Span(10, Seconds))) {
-          wis.collectStats.futureValue.values.sum shouldBe 0
+          wis.collectStats.futureValue.values.sum.shouldBe(0)
         }
       }
     }
@@ -147,7 +147,7 @@ with PlayRunners {
   "job monitoring job" should {
     "check job completion periodically and mark as complete accordingly" in {
       running(
-        _.configure(configOverrides *)
+        _.configure(configOverrides*)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -171,14 +171,14 @@ with PlayRunners {
 
         // The scheduled job should be marked as complete (since there are no outstanding items in the repo that belong to it)
         eventually(Timeout(Span(10, Seconds))) {
-          jms.getNextJobToCheck.futureValue shouldBe empty
+          jms.getNextJobToCheck.futureValue.shouldBe(empty)
         }
       }
     }
 
     "clean up the repository periodically" in {
       running(
-        _.configure(configOverrides *)
+        _.configure(configOverrides*)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
       ) { app =>
@@ -201,12 +201,12 @@ with PlayRunners {
             .futureValue
 
         jms.markAsFinished(objectId).futureValue
-        jmr.metrics.futureValue.values.sum shouldBe 1
+        jmr.metrics.futureValue.values.sum.shouldBe(1)
 
         val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         // Wait for the scheduled job to be executed
         eventually(Timeout(Span(10, Seconds))) {
-          jmr.metrics.futureValue.values.sum shouldBe 0
+          jmr.metrics.futureValue.values.sum.shouldBe(0)
         }
 
       }
@@ -217,13 +217,13 @@ with PlayRunners {
     // to be fair this is mostly to placate the test coverage checks
     "be recovered so they do not hinder other jobs" in {
       val stubAwis = stub[AssignmentsWorkItemService]
-      (stubAwis.collectStats(_: ExecutionContext)).when(*).returns(Future.failed(new RuntimeException("foo")))
-      (stubAwis.cleanup(_: Instant)(_: ExecutionContext)).when(*, *).returns(Future.failed(new RuntimeException("foo")))
+      (stubAwis.collectStats(using _: ExecutionContext)).when(*).returns(Future.failed(new RuntimeException("foo")))
+      (stubAwis.cleanup(_: Instant)(using _: ExecutionContext)).when(*, *).returns(Future.failed(new RuntimeException("foo")))
       val stubFwis = stub[FriendlyNameWorkItemService]
-      (stubFwis.collectStats(_: ExecutionContext)).when(*).returns(Future.failed(new RuntimeException("bar")))
-      (stubFwis.cleanup(_: Instant)(_: ExecutionContext)).when(*, *).returns(Future.failed(new RuntimeException("bar")))
+      (stubFwis.collectStats(using _: ExecutionContext)).when(*).returns(Future.failed(new RuntimeException("bar")))
+      (stubFwis.cleanup(_: Instant)(using _: ExecutionContext)).when(*, *).returns(Future.failed(new RuntimeException("bar")))
       running(
-        _.configure(configOverrides *)
+        _.configure(configOverrides*)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
           .overrides(bind[AssignmentsWorkItemService].toInstance(stubAwis))
@@ -231,10 +231,10 @@ with PlayRunners {
       ) { app =>
         val _ = app.injector.instanceOf[AgentUserClientDetailsMain] // starts the scheduled jobs
         Thread.sleep(5000)
-        (stubAwis.collectStats(_: ExecutionContext)).verify(*).atLeastOnce()
-        (stubAwis.cleanup(_: Instant)(_: ExecutionContext)).verify(*, *).atLeastOnce()
-        (stubFwis.collectStats(_: ExecutionContext)).verify(*).atLeastOnce()
-        (stubFwis.cleanup(_: Instant)(_: ExecutionContext)).verify(*, *).atLeastOnce()
+        (stubAwis.collectStats(using _: ExecutionContext)).verify(*).atLeastOnce()
+        (stubAwis.cleanup(_: Instant)(using _: ExecutionContext)).verify(*, *).atLeastOnce()
+        (stubFwis.collectStats(using _: ExecutionContext)).verify(*).atLeastOnce()
+        (stubFwis.cleanup(_: Instant)(using _: ExecutionContext)).verify(*, *).atLeastOnce()
       }
     }
   }
@@ -249,7 +249,7 @@ with PlayRunners {
       (() => stubFnw.isRunning).when().returns(true)
       (() => stubFnw.start()).when().returns(Future.successful(()))
       running(
-        _.configure(configOverrides *)
+        _.configure(configOverrides*)
           .overrides(bind[MongoComponent].toInstance(mongoComponent))
           .overrides(bind[AuthConnector].toInstance(mockAuthConnector))
           .overrides(bind[AssignmentsWorker].toInstance(stubAw))

@@ -24,7 +24,7 @@ import play.api.http.Status
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpResponse
@@ -43,7 +43,7 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[HipConnectorImpl])
 trait HipConnector {
-  def getTradingDetailsForMtdItId(mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Option[TradingDetails]]
+  def getTradingDetailsForMtdItId(mtdItId: MtdItId)(using hc: HeaderCarrier): Future[Option[TradingDetails]]
 }
 
 @Singleton
@@ -52,13 +52,13 @@ class HipConnectorImpl @Inject() (
   httpClient: HttpClientV2,
   val metrics: Metrics,
   clock: Clock
-)(implicit val ec: ExecutionContext)
+)(using val ec: ExecutionContext)
 extends HipConnector
 with Logging {
 
   /** API number: API#5266 Itsa Taxpayer Business Details https://admin.tax.service.gov.uk/integration-hub/apis/details/e54e8843-c146-4551-a499-c93ecac4c6fd
     */
-  def getTradingDetailsForMtdItId(mtdItId: MtdItId)(implicit hc: HeaderCarrier): Future[Option[TradingDetails]] = {
+  def getTradingDetailsForMtdItId(mtdItId: MtdItId)(using hc: HeaderCarrier): Future[Option[TradingDetails]] = {
 
     val url: URL = url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdItId.value}"
 
@@ -80,7 +80,7 @@ with Logging {
 
     httpClient
       .get(url)
-      .setHeader(headers *)
+      .setHeader(headers*)
       .execute[HttpResponse]
       .map { response =>
         response.status match {

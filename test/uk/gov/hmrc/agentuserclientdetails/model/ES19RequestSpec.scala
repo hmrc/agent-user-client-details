@@ -28,11 +28,11 @@ extends BaseSpec {
     val json = Json.obj("friendlyName" -> "Enrolment Man")
 
     "read from JSON" in {
-      json.as[ES19Request] shouldBe model
+      json.as[ES19Request].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 }

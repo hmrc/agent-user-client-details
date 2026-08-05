@@ -48,7 +48,7 @@ class FriendlyNameController @Inject() (
   workItemService: FriendlyNameWorkItemService,
   espConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-)(implicit
+)(using
   authAction: AuthAction,
   ec: ExecutionContext
 )
@@ -56,7 +56,8 @@ extends BackendController(cc)
 with AuthorisedAgentSupport {
 
   def updateFriendlyName(arn: Arn): Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+    Action.async(parse.json) { request =>
+      given Request[JsValue] = request
       lazy val mSessionId: Option[String] =
         if (appConfig.stubsCompatibilityMode)
           hc.sessionId.map(_.value)
@@ -118,7 +119,8 @@ with AuthorisedAgentSupport {
     }
 
   def updateOneFriendlyName(arn: Arn): Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+    Action.async(parse.json) { request =>
+      given Request[JsValue] = request
       withAuthorisedAgent() { _ =>
         withGroupIdForArn(arn) { groupId =>
           withJsonBody[UpdateFriendlyNameRequest] { req =>
@@ -134,7 +136,7 @@ with AuthorisedAgentSupport {
 
   private def withGroupIdForArn(
     arn: Arn
-  )(f: String => Future[Result])(implicit
+  )(f: String => Future[Result])(using
     c: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Result] = espConnector.getPrincipalGroupIdFor(arn).flatMap {

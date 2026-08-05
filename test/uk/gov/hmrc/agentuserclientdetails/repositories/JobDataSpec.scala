@@ -38,8 +38,8 @@ extends BaseSpec {
 
       val json = Json.toJson(jobData)
       val parsed: JobData = Json.fromJson[JobData](json).get
-      parsed should matchPattern { case x: FriendlyNameJobData => }
-      parsed shouldBe jobData
+      parsed should matchPattern { case _: FriendlyNameJobData => }
+      parsed.shouldBe(jobData)
     }
 
   }

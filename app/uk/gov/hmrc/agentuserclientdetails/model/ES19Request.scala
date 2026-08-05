@@ -21,6 +21,5 @@ import play.api.libs.json.Json
 
 case class ES19Request(friendlyName: String)
 
-object ES19Request {
-  implicit val format: Format[ES19Request] = Json.format[ES19Request]
-}
+object ES19Request:
+  given format: Format[ES19Request] = Json.format[ES19Request]

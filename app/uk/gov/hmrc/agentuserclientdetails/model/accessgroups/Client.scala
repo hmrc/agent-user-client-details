@@ -24,10 +24,8 @@ case class Client(
   friendlyName: String
 )
 
-object Client {
+object Client:
 
-  implicit val format: Format[Client] = Json.format[Client]
+  given format: Format[Client] = Json.format[Client]
 
   def fromEnrolment(enrolment: Enrolment): Client = Client(EnrolmentKey.fromEnrolment(enrolment), enrolment.friendlyName)
-
-}

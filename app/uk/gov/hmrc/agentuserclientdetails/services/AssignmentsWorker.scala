@@ -24,9 +24,8 @@ import org.apache.pekko.stream.scaladsl.Source
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
-import uk.gov.hmrc.agentuserclientdetails.model.Unassign
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 import uk.gov.hmrc.agentuserclientdetails.util.StatusUtil
 import uk.gov.hmrc.clusterworkthrottling.Rate
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
@@ -34,7 +33,7 @@ import uk.gov.hmrc.clusterworkthrottling.ThrottledWorkItemProcessor
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.SessionId
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
@@ -52,7 +51,7 @@ class AssignmentsWorker @Inject() (
   actorSystem: ActorSystem,
   appConfig: AppConfig,
   mat: Materializer
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends Logging {
 
   lazy val assignmentsThrottler: ThrottledWorkItemProcessor =
@@ -84,7 +83,7 @@ extends Logging {
 
         val workItems: Source[WorkItem[AssignmentWorkItem], NotUsed] = Source.unfoldAsync(())(_ => pullWorkItemWhile(isRunning).map(_.map(() -> _)))
         val processWorkItems: Sink[WorkItem[AssignmentWorkItem], Future[Unit]] = Sink.foldAsync(()) { case ((), item) => processItem(item) }
-        val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
+        val result: Future[Unit] = workItems.runWith(processWorkItems)(using mat)
         result.onComplete { _ =>
           logger.debug("Assignments processing finished.")
           running.set(false)
@@ -94,7 +93,7 @@ extends Logging {
 
   def pullWorkItemWhile(
     continue: => Boolean
-  )(implicit ec: ExecutionContext): Future[Option[WorkItem[AssignmentWorkItem]]] =
+  )(using ec: ExecutionContext): Future[Option[WorkItem[AssignmentWorkItem]]] =
     if (continue) {
       workItemService.pullOutstanding(
         failedBefore = Instant.now().minusSeconds(appConfig.assignEnrolmentWorkItemRepoFailedBeforeSeconds),
@@ -109,7 +108,7 @@ extends Logging {
    Main logic
    */
   def processItem(workItem: WorkItem[AssignmentWorkItem]): Future[Unit] = {
-    implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId.apply))
+    given HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId.apply))
     val userId = workItem.item.userId
     val enrolmentKey = workItem.item.enrolmentKey
     val endpoint =
@@ -154,7 +153,7 @@ extends Logging {
       case e => e.getMessage
     }
 
-  private[services] def throttledAssignEnrolment(awi: AssignmentWorkItem)(implicit
+  private[services] def throttledAssignEnrolment(awi: AssignmentWorkItem)(using
     hc: HeaderCarrier
   ): Future[Unit] = {
     // return a Future[Option[Throwable]] instead of a failed future because the throttler library

@@ -20,6 +20,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.JsError
 import play.api.libs.json.Json
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 
 class AssignmentWorkItemSpec
 extends AnyWordSpec
@@ -46,8 +47,8 @@ with Matchers {
         Some("testSessionId")
       )
 
-      Json.toJson(assignWi).as[AssignmentWorkItem] shouldBe assignWi
-      Json.toJson(unassignWi).as[AssignmentWorkItem] shouldBe unassignWi
+      Json.toJson(assignWi).as[AssignmentWorkItem].shouldBe(assignWi)
+      Json.toJson(unassignWi).as[AssignmentWorkItem].shouldBe(unassignWi)
     }
     "throw a JS error for an invalid operation" in {
       Json.fromJson[AssignmentWorkItem](

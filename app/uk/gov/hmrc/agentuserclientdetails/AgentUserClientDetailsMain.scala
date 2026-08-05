@@ -47,7 +47,7 @@ class AgentUserClientDetailsMain @Inject() (
   jobMonitoringService: JobMonitoringService,
   serviceInstances: ServiceInstances,
   appConfig: AppConfig
-)(implicit val ec: ExecutionContext)
+)(using val ec: ExecutionContext)
 extends Logging {
 
   lifecycle.addStopHook(() =>

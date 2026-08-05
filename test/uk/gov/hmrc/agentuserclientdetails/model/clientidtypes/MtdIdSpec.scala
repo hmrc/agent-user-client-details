@@ -29,20 +29,20 @@ with Matchers {
 
   it should "be true for a valid MTDITID" in {
     validMtdItId.map { mtditid =>
-      MtdItId.isValid(mtditid) shouldBe true
+      MtdItId.isValid(mtditid).shouldBe(true)
     }
   }
 
   it should "be false when it has more than 15 digits" in {
-    MtdItId.isValid("0000000000000000") shouldBe false
+    MtdItId.isValid("0000000000000000").shouldBe(false)
   }
 
   it should "be false when it is empty" in {
-    MtdItId.isValid("") shouldBe false
+    MtdItId.isValid("").shouldBe(false)
   }
 
   it should "be false when it has non-alphanumeric characters" in {
-    MtdItId.isValid("00000000000000!") shouldBe false
+    MtdItId.isValid("00000000000000!").shouldBe(false)
   }
 
 }

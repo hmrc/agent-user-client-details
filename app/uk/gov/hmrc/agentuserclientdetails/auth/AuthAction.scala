@@ -50,19 +50,19 @@ with Logging {
   private val agentEnrolment = "HMRC-AS-AGENT"
   private val agentReferenceNumberIdentifier = "AgentReferenceNumber"
 
-  def getAuthorisedAgent(allowStandardUser: Boolean = false)(implicit
+  def getAuthorisedAgent(allowStandardUser: Boolean = false)(using
     ec: ExecutionContext,
     request: Request[?]
   ): Future[Option[AuthorisedAgent]] = {
 
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+    given HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
     authorised(AuthProviders(GovernmentGateway) and Enrolment(agentEnrolment))
       .retrieve(allEnrolments and credentialRole) {
         case enrols ~ credRole =>
           getArn(enrols) match {
             case Some(authorisedAgent) =>
-              if (credRole.contains(User) | credRole.contains(Admin) | (credRole.contains(Assistant) & allowStandardUser)) {
+              if (credRole.contains(User) || (credRole.contains(Assistant) && allowStandardUser)) {
                 Future.successful(Option(authorisedAgent))
               }
               else {
@@ -78,11 +78,11 @@ with Logging {
       } transformWith failureHandler
   }
 
-  def simpleAuth(body: => Future[Result])(implicit
+  def simpleAuth(body: => Future[Result])(using
     request: Request[?],
     ec: ExecutionContext
   ): Future[Result] = {
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+    given HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
     authorised() {
       body
     }

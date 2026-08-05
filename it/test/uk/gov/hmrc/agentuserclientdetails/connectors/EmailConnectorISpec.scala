@@ -18,7 +18,8 @@ package uk.gov.hmrc.agentuserclientdetails.connectors
 
 import com.codahale.metrics.NoopMetricRegistry
 import izumi.reflect.Tag
-import org.scalamock.handlers.CallHandler2
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
 import org.scalamock.scalatest.MockFactory
 import play.api.http.Status.BAD_REQUEST
 import play.api.http.Status.OK
@@ -43,28 +44,30 @@ extends BaseIntegrationSpec
 with HttpClientStub
 with MockFactory {
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  given HeaderCarrier = HeaderCarrier()
+  given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
-  override def mockRequestBuilderExecute[A](value: A): CallHandler2[
-    HttpReads[A],
-    ExecutionContext,
-    Future[A]
-  ] = {
-    (mockRequestBuilder
-      .withBody(_: JsValue)(
-        using
-        _: BodyWritable[JsValue],
-        _: Tag[JsValue],
-        _: ExecutionContext
-      ))
-      .expects(*, *, *, *)
-      .returns(mockRequestBuilder)
-
-    (mockRequestBuilder
-      .execute(using _: HttpReads[A], _: ExecutionContext))
-      .expects(*, *)
-      .returning(Future successful value)
+  private def requestBuilderReturning(response: HttpResponse): RequestBuilder = {
+    val requestBuilder = Mockito.mock(classOf[RequestBuilder])
+    Mockito
+      .when(
+        requestBuilder.withBody(ArgumentMatchers.any[JsValue]())(
+          using
+          ArgumentMatchers.any[BodyWritable[JsValue]](),
+          ArgumentMatchers.any[Tag[JsValue]](),
+          ArgumentMatchers.any[ExecutionContext]()
+        )
+      )
+      .thenReturn(requestBuilder)
+    Mockito
+      .when(
+        requestBuilder.execute(using
+          ArgumentMatchers.any[HttpReads[HttpResponse]](),
+          ArgumentMatchers.any[ExecutionContext]()
+        )
+      )
+      .thenReturn(Future.successful(response))
+    requestBuilder
   }
 
   val emailInformation: EmailInformation = EmailInformation(
@@ -88,8 +91,10 @@ with MockFactory {
     s"email endpoint returns $OK" should {
 
       "return true" in {
-        mockHttpPost(url"${appConfig.emailBaseUrl}/hmrc/email")
-        mockRequestBuilderExecute(HttpResponse(200))
+        mockHttpPostReturning(
+          url"${appConfig.emailBaseUrl}/hmrc/email",
+          requestBuilderReturning(HttpResponse(200))
+        )
 
         underTest.sendEmail(emailInformation).futureValue shouldBe true
       }
@@ -97,8 +102,10 @@ with MockFactory {
 
     s"email endpoint returns $BAD_REQUEST" should {
       "return false" in {
-        mockHttpPost(url"${appConfig.emailBaseUrl}/hmrc/email")
-        mockRequestBuilderExecute(HttpResponse(400))
+        mockHttpPostReturning(
+          url"${appConfig.emailBaseUrl}/hmrc/email",
+          requestBuilderReturning(HttpResponse(400))
+        )
 
         underTest.sendEmail(emailInformation).futureValue shouldBe false
       }

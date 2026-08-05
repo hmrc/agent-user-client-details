@@ -19,16 +19,15 @@ package uk.gov.hmrc.agentuserclientdetails.controllers
 import play.api.libs.json.Format
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthorisedAgentSupport
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
-import uk.gov.hmrc.agentuserclientdetails.model.Unassign
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemService
 import uk.gov.hmrc.http.NotFoundException
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus.ToDo
@@ -46,9 +45,8 @@ case class UserEnrolment(
   override def toString: String = s"$userId:$enrolmentKey"
 }
 
-object UserEnrolment {
-  implicit val formats: Format[UserEnrolment] = Json.format
-}
+object UserEnrolment:
+  given formats: Format[UserEnrolment] = Json.format
 
 /** Represents the user/client combinations to assign and unassign in EACD.
   * @param assign
@@ -62,9 +60,8 @@ case class UserEnrolmentAssignments(
   arn: Arn
 )
 
-object UserEnrolmentAssignments {
-  implicit val formats: Format[UserEnrolmentAssignments] = Json.format
-}
+object UserEnrolmentAssignments:
+  given formats: Format[UserEnrolmentAssignments] = Json.format
 
 @Singleton()
 class AssignmentController @Inject() (
@@ -72,7 +69,7 @@ class AssignmentController @Inject() (
   workItemService: AssignmentsWorkItemService,
   enrolmentStore: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-)(implicit
+)(using
   authAction: AuthAction,
   ec: ExecutionContext
 )
@@ -80,7 +77,8 @@ extends BackendController(cc)
 with AuthorisedAgentSupport {
 
   def assignEnrolments: Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+    Action.async(parse.json) { request =>
+      given Request[JsValue] = request
       lazy val mSessionId: Option[String] =
         if (appConfig.stubsCompatibilityMode)
           hc.sessionId.map(_.value)
@@ -127,7 +125,8 @@ with AuthorisedAgentSupport {
     arn: Arn,
     userId: String
   ): Action[JsValue] =
-    Action.async(parse.json) { implicit request =>
+    Action.async(parse.json) { request =>
+      given Request[JsValue] = request
       lazy val mSessionId: Option[String] =
         if (appConfig.stubsCompatibilityMode)
           hc.sessionId.map(_.value)

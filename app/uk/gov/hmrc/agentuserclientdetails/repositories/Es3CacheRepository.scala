@@ -59,11 +59,11 @@ class Es3CacheRepositoryImpl @Inject() (
   appConfig: AppConfig,
   crypto: Encrypter & Decrypter,
   timestampSupport: TimestampSupport
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends PlayMongoRepository[Es3Cache](
   mongoComponent = mongoComponent,
   collectionName = "es3-cache",
-  domainFormat = Es3Cache.format(crypto),
+  domainFormat = Es3Cache.format(using crypto),
   indexes = Seq(
     IndexModel(
       ascending("groupId"),
@@ -97,7 +97,6 @@ with Logging {
 
   private def numberOfDocumentLogs(
     groupId: String,
-    expectedCount: Int,
     savedCount: Int,
     documents: Seq[Es3Cache]
   ): Unit = {
@@ -130,7 +129,6 @@ with Logging {
       savedCount <- collection.insertMany(documents).toFuture().map(_.getInsertedIds.size())
       _ = numberOfDocumentLogs(
         groupId,
-        documents.size,
         savedCount,
         documents
       )

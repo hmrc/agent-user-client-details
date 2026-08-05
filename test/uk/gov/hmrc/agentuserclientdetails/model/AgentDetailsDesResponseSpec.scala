@@ -29,11 +29,11 @@ extends BaseSpec {
   "AgencyDetails" should {
 
     "read from JSON" in {
-      agencyDetailsJson.as[AgencyDetails] shouldBe agencyDetailsModel
+      agencyDetailsJson.as[AgencyDetails].shouldBe(agencyDetailsModel)
     }
 
     "write to JSON" in {
-      Json.toJson(agencyDetailsModel) shouldBe agencyDetailsJson
+      Json.toJson(agencyDetailsModel).shouldBe(agencyDetailsJson)
     }
   }
 
@@ -43,11 +43,11 @@ extends BaseSpec {
     val json = Json.obj("agencyDetails" -> agencyDetailsJson)
 
     "read from JSON" in {
-      json.as[AgentDetailsDesResponse] shouldBe model
+      json.as[AgentDetailsDesResponse].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 

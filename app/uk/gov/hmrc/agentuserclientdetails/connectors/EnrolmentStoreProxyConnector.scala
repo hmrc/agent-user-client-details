@@ -56,13 +56,13 @@ trait EnrolmentStoreProxyConnector {
   def getUsersAssignedToEnrolment(
     enrolmentKey: String,
     `type`: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Seq[String]]
 
   // ES1 - principal
-  def getPrincipalGroupIdFor(arn: Arn)(implicit
+  def getPrincipalGroupIdFor(arn: Arn)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]]
@@ -70,7 +70,7 @@ trait EnrolmentStoreProxyConnector {
   // ES2 - Query Enrolments assigned to a user
   def getEnrolmentsAssignedToUser(
     userId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Seq[Enrolment]]
@@ -78,7 +78,7 @@ trait EnrolmentStoreProxyConnector {
   // ES3 - Query Enrolments allocated to a Group
   def getEnrolmentsForGroupId(
     groupId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     executionContext: ExecutionContext
   ): Future[Seq[Enrolment]]
@@ -87,7 +87,7 @@ trait EnrolmentStoreProxyConnector {
   def assignEnrolment(
     userId: String,
     enrolmentKey: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit]
@@ -96,7 +96,7 @@ trait EnrolmentStoreProxyConnector {
   def unassignEnrolment(
     userId: String,
     enrolmentKey: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit]
@@ -106,7 +106,7 @@ trait EnrolmentStoreProxyConnector {
     groupId: String,
     enrolmentKey: String,
     friendlyName: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit]
@@ -114,7 +114,7 @@ trait EnrolmentStoreProxyConnector {
   // ES21 - Query a group's delegated enrolments, returning information about the assigned agent users
   def getGroupDelegatedEnrolments(
     groupId: String
-  )(implicit hc: HeaderCarrier): Future[Option[GroupDelegatedEnrolments]]
+  )(using hc: HeaderCarrier): Future[Option[GroupDelegatedEnrolments]]
 
 }
 
@@ -122,7 +122,7 @@ trait EnrolmentStoreProxyConnector {
 class EnrolmentStoreProxyConnectorImpl @Inject() (
   http: HttpClientV2,
   val metrics: Metrics
-)(implicit
+)(using
   appConfig: AppConfig,
   materializer: Materializer,
   val ec: ExecutionContext
@@ -143,7 +143,7 @@ with Logging {
   override def getUsersAssignedToEnrolment(
     enrolmentKey: String,
     `type`: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Seq[String]] = {
@@ -182,7 +182,7 @@ with Logging {
   }
 
   // ES1 - principal
-  def getPrincipalGroupIdFor(arn: Arn)(implicit
+  def getPrincipalGroupIdFor(arn: Arn)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] = {
@@ -223,7 +223,7 @@ with Logging {
   // ES2 - Query Enrolments assigned to a user
   def getEnrolmentsAssignedToUser(
     userId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Seq[Enrolment]] = {
@@ -264,7 +264,7 @@ with Logging {
   // ES3 - Query Enrolments allocated to a Group
   override def getEnrolmentsForGroupId(
     groupId: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Seq[Enrolment]] = {
@@ -295,7 +295,7 @@ with Logging {
   private def fetchGroupDelegatedEnrolments(
     groupId: String,
     startRecord: Int
-  )(implicit
+  )(using
     hc: HeaderCarrier
   ): Future[Option[PaginatedEnrolments]] = {
     val url =
@@ -319,7 +319,7 @@ with Logging {
   def assignEnrolment(
     userId: String,
     enrolmentKey: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit] = {
@@ -347,7 +347,7 @@ with Logging {
   def unassignEnrolment(
     userId: String,
     enrolmentKey: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit] = {
@@ -376,11 +376,11 @@ with Logging {
     groupId: String,
     enrolmentKey: String,
     friendlyName: String
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Unit] = {
-    implicit val format: Format[ES19Request] = ES19Request.format
+    given Format[ES19Request] = ES19Request.format
     val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments/$enrolmentKey/friendly_name"
 
     http
@@ -407,7 +407,7 @@ with Logging {
   // ES21 - Query a group's delegated enrolments, returning information about the assigned agent users
   override def getGroupDelegatedEnrolments(
     groupId: String
-  )(implicit hc: HeaderCarrier): Future[Option[GroupDelegatedEnrolments]] = {
+  )(using hc: HeaderCarrier): Future[Option[GroupDelegatedEnrolments]] = {
     val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/delegated"
 
     http

@@ -47,7 +47,7 @@ with MockFactory {
   lazy val wir = FriendlyNameWorkItemRepository(config, mongoComponent)
   lazy val wis = new FriendlyNameWorkItemServiceImpl(wir, appConfig)
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val badGroupId = "XINV-ALID-GROU-PIDX"
   val client1 = Client("HMRC-MTD-VAT~VRN~101747641", "John Innes")
@@ -114,10 +114,10 @@ with MockFactory {
         Failed
       ).futureValue
       val stats = wis.collectStats.futureValue
-      stats.get(ToDo.name) shouldBe Some(2)
-      stats.get(Succeeded.name) shouldBe Some(1)
-      stats.get(Failed.name) shouldBe Some(1)
-      stats.get(PermanentlyFailed.name) shouldBe None
+      stats.get(ToDo.name).shouldBe(Some(2))
+      stats.get(Succeeded.name).shouldBe(Some(1))
+      stats.get(Failed.name).shouldBe(Some(1))
+      stats.get(PermanentlyFailed.name).shouldBe(None)
     }
   }
 
@@ -140,11 +140,11 @@ with MockFactory {
         Instant.now(),
         Failed
       ).futureValue
-      wis.query(testGroupId, Some(Seq(ToDo))).futureValue.length shouldBe 2
-      wis.query(testGroupId, Some(Seq(ToDo, Succeeded))).futureValue.length shouldBe 3
-      wis.query(testGroupId, Some(Seq(Duplicate, PermanentlyFailed))).futureValue.length shouldBe 0
-      wis.query(testGroupId, None).futureValue.length shouldBe 4
-      wis.query(badGroupId, None).futureValue.length shouldBe 0
+      wis.query(testGroupId, Some(Seq(ToDo))).futureValue.length.shouldBe(2)
+      wis.query(testGroupId, Some(Seq(ToDo, Succeeded))).futureValue.length.shouldBe(3)
+      wis.query(testGroupId, Some(Seq(Duplicate, PermanentlyFailed))).futureValue.length.shouldBe(0)
+      wis.query(testGroupId, None).futureValue.length.shouldBe(4)
+      wis.query(badGroupId, None).futureValue.length.shouldBe(0)
     }
   }
 
@@ -171,10 +171,10 @@ with MockFactory {
         Failed
       ).futureValue
       wis.cleanup(Instant.now().plusSeconds(24 * 3600 /* 1 day */ )).futureValue
-      wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length shouldBe 0
-      wis.query(testGroupId, Some(Seq(Duplicate))).futureValue.length shouldBe 0
-      wis.query(testGroupId, Some(Seq(PermanentlyFailed))).futureValue.length shouldBe 1
-      wis.query(testGroupId, Some(Seq(Failed))).futureValue.length shouldBe 1
+      wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length.shouldBe(0)
+      wis.query(testGroupId, Some(Seq(Duplicate))).futureValue.length.shouldBe(0)
+      wis.query(testGroupId, Some(Seq(PermanentlyFailed))).futureValue.length.shouldBe(1)
+      wis.query(testGroupId, Some(Seq(Failed))).futureValue.length.shouldBe(1)
     }
     "not remove an item that was recently updated" in {
       wis
@@ -187,7 +187,7 @@ with MockFactory {
       wis
         .cleanup(Instant.now().plusSeconds(60))
         .futureValue // item was updated only 1 minute before the cleanup time, so it should be kept
-      wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length shouldBe 1
+      wis.query(testGroupId, Some(Seq(Succeeded))).futureValue.length.shouldBe(1)
     }
 
   }
@@ -199,7 +199,7 @@ with MockFactory {
         Instant.now(),
         Succeeded
       ).futureValue
-      wir.deleteWorkItems(testGroupId).futureValue shouldBe 1L
+      wir.deleteWorkItems(testGroupId).futureValue.shouldBe(1L)
     }
   }
 

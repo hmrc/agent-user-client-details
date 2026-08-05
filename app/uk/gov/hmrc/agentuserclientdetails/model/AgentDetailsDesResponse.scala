@@ -27,10 +27,8 @@ case class AgencyDetails(
   agencyEmail: Option[String]
 )
 
-object AgencyDetails {
-  implicit val agencyDetailsFormat: OFormat[AgencyDetails] = Json.format[AgencyDetails]
-}
+object AgencyDetails:
+  given agencyDetailsFormat: OFormat[AgencyDetails] = Json.format[AgencyDetails]
 
-object AgentDetailsDesResponse {
-  implicit val agencyDetailsFormat: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]
-}
+object AgentDetailsDesResponse:
+  given agencyDetailsFormat: OFormat[AgentDetailsDesResponse] = Json.format[AgentDetailsDesResponse]

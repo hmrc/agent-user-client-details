@@ -37,11 +37,11 @@ import scala.concurrent.Future
 class AgentServicesAccountConnector @Inject() (
   appConfig: AppConfig,
   http: HttpClientV2
-)(implicit ec: ExecutionContext) {
+)(using ec: ExecutionContext) {
 
   private lazy val baseUrl: String = appConfig.asaBaseUrl
 
-  def getAgentDetails(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] = http
+  def getAgentDetails(using hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] = http
     .get(url"$baseUrl/agent-services-account/agent-record-with-checks")
     .execute[HttpResponse]
     .map(response =>

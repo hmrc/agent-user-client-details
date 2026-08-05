@@ -28,6 +28,5 @@ case class UserDetails(
   email: Option[String] = None
 )
 
-object UserDetails {
-  implicit val format: Format[UserDetails] = Json.format
-}
+object UserDetails:
+  given format: Format[UserDetails] = Json.format

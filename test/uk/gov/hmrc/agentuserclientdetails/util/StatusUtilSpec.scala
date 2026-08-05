@@ -30,35 +30,35 @@ extends BaseSpec {
     "return true" when {
 
       "a status code is provided that is on the list of retryable statuses" in {
-        StatusUtil.isRetryable(UNAUTHORIZED) shouldBe true
-        StatusUtil.isRetryable(TOO_MANY_REQUESTS) shouldBe true
-        StatusUtil.isRetryable(INTERNAL_SERVER_ERROR) shouldBe true
-        StatusUtil.isRetryable(BAD_GATEWAY) shouldBe true
-        StatusUtil.isRetryable(SERVICE_UNAVAILABLE) shouldBe true
-        StatusUtil.isRetryable(GATEWAY_TIMEOUT) shouldBe true
+        StatusUtil.isRetryable(UNAUTHORIZED).shouldBe(true)
+        StatusUtil.isRetryable(TOO_MANY_REQUESTS).shouldBe(true)
+        StatusUtil.isRetryable(INTERNAL_SERVER_ERROR).shouldBe(true)
+        StatusUtil.isRetryable(BAD_GATEWAY).shouldBe(true)
+        StatusUtil.isRetryable(SERVICE_UNAVAILABLE).shouldBe(true)
+        StatusUtil.isRetryable(GATEWAY_TIMEOUT).shouldBe(true)
       }
 
       "an UpstreamErrorResponse is provided that has a status code on the list of retryable statuses" in {
-        StatusUtil.isRetryable(UpstreamErrorResponse("Too many requests!!", TOO_MANY_REQUESTS)) shouldBe true
+        StatusUtil.isRetryable(UpstreamErrorResponse("Too many requests!!", TOO_MANY_REQUESTS)).shouldBe(true)
       }
 
       "an unrecognised exception is provided (assumed temporary issue)" in {
-        StatusUtil.isRetryable(HttpException("Umm", INTERNAL_SERVER_ERROR)) shouldBe true
+        StatusUtil.isRetryable(HttpException("Umm", INTERNAL_SERVER_ERROR)).shouldBe(true)
       }
     }
 
     "return false" when {
 
       "a status code is provided that is not on the list of retryable statuses" in {
-        StatusUtil.isRetryable(BAD_REQUEST) shouldBe false
+        StatusUtil.isRetryable(BAD_REQUEST).shouldBe(false)
       }
 
       "an UpstreamErrorResponse is provided that has a status code not on the list of retryable statuses" in {
-        StatusUtil.isRetryable(UpstreamErrorResponse("Bad request", BAD_REQUEST)) shouldBe false
+        StatusUtil.isRetryable(UpstreamErrorResponse("Bad request", BAD_REQUEST)).shouldBe(false)
       }
 
       "an InvalidServiceIdException is provided" in {
-        StatusUtil.isRetryable(InvalidServiceIdException("ABC")) shouldBe false
+        StatusUtil.isRetryable(InvalidServiceIdException("ABC")).shouldBe(false)
       }
     }
   }

@@ -54,15 +54,15 @@ with MockFactory {
     Enrolments(enrolments) and
       Some(Assistant)
 
-  def mockAuthResponseWithoutException(response: GrantAccess)(implicit authConnector: AuthConnector): Unit =
+  def mockAuthResponseWithoutException(response: GrantAccess)(using authConnector: AuthConnector): Unit =
     (authConnector
-      .authorise(_: Predicate, _: Retrieval[GrantAccess])(_: HeaderCarrier, _: ExecutionContext))
+      .authorise(_: Predicate, _: Retrieval[GrantAccess])(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
       .returning(Future successful response)
 
-  def mockSimpleAuthResponse()(implicit authConnector: AuthConnector): Unit =
+  def mockSimpleAuthResponse()(using authConnector: AuthConnector): Unit =
     (authConnector
-      .authorise(_: Predicate, _: Retrieval[Unit])(_: HeaderCarrier, _: ExecutionContext))
+      .authorise(_: Predicate, _: Retrieval[Unit])(using _: HeaderCarrier, _: ExecutionContext))
       .expects(*, *, *, *)
       .returning(Future.successful(()))
 

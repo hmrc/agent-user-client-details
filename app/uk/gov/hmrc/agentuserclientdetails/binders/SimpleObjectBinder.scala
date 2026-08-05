@@ -24,7 +24,7 @@ import scala.util.control.NonFatal
 class SimpleObjectBinder[T](
   bind: String => T,
   unbind: T => String
-)(implicit m: ClassTag[T])
+)(using m: ClassTag[T])
 extends PathBindable[T] {
 
   override def bind(

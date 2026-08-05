@@ -21,25 +21,23 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.testkit.NoMaterializer
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.concurrent.ScalaFutures._
+import org.scalatest.concurrent.ScalaFutures.*
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
-import uk.gov.hmrc.agentuserclientdetails.model.Unassign
-import uk.gov.hmrc.agentuserclientdetails.support._
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
+import uk.gov.hmrc.agentuserclientdetails.support.*
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ResultStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -47,6 +45,8 @@ class AssignmentsWorkerSpec
 extends AnyWordSpec
 with Matchers
 with MockFactory {
+
+  given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   val testUserId = "ABCEDEFGI1234568"
   val testEnrolmentKey = "HMRC-MTD-VAT~VRN~12345678"
@@ -80,12 +80,12 @@ with MockFactory {
     "make a call to ES11 and mark the item as succeeded when call succeeds" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .assignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .assignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
 
@@ -110,7 +110,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (mockEsp
-        .assignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .assignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testUserId,
           testEnrolmentKey,
@@ -119,7 +119,7 @@ with MockFactory {
         )
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           Succeeded,
@@ -131,7 +131,7 @@ with MockFactory {
     "when the ES11 call fails with a retryable failure such as a 429 status, mark the item as failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -139,12 +139,12 @@ with MockFactory {
           _: Seq[AssignmentWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .assignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .assignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
@@ -169,7 +169,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           Failed,
@@ -181,7 +181,7 @@ with MockFactory {
     "when the ES11 call fails with a non-response exception, mark the item as failed (retryable)" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -189,12 +189,12 @@ with MockFactory {
           _: Seq[AssignmentWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .assignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .assignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(new RuntimeException("Unknown error!")))
 
@@ -219,7 +219,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           Failed,
@@ -231,7 +231,7 @@ with MockFactory {
     "when the ES11 call fails with a non-retryable failure, mark the item as permanently failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -239,12 +239,12 @@ with MockFactory {
           _: Seq[AssignmentWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .assignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .assignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 404)))
 
@@ -269,7 +269,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,
@@ -281,12 +281,12 @@ with MockFactory {
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .assignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .assignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 500)))
 
@@ -312,7 +312,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,
@@ -326,12 +326,12 @@ with MockFactory {
     "make a call to ES12 and mark the item as succeeded when call succeeds" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .unassignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .unassignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
 
@@ -356,7 +356,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (mockEsp
-        .unassignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .unassignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testUserId,
           testEnrolmentKey,
@@ -365,7 +365,7 @@ with MockFactory {
         )
         .once()
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           Succeeded,
@@ -377,7 +377,7 @@ with MockFactory {
     "when the ES12 call fails with a retryable failure such as a 429 status, mark the item as failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -385,12 +385,12 @@ with MockFactory {
           _: Seq[AssignmentWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .unassignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .unassignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
@@ -415,7 +415,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           Failed,
@@ -427,7 +427,7 @@ with MockFactory {
     "when the ES12 call fails with a non-response exception, mark the item as failed (retryable)" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -435,12 +435,12 @@ with MockFactory {
           _: Seq[AssignmentWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .unassignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .unassignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(new RuntimeException("Unknown error!")))
 
@@ -465,7 +465,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           Failed,
@@ -477,7 +477,7 @@ with MockFactory {
     "when the ES12 call fails with a non-retryable failure, mark the item as permanently failed" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -485,12 +485,12 @@ with MockFactory {
           _: Seq[AssignmentWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .unassignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .unassignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 404)))
 
@@ -515,7 +515,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,
@@ -527,12 +527,12 @@ with MockFactory {
     "mark the work item as permanently failed if it is determined that we should give up" in {
       val stubWis: AssignmentsWorkItemService = stub[AssignmentsWorkItemService]
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .when(*, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
       (mockEsp
-        .unassignEnrolment(_: String, _: String)(_: HeaderCarrier, _: ExecutionContext))
+        .unassignEnrolment(_: String, _: String)(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 500)))
 
@@ -558,7 +558,7 @@ with MockFactory {
       worker.processItem(workItem).futureValue
 
       (stubWis
-        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(_: ExecutionContext))
+        .complete(_: ObjectId, _: ProcessingStatus & ResultStatus)(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,

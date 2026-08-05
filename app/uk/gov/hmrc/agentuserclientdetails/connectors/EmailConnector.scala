@@ -22,7 +22,7 @@ import play.api.libs.json.Json
 import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.EmailInformation
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HttpErrorFunctions
@@ -36,7 +36,7 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[EmailConnectorImpl])
 trait EmailConnector {
-  def sendEmail(emailInformation: EmailInformation)(implicit
+  def sendEmail(emailInformation: EmailInformation)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Boolean]
@@ -46,7 +46,7 @@ class EmailConnectorImpl @Inject() (
   appConfig: AppConfig,
   http: HttpClientV2,
   val metrics: Metrics
-)(implicit
+)(using
   val ec: ExecutionContext
 )
 extends EmailConnector
@@ -55,7 +55,7 @@ with Logging {
 
   private val baseUrl: String = appConfig.emailBaseUrl
 
-  def sendEmail(emailInformation: EmailInformation)(implicit
+  def sendEmail(emailInformation: EmailInformation)(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Boolean] = http

@@ -21,18 +21,18 @@ import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.testkit.NoMaterializer
 import org.bson.types.ObjectId
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.concurrent.ScalaFutures._
+import org.scalatest.concurrent.ScalaFutures.*
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Client
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
-import uk.gov.hmrc.agentuserclientdetails.support._
+import uk.gov.hmrc.agentuserclientdetails.support.*
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.mongo.workitem.ProcessingStatus._
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.*
 import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.ResultStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
@@ -40,7 +40,6 @@ import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveCli
 
 import java.net.ConnectException
 import java.time.Instant
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -48,6 +47,8 @@ class FriendlyNameWorkerSpec
 extends AnyWordSpec
 with Matchers
 with MockFactory {
+
+  given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   val testGroupId = "2K6H-N1C1-7M7V-O4A3"
   val client1 = Client("HMRC-MTD-VAT~VRN~12345678", "")
@@ -84,7 +85,7 @@ with MockFactory {
       FakeHipConnector,
       new TestAppConfig
     ) {
-      override def getClientName(enrolmentKey: String)(implicit
+      override def getClientName(enrolmentKey: String)(using
         hc: HeaderCarrier,
         ec: ExecutionContext
       ): Future[Option[String]] = Future.failed(new ConnectException("Weird error occurred."))
@@ -131,7 +132,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -140,7 +141,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
@@ -162,7 +163,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -176,7 +177,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           Succeeded,
@@ -193,7 +194,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -202,7 +203,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
@@ -224,7 +225,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -238,7 +239,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,
@@ -255,7 +256,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -264,7 +265,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
@@ -286,7 +287,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -300,7 +301,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,
@@ -317,7 +318,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -326,7 +327,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(
           testGroupId,
           *,
@@ -354,7 +355,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -368,7 +369,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           Failed,
@@ -385,7 +386,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -394,7 +395,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(
           testGroupId,
           *,
@@ -422,7 +423,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -436,7 +437,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           Failed,
@@ -453,7 +454,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -462,7 +463,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(
           testGroupId,
           *,
@@ -491,7 +492,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -505,7 +506,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,
@@ -522,7 +523,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       (stubWis
@@ -530,7 +531,7 @@ with MockFactory {
           _: Seq[FriendlyNameWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(()))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -539,7 +540,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse("", 429)))
 
@@ -561,7 +562,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           Duplicate,
@@ -574,7 +575,7 @@ with MockFactory {
           _: Seq[FriendlyNameWorkItem],
           _: Instant,
           _: ProcessingStatus
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           argThat((_: Seq[FriendlyNameWorkItem]).head.client.friendlyName.decryptedValue.nonEmpty),
           *,
@@ -591,7 +592,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -600,7 +601,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.successful(()))
 
@@ -625,7 +626,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -639,7 +640,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           Succeeded,
@@ -656,7 +657,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .when(*, *, *, *)
         .returns(Future.successful(true))
       val mockEsp: EnrolmentStoreProxyConnector = stub[EnrolmentStoreProxyConnector]
@@ -665,7 +666,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .when(*, *, *, *, *)
         .returns(Future.failed(UpstreamErrorResponse(
           s"Unexpected status on ES19 request: INVALID_JSON",
@@ -694,7 +695,7 @@ with MockFactory {
           _: String,
           _: String,
           _: String
-        )(_: HeaderCarrier, _: ExecutionContext))
+        )(using _: HeaderCarrier, _: ExecutionContext))
         .verify(
           testGroupId,
           *,
@@ -708,7 +709,7 @@ with MockFactory {
           _: ObjectId,
           _: ProcessingStatus & ResultStatus,
           _: Map[String, String]
-        )(_: ExecutionContext))
+        )(using _: ExecutionContext))
         .verify(
           workItem.id,
           PermanentlyFailed,

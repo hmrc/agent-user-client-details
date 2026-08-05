@@ -51,9 +51,9 @@ extends BaseSpec {
         mockEnrolmentStoreProxyConnectorGetEnrolmentsForGroupId(enrolments)
         mockEs3CacheRepositorySave(enrolments)
 
-        es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue shouldBe Seq(
+        es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue.shouldBe(Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
-        )
+        ))
       }
     }
 
@@ -68,9 +68,9 @@ extends BaseSpec {
 
         mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, enrolments.map(SensitiveEnrolment(_)))))
 
-        es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue shouldBe Seq(
+        es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue.shouldBe(Seq(
           Client("HMRC-MTD-IT~MTDITID~X12345678909876", "")
-        )
+        ))
       }
     }
   }
@@ -97,15 +97,15 @@ extends BaseSpec {
       mockEs3CacheRepositorySave(es3Response)
       mockEs3CacheRepositoryFetch(Some(Es3Cache(groupId, es3Response.map(SensitiveEnrolment(_)))))
 
-      es3CacheService.refreshIfGroupIdExist(groupId).futureValue shouldBe Some(())
+      es3CacheService.refreshIfGroupIdExist(groupId).futureValue.shouldBe(Some(()))
 
-      es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue shouldBe List(Client("HMRC-MTD-VAT~VRN~123456789", ""))
+      es3CacheService.fetchClientsAndPoupluateCacheIfEmpty(groupId).futureValue.shouldBe(List(Client("HMRC-MTD-VAT~VRN~123456789", "")))
     }
 
     "not rebuild the cache if one doesn't exist" in new TestScope {
 
       mockEs3CacheRepositoryFetch(None)
-      es3CacheService.refreshIfGroupIdExist(groupId).futureValue shouldBe None
+      es3CacheService.refreshIfGroupIdExist(groupId).futureValue.shouldBe(None)
     }
   }
 
@@ -119,8 +119,8 @@ extends BaseSpec {
 
     val groupId = "0R4C-G0G1-4M9Y-T7P0"
 
-    implicit val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-    implicit val hc: HeaderCarrier = HeaderCarrier()
+    given ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+    given HeaderCarrier = HeaderCarrier()
 
     def mockEs3CacheRepositoryFetch(maybeEs3Cache: Option[Es3Cache]): CallHandler1[String, Future[Option[Es3Cache]]] =
       (mockEs3CacheRepository
@@ -147,7 +147,7 @@ extends BaseSpec {
       Future[Seq[Enrolment]]
     ] =
       (mockEnrolmentStoreProxyConnector
-        .getEnrolmentsForGroupId(_: String)(_: HeaderCarrier, _: ExecutionContext))
+        .getEnrolmentsForGroupId(_: String)(using _: HeaderCarrier, _: ExecutionContext))
         .expects(groupId, *, *)
         .returning(Future successful enrolments)
 

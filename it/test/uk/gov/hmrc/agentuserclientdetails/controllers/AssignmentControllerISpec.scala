@@ -33,9 +33,8 @@ import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.Identifier
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.auth.AuthAction
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
-import uk.gov.hmrc.agentuserclientdetails.model.Assign
 import uk.gov.hmrc.agentuserclientdetails.model.AssignmentWorkItem
-import uk.gov.hmrc.agentuserclientdetails.model.Unassign
+import uk.gov.hmrc.agentuserclientdetails.model.Operation.*
 import uk.gov.hmrc.agentuserclientdetails.repositories.AssignmentsWorkItemRepository
 import uk.gov.hmrc.agentuserclientdetails.services.AssignmentsWorkItemServiceImpl
 import uk.gov.hmrc.agentuserclientdetails.stubs.AuthorisationMockSupport
@@ -69,10 +68,10 @@ with EnrolmentStoreProxyConnectorStub {
   lazy val wir = AssignmentsWorkItemRepository(config, mongoComponent)
   lazy val wis = new AssignmentsWorkItemServiceImpl(wir, appConfig)
 
-  implicit lazy val mockAuthConnector: AuthConnector = mock[AuthConnector]
-  implicit lazy val authAction: AuthAction = app.injector.instanceOf[AuthAction]
+  given AuthConnector = mock[AuthConnector]
+  given AuthAction = app.injector.instanceOf[AuthAction]
 
-  implicit val hc: HeaderCarrier = HeaderCarrier()
+  given HeaderCarrier = HeaderCarrier()
   val testUserId = "ABCEDEFGI1234568"
   val ue1 = UserEnrolment(testUserId, "HMRC-MTD-VAT~VRN~101747641")
   val ue2 = UserEnrolment(testUserId, "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345")
@@ -82,7 +81,7 @@ with EnrolmentStoreProxyConnectorStub {
 
   override def moduleOverrides: AbstractModule =
     new AbstractModule {
-      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(mockAuthConnector)
+      override def configure(): Unit = bind(classOf[AuthConnector]).toInstance(summon[AuthConnector])
     }
 
   override def beforeEach(): Unit = {
@@ -113,8 +112,8 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = fnc.assignEnrolments(request: Request[JsValue])
-      status(result) shouldBe 202
-      wis.collectStats.futureValue.values.sum shouldBe 4
+      status(result).shouldBe(202)
+      wis.collectStats.futureValue.values.sum.shouldBe(4)
     }
     "respond with 202 Accepted and add items to the queue (unassign)" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
@@ -138,8 +137,8 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = fnc.assignEnrolments(request: Request[JsValue])
-      status(result) shouldBe 202
-      wis.collectStats.futureValue.values.sum shouldBe 4
+      status(result).shouldBe(202)
+      wis.collectStats.futureValue.values.sum.shouldBe(4)
     }
     "respond with 202 Accepted and add items to the queue (mixed)" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
@@ -158,8 +157,8 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = fnc.assignEnrolments(request: Request[JsValue])
-      status(result) shouldBe 202
-      wis.collectStats.futureValue.values.sum shouldBe 4
+      status(result).shouldBe(202)
+      wis.collectStats.futureValue.values.sum.shouldBe(4)
     }
     "respond with 400 status if the request is malformed" in {
       mockAuthResponseWithoutException(buildAuthorisedResponse)
@@ -172,7 +171,7 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = fnc.assignEnrolments(request)
-      status(result) shouldBe 400
+      status(result).shouldBe(400)
     }
   }
 
@@ -204,8 +203,8 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = ac.ensureAssignments(arn, "myUser")(request)
-      status(result) shouldBe 200
-      wis.collectStats.futureValue.values.sum shouldBe 0 // no work items should be created
+      status(result).shouldBe(200)
+      wis.collectStats.futureValue.values.sum.shouldBe(0) // no work items should be created
     }
 
     "respond with 202 if changes are needed and add items in the queue to effect the desired change" in {
@@ -249,9 +248,9 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = ac.ensureAssignments(arn, "myUser")(request)
-      status(result) shouldBe 202
-      wis.collectStats.futureValue.values.sum shouldBe 2 // one add, one delete
-      wir.collection.find(Filters.empty()).toFuture().futureValue.map(_.item).toSet shouldBe Set(
+      status(result).shouldBe(202)
+      wis.collectStats.futureValue.values.sum.shouldBe(2) // one add, one delete
+      wir.collection.find(Filters.empty()).toFuture().futureValue.map(_.item).toSet.shouldBe(Set(
         AssignmentWorkItem(
           Assign,
           "myUser",
@@ -264,7 +263,7 @@ with EnrolmentStoreProxyConnectorStub {
           "HMRC-PPT-ORG~EtmpRegistrationNumber~XAPPT0000012345",
           arn.value
         )
-      )
+      ))
     }
 
     "respond with 404 status if userId is unknown" in {
@@ -294,8 +293,8 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = ac.ensureAssignments(arn, "unknownUser")(request)
-      status(result) shouldBe 404
-      wis.collectStats.futureValue.values.sum shouldBe 0 // no work items should be created
+      status(result).shouldBe(404)
+      wis.collectStats.futureValue.values.sum.shouldBe(0) // no work items should be created
 
     }
 
@@ -310,7 +309,7 @@ with EnrolmentStoreProxyConnectorStub {
           appConfig
         )
       val result = ac.ensureAssignments(arn, "myUser")(request)
-      status(result) shouldBe 400
+      status(result).shouldBe(400)
     }
   }
 

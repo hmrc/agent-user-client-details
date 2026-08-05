@@ -39,15 +39,15 @@ with Matchers {
       )
       val paginationMetaData = paginatedClients.paginationMetaData
 
-      paginationMetaData.lastPage shouldBe false
-      paginationMetaData.firstPage shouldBe true
-      paginationMetaData.totalSize shouldBe clients.size
-      paginationMetaData.totalPages shouldBe 3
-      paginationMetaData.pageSize shouldBe pageSize
-      paginationMetaData.currentPageNumber shouldBe page
-      paginationMetaData.currentPageSize shouldBe pageSize
+      paginationMetaData.lastPage.shouldBe(false)
+      paginationMetaData.firstPage.shouldBe(true)
+      paginationMetaData.totalSize.shouldBe(clients.size)
+      paginationMetaData.totalPages.shouldBe(3)
+      paginationMetaData.pageSize.shouldBe(pageSize)
+      paginationMetaData.currentPageNumber.shouldBe(page)
+      paginationMetaData.currentPageSize.shouldBe(pageSize)
 
-      paginatedClients.pageContent.size shouldBe pageSize
+      paginatedClients.pageContent.size.shouldBe(pageSize)
     }
 
     "build middle page correctly" in {
@@ -60,15 +60,15 @@ with Matchers {
       )
       val paginationMetaData = paginatedClients.paginationMetaData
 
-      paginationMetaData.lastPage shouldBe false
-      paginationMetaData.firstPage shouldBe false
-      paginationMetaData.totalSize shouldBe clients.size
-      paginationMetaData.totalPages shouldBe 3
-      paginationMetaData.pageSize shouldBe pageSize
-      paginationMetaData.currentPageNumber shouldBe page
-      paginationMetaData.currentPageSize shouldBe pageSize
+      paginationMetaData.lastPage.shouldBe(false)
+      paginationMetaData.firstPage.shouldBe(false)
+      paginationMetaData.totalSize.shouldBe(clients.size)
+      paginationMetaData.totalPages.shouldBe(3)
+      paginationMetaData.pageSize.shouldBe(pageSize)
+      paginationMetaData.currentPageNumber.shouldBe(page)
+      paginationMetaData.currentPageSize.shouldBe(pageSize)
 
-      paginatedClients.pageContent.size shouldBe pageSize
+      paginatedClients.pageContent.size.shouldBe(pageSize)
     }
 
     "build last page correctly" in {
@@ -81,15 +81,15 @@ with Matchers {
       )
       val paginationMetaData = paginatedClients.paginationMetaData
 
-      paginationMetaData.lastPage shouldBe true
-      paginationMetaData.firstPage shouldBe false
-      paginationMetaData.totalSize shouldBe clients.size
-      paginationMetaData.totalPages shouldBe 3
-      paginationMetaData.pageSize shouldBe pageSize
-      paginationMetaData.currentPageNumber shouldBe page
-      paginationMetaData.currentPageSize shouldBe (clients.size - (2 * pageSize))
+      paginationMetaData.lastPage.shouldBe(true)
+      paginationMetaData.firstPage.shouldBe(false)
+      paginationMetaData.totalSize.shouldBe(clients.size)
+      paginationMetaData.totalPages.shouldBe(3)
+      paginationMetaData.pageSize.shouldBe(pageSize)
+      paginationMetaData.currentPageNumber.shouldBe(page)
+      paginationMetaData.currentPageSize.shouldBe(clients.size - (2 * pageSize))
 
-      paginatedClients.pageContent.size shouldBe (clients.size - (2 * pageSize))
+      paginatedClients.pageContent.size.shouldBe(clients.size - (2 * pageSize))
     }
 
     "build zeroth page correctly" in {
@@ -102,15 +102,15 @@ with Matchers {
       )
       val paginationMetaData = paginatedClients.paginationMetaData
 
-      paginationMetaData.lastPage shouldBe false
-      paginationMetaData.firstPage shouldBe false
-      paginationMetaData.totalSize shouldBe clients.size
-      paginationMetaData.totalPages shouldBe 3
-      paginationMetaData.pageSize shouldBe pageSize
-      paginationMetaData.currentPageNumber shouldBe page
-      paginationMetaData.currentPageSize shouldBe 0
+      paginationMetaData.lastPage.shouldBe(false)
+      paginationMetaData.firstPage.shouldBe(false)
+      paginationMetaData.totalSize.shouldBe(clients.size)
+      paginationMetaData.totalPages.shouldBe(3)
+      paginationMetaData.pageSize.shouldBe(pageSize)
+      paginationMetaData.currentPageNumber.shouldBe(page)
+      paginationMetaData.currentPageSize.shouldBe(0)
 
-      paginatedClients.pageContent.size shouldBe 0
+      paginatedClients.pageContent.size.shouldBe(0)
     }
 
     "build last+1 page correctly" in {
@@ -123,15 +123,15 @@ with Matchers {
       )
       val paginationMetaData = paginatedClients.paginationMetaData
 
-      paginationMetaData.lastPage shouldBe false
-      paginationMetaData.firstPage shouldBe false
-      paginationMetaData.totalSize shouldBe clients.size
-      paginationMetaData.totalPages shouldBe 3
-      paginationMetaData.pageSize shouldBe pageSize
-      paginationMetaData.currentPageNumber shouldBe page
-      paginationMetaData.currentPageSize shouldBe 0
+      paginationMetaData.lastPage.shouldBe(false)
+      paginationMetaData.firstPage.shouldBe(false)
+      paginationMetaData.totalSize.shouldBe(clients.size)
+      paginationMetaData.totalPages.shouldBe(3)
+      paginationMetaData.pageSize.shouldBe(pageSize)
+      paginationMetaData.currentPageNumber.shouldBe(page)
+      paginationMetaData.currentPageSize.shouldBe(0)
 
-      paginatedClients.pageContent.size shouldBe 0
+      paginatedClients.pageContent.size.shouldBe(0)
     }
 
     "build page correctly for no clients" in {
@@ -146,15 +146,15 @@ with Matchers {
       )
       val paginationMetaData = paginatedClients.paginationMetaData
 
-      paginationMetaData.lastPage shouldBe false
-      paginationMetaData.firstPage shouldBe true
-      paginationMetaData.totalSize shouldBe 0
-      paginationMetaData.totalPages shouldBe 0
-      paginationMetaData.pageSize shouldBe pageSize
-      paginationMetaData.currentPageNumber shouldBe page
-      paginationMetaData.currentPageSize shouldBe 0
+      paginationMetaData.lastPage.shouldBe(false)
+      paginationMetaData.firstPage.shouldBe(true)
+      paginationMetaData.totalSize.shouldBe(0)
+      paginationMetaData.totalPages.shouldBe(0)
+      paginationMetaData.pageSize.shouldBe(pageSize)
+      paginationMetaData.currentPageNumber.shouldBe(page)
+      paginationMetaData.currentPageSize.shouldBe(0)
 
-      paginatedClients.pageContent.size shouldBe 0
+      paginatedClients.pageContent.size.shouldBe(0)
     }
   }
 

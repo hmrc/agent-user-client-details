@@ -32,12 +32,11 @@ case class Citizen(
   }
 }
 
-object Citizen {
-  implicit val reads: Reads[Citizen] = {
+object Citizen:
+  given reads: Reads[Citizen] = {
     val current = JsPath \ "name" \ "current"
     for {
       fn <- (current \ "firstName").readNullable[String]
       ln <- (current \ "lastName").readNullable[String]
     } yield Citizen(fn, ln)
   }
-}

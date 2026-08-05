@@ -34,7 +34,7 @@ import scala.concurrent.Future
 case class FriendlyNameWorkItemRepository @Inject() (
   config: Config,
   mongoComponent: MongoComponent
-)(implicit
+)(using
   ec: ExecutionContext,
   crypto: Encrypter & Decrypter
 )

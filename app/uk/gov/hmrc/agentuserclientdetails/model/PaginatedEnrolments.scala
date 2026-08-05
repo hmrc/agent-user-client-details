@@ -26,6 +26,5 @@ case class PaginatedEnrolments(
   enrolments: Seq[Enrolment]
 )
 
-object PaginatedEnrolments {
-  implicit val format: OFormat[PaginatedEnrolments] = Json.format[PaginatedEnrolments]
-}
+object PaginatedEnrolments:
+  given format: OFormat[PaginatedEnrolments] = Json.format[PaginatedEnrolments]

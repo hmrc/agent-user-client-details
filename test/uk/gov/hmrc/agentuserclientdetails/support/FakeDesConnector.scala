@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentuserclientdetails.support
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.CgtRef
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Vrn
 import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
-import uk.gov.hmrc.agentuserclientdetails.model._
+import uk.gov.hmrc.agentuserclientdetails.model.*
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.UpstreamErrorResponse
 
@@ -31,7 +31,7 @@ extends DesConnector {
 
   def getCgtSubscription(
     cgtRef: CgtRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[CgtSubscription]] = Future.successful(
@@ -49,7 +49,7 @@ extends DesConnector {
 
   def getVatCustomerDetails(
     vrn: Vrn
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[VatCustomerDetails]] = Future.successful(Some(VatCustomerDetails(
@@ -65,14 +65,14 @@ extends DesConnector {
 
   def getCgtSubscription(
     cgtRef: CgtRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[CgtSubscription]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
 
   def getVatCustomerDetails(
     vrn: Vrn
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[VatCustomerDetails]] = Future.failed(UpstreamErrorResponse("A fake exception", status))
@@ -80,20 +80,18 @@ extends DesConnector {
 }
 
 case object NotFoundDesConnector
-extends DesConnector {
+extends DesConnector:
 
   def getCgtSubscription(
     cgtRef: CgtRef
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[CgtSubscription]] = Future.successful(None)
 
   def getVatCustomerDetails(
     vrn: Vrn
-  )(implicit
+  )(using
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[VatCustomerDetails]] = Future.successful(None)
-
-}

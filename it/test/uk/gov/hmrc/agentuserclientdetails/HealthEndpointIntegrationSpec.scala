@@ -48,7 +48,7 @@ with MockFactory {
           .get()
           .futureValue
 
-      response.status shouldBe 200
+      response.status.shouldBe(200)
     }
   }
 

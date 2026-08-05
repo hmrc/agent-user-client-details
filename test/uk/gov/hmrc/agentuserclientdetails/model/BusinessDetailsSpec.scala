@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentuserclientdetails.model
 
-import BusinessDetails._
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
@@ -34,14 +33,22 @@ extends BaseSpec {
   "BusinessAddressDetails" should {
 
     "read from JSON" in {
-      businessAddressDetailsJson.as[BusinessAddressDetails] shouldBe businessAddressDetailsModel
+      businessAddressDetailsJson.as[BusinessAddressDetails].shouldBe(businessAddressDetailsModel)
+    }
+
+    "read from JSON when postalCode is missing" in {
+      Json.obj("countryCode" -> "GB").as[BusinessAddressDetails].shouldBe(BusinessAddressDetails("GB", None))
     }
   }
 
   "BusinessData" should {
 
     "read from JSON" in {
-      businessDataJson.as[BusinessData] shouldBe businessDataModel
+      businessDataJson.as[BusinessData].shouldBe(businessDataModel)
+    }
+
+    "read from JSON when businessAddressDetails is missing" in {
+      Json.obj().as[BusinessData].shouldBe(BusinessData(None))
     }
   }
 
@@ -51,7 +58,13 @@ extends BaseSpec {
     val json = Json.obj("businessData" -> Json.arr(businessDataJson), "mtdId" -> "XAIT1234567890")
 
     "read from JSON" in {
-      json.as[BusinessDetails] shouldBe model
+      json.as[BusinessDetails].shouldBe(model)
+    }
+
+    "read from JSON when mtdId is missing" in {
+      Json.obj("businessData" -> Json.arr(businessDataJson))
+        .as[BusinessDetails]
+        .shouldBe(BusinessDetails(Seq(businessDataModel), None))
     }
   }
 

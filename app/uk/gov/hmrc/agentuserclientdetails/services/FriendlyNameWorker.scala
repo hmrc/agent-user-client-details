@@ -53,7 +53,7 @@ class FriendlyNameWorker @Inject() (
   actorSystem: ActorSystem,
   appConfig: AppConfig,
   mat: Materializer
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends Logging {
 
   lazy val es19Throttler: ThrottledWorkItemProcessor =
@@ -88,7 +88,7 @@ extends Logging {
           Sink.foldAsync(()) {
             case ((), item) => processItem(item)
           }
-        val result: Future[Unit] = workItems.runWith(processWorkItems)(mat)
+        val result: Future[Unit] = workItems.runWith(processWorkItems)(using mat)
         result.onComplete { _ =>
           logger.info("Friendly name processing finished.")
           running.set(false)
@@ -98,7 +98,7 @@ extends Logging {
 
   def pullWorkItemWhile(
     continue: => Boolean
-  )(implicit ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
+  )(using ec: ExecutionContext): Future[Option[WorkItem[FriendlyNameWorkItem]]] =
     if (continue) {
       workItemService.pullOutstanding(
         failedBefore = Instant.now().minusSeconds(appConfig.friendlyNameWorkItemRepoFailedBeforeSeconds),
@@ -113,7 +113,7 @@ extends Logging {
    Main logic
    */
   def processItem(workItem: WorkItem[FriendlyNameWorkItem]): Future[Unit] = {
-    implicit val hc: HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId.apply))
+    given HeaderCarrier = HeaderCarrier().copy(sessionId = workItem.item.sessionId.map(SessionId.apply))
     val groupId = workItem.item.groupId
     val friendlyName = workItem.item.client.decryptedValue.friendlyName
     val enrolmentKey = workItem.item.client.decryptedValue.enrolmentKey
@@ -262,9 +262,7 @@ extends Logging {
     groupId: String,
     enrolmentKey: String,
     friendlyName: String
-  )(
-    implicit hc: HeaderCarrier
-  ): Future[Unit] = {
+  )(using hc: HeaderCarrier): Future[Unit] = {
     // return a Future[Option[Throwable]] instead of a failed future because the throttler library
     // doesn't seem to throttle failed futures correctly.
     val es19CompatibleFriendlyName = URLEncoder.encode(friendlyName, "UTF-8")

@@ -26,6 +26,7 @@ import play.api.Logging
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
+import uk.gov.hmrc.agentuserclientdetails.repositories.UpsertType.*
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -34,11 +35,8 @@ import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-sealed trait UpsertType
-case object RecordInserted
-extends UpsertType
-case object RecordUpdated
-extends UpsertType
+enum UpsertType:
+  case RecordInserted, RecordUpdated
 
 case class AgentSize(
   arn: Arn,
@@ -46,9 +44,8 @@ case class AgentSize(
   refreshedDateTime: java.time.LocalDateTime
 )
 
-object AgentSize {
-  implicit val formatAgentSize: OFormat[AgentSize] = Json.format[AgentSize]
-}
+object AgentSize:
+  given formatAgentSize: OFormat[AgentSize] = Json.format[AgentSize]
 
 @ImplementedBy(classOf[AgentSizeRepositoryImpl])
 trait AgentSizeRepository {
@@ -63,7 +60,7 @@ trait AgentSizeRepository {
 @Singleton
 class AgentSizeRepositoryImpl @Inject() (
   mongoComponent: MongoComponent
-)(implicit ec: ExecutionContext)
+)(using ec: ExecutionContext)
 extends PlayMongoRepository[AgentSize](
   collectionName = "agent-size",
   domainFormat = AgentSize.formatAgentSize,

@@ -43,11 +43,11 @@ extends BaseSpec {
     )
 
     "read from JSON" in {
-      json.as[EmailInformation] shouldBe model
+      json.as[EmailInformation].shouldBe(model)
     }
 
     "write to JSON" in {
-      Json.toJson(model) shouldBe json
+      Json.toJson(model).shouldBe(json)
     }
   }
 }

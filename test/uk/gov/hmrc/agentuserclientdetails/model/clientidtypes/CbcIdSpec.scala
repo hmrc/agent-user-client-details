@@ -25,27 +25,27 @@ with Matchers {
 
   "validation" should {
     "pass for a valid PPT" in {
-      CbcId.isValid("XACBC0123456789") shouldBe true
+      CbcId.isValid("XACBC0123456789").shouldBe(true)
     }
 
     "fail when it has more than 15 characters" in {
-      CbcId.isValid("XACBC01234567890") shouldBe false
+      CbcId.isValid("XACBC01234567890").shouldBe(false)
     }
 
     "fail when it has less than 15 characters" in {
-      CbcId.isValid("XACBC012345678") shouldBe false
+      CbcId.isValid("XACBC012345678").shouldBe(false)
     }
 
     "fail when it is empty" in {
-      CbcId.isValid("") shouldBe false
+      CbcId.isValid("").shouldBe(false)
     }
 
     "fail when it contains lowercase characters" in {
-      CbcId.isValid("xacbc0123456789") shouldBe false
+      CbcId.isValid("xacbc0123456789").shouldBe(false)
     }
 
     "fail when it has non-alphanumeric characters" in {
-      CbcId.isValid("XACBC012345678!") shouldBe false
+      CbcId.isValid("XACBC012345678!").shouldBe(false)
     }
   }
 }

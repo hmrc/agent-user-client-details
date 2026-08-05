@@ -21,6 +21,7 @@ import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+import uk.gov.hmrc.agentuserclientdetails.repositories.UpsertType.*
 
 import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext
@@ -29,7 +30,7 @@ class AgentSizeRepositoryISpec
 extends BaseIntegrationSpec
 with DefaultPlayMongoRepositorySupport[AgentSize] {
 
-  implicit val executionContext: ExecutionContext = app.injector.instanceOf[ExecutionContext]
+  given ExecutionContext = app.injector.instanceOf[ExecutionContext]
   override protected val repository: PlayMongoRepository[AgentSize] = new AgentSizeRepositoryImpl(mongoComponent)
 
   val arn: Arn = Arn("KARN1234567")
@@ -46,40 +47,40 @@ with DefaultPlayMongoRepositorySupport[AgentSize] {
 
     "set up" should {
       "have correct indexes" in {
-        agentSizeRepository.collectionName shouldBe "agent-size"
-        agentSizeRepository.indexes.size shouldBe 1
+        agentSizeRepository.collectionName.shouldBe("agent-size")
+        agentSizeRepository.indexes.size.shouldBe(1)
         val indexModel: IndexModel = agentSizeRepository.indexes.head
         assert(indexModel.getKeys.toBsonDocument.containsKey("arn"))
-        indexModel.getOptions.getName shouldBe "arnIdx"
+        indexModel.getOptions.getName.shouldBe("arnIdx")
         assert(indexModel.getOptions.isUnique)
       }
     }
 
     "fetching a non-existing record" should {
       "return nothing" in {
-        agentSizeRepository.get(arn).futureValue shouldBe None
+        agentSizeRepository.get(arn).futureValue.shouldBe(None)
       }
     }
 
     "fetching an existing record" should {
       "return the agentSize record" in {
-        agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordInserted)
-        agentSizeRepository.get(arn).futureValue shouldBe Some(agentSize)
+        agentSizeRepository.upsert(agentSize).futureValue.shouldBe(Some(RecordInserted))
+        agentSizeRepository.get(arn).futureValue.shouldBe(Some(agentSize))
       }
     }
 
     "updating an existing record" should {
       s"return $RecordUpdated" in {
-        agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordInserted)
-        agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordUpdated)
+        agentSizeRepository.upsert(agentSize).futureValue.shouldBe(Some(RecordInserted))
+        agentSizeRepository.upsert(agentSize).futureValue.shouldBe(Some(RecordUpdated))
       }
     }
   }
 
   "delete" should {
     "delete data" in {
-      agentSizeRepository.upsert(agentSize).futureValue shouldBe Some(RecordInserted)
-      agentSizeRepository.delete(arn.value).futureValue shouldBe 1L
+      agentSizeRepository.upsert(agentSize).futureValue.shouldBe(Some(RecordInserted))
+      agentSizeRepository.delete(arn.value).futureValue.shouldBe(1L)
     }
   }
 

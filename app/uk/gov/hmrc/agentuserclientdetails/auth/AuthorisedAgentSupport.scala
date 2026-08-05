@@ -29,7 +29,7 @@ extends Logging {
 
   def withAuthorisedAgent[T](allowStandardUser: Boolean = false)(
     body: AuthorisedAgent => Future[Result]
-  )(implicit
+  )(using
     authAction: AuthAction,
     request: Request[T],
     ec: ExecutionContext

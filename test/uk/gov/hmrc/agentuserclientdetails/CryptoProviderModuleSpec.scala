@@ -43,7 +43,7 @@ extends BaseSpec {
     }
     "provide a no-op crypto instance if field-level encryption is enabled in config" in {
       val x = new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = false))
-      x shouldBe a[NoCrypto]
+      x.shouldBe(a[NoCrypto])
     }
   }
 
@@ -53,13 +53,13 @@ extends BaseSpec {
     val base64Bytes = new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8)
 
     "passthrough data on encryption" in {
-      NoCrypto.encrypt(PlainText(text)).value shouldBe text
-      NoCrypto.encrypt(PlainBytes(bytes)).value shouldBe base64Bytes
+      NoCrypto.encrypt(PlainText(text)).value.shouldBe(text)
+      NoCrypto.encrypt(PlainBytes(bytes)).value.shouldBe(base64Bytes)
     }
 
     "passthrough data on decryption" in {
-      NoCrypto.decrypt(Crypted(text)).value shouldBe text
-      NoCrypto.decryptAsBytes(Crypted(base64Bytes)).value shouldBe bytes
+      NoCrypto.decrypt(Crypted(text)).value.shouldBe(text)
+      NoCrypto.decryptAsBytes(Crypted(base64Bytes)).value.shouldBe(bytes)
     }
   }
 

@@ -23,13 +23,12 @@ import uk.gov.hmrc.agentuserclientdetails.model.AgentDetailsDesResponse
 import uk.gov.hmrc.agentuserclientdetails.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 
+import scala.annotation.unused
 import scala.concurrent.Future
 
 @Singleton
 class AgentRecordService @Inject() (
   agentServicesAccountConnector: AgentServicesAccountConnector
-) {
+):
 
-  def getAgentDetails(arn: Arn)(implicit hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] = agentServicesAccountConnector.getAgentDetails
-
-}
+  def getAgentDetails(@unused arn: Arn)(using hc: HeaderCarrier): Future[Option[AgentDetailsDesResponse]] = agentServicesAccountConnector.getAgentDetails
