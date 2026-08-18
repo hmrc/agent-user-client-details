@@ -21,6 +21,8 @@ import play.api.http.Status
 import uk.gov.hmrc.agentuserclientdetails.BaseIntegrationSpec
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Urn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Utr
 import uk.gov.hmrc.agentuserclientdetails.stubs.HttpClientStub
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HeaderCarrier
@@ -115,6 +117,108 @@ with MockFactory {
     val correlationId = result.split("correlationId: ")(1).split("]")(0)
 
     result shouldBe s"Unexpected response from HIP API: [correlationId: $correlationId] [status: 404] [responseBody: url not found]"
+  }
+
+  "HipConnector.getTrustName calls API endpoint and return Trust name" when {
+    "requesting for a UTR" should {
+      "return trust name" in {
+        mockHttpGet(url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/UTR/2757091573")
+        val mockResponse = HttpResponse(
+          Status.OK,
+          """{
+            |  "success": {
+            |    "trustDetails": {
+            |      "identifiers": {
+            |        "utr": "1234567890",
+            |        "urn": "XXTRUST80000001"
+            |      },
+            |      "trustName": "Nelson James Trust",
+            |      "address": {
+            |        "line1": "10 Enderson Road",
+            |        "line2": "Cheapside",
+            |        "line3": "Riverside",
+            |        "line4": "Boston",
+            |        "country": "GB",
+            |        "postCode": "TF3 4ER"
+            |      },
+            |      "serviceName": "TERS"
+            |    }
+            |  }
+            |}""".stripMargin
+        )
+        mockRequestBuilderExecuteWithHeader(mockResponse)
+        hipConnector.getTrustName(Right(Utr("2757091573"))).futureValue shouldBe Some("Nelson James Trust")
+      }
+
+      "fail on a bad response" in {
+        mockHttpGet(url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/UTR/2757091573")
+        val mockResponse = HttpResponse(
+          Status.BAD_REQUEST,
+          """{
+            |  "origin": "HoD",
+            |  "response": {
+            |    "error": {
+            |      "code": "400",
+            |      "message": "String",
+            |      "logID": "00000000000000000000000000000000"
+            |    }
+            |  }
+            |}""".stripMargin
+        )
+        mockRequestBuilderExecuteWithHeader(mockResponse)
+        hipConnector.getTrustName(Right(Utr("2757091573"))).failed.futureValue shouldBe a[RuntimeException]
+      }
+    }
+
+    "requesting for a URN" should {
+      "return trust name" in {
+        mockHttpGet(url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/URN/XXTRUST80000001")
+        val mockResponse = HttpResponse(
+          Status.OK,
+          """{
+            |  "success": {
+            |    "trustDetails": {
+            |      "identifiers": {
+            |        "utr": "1234567890",
+            |        "urn": "XXTRUST80000001"
+            |      },
+            |      "trustName": "Nelson James Trust",
+            |      "address": {
+            |        "line1": "10 Enderson Road",
+            |        "line2": "Cheapside",
+            |        "line3": "Riverside",
+            |        "line4": "Boston",
+            |        "country": "GB",
+            |        "postCode": "TF3 4ER"
+            |      },
+            |      "serviceName": "TERS"
+            |    }
+            |  }
+            |}""".stripMargin
+        )
+        mockRequestBuilderExecuteWithHeader(mockResponse)
+        hipConnector.getTrustName(Left(Urn("XXTRUST80000001"))).futureValue shouldBe Some("Nelson James Trust")
+      }
+
+      "fail on a bad response" in {
+        mockHttpGet(url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/URN/XXTRUST80000001")
+        val mockResponse = HttpResponse(
+          Status.BAD_REQUEST,
+          """{
+            |  "origin": "HoD",
+            |  "response": {
+            |    "error": {
+            |      "code": "400",
+            |      "message": "String",
+            |      "logID": "00000000000000000000000000000000"
+            |    }
+            |  }
+            |}""".stripMargin
+        )
+        mockRequestBuilderExecuteWithHeader(mockResponse)
+        hipConnector.getTrustName(Left(Urn("XXTRUST80000001"))).failed.futureValue shouldBe a[RuntimeException]
+      }
+    }
   }
 
   lazy val responseBodySuccess: String =

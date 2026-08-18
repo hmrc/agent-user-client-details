@@ -22,6 +22,8 @@ import play.api.Logging
 import play.api.http.HeaderNames
 import play.api.http.Status
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Urn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Utr
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.domain.Nino
 import uk.gov.hmrc.http.HttpReads.Implicits.*
@@ -43,7 +45,13 @@ import scala.concurrent.Future
 
 @ImplementedBy(classOf[HipConnectorImpl])
 trait HipConnector {
+
   def getTradingDetailsForMtdItId(mtdItId: MtdItId)(using hc: HeaderCarrier): Future[Option[TradingDetails]]
+  def getTrustName(trustTaxIdentifier: Either[Urn, Utr])(using
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]]
+
 }
 
 @Singleton
@@ -108,6 +116,49 @@ with Logging {
       }
 
   }
+
+  /** API number: API#5887 Trusts and Estates Registration Services (TRS)
+    * https://admin.tax.service.gov.uk/integration-hub/apis/details/8caef5ab-34a1-4c70-aa7e-c3346091d253
+    */
+  def getTrustName(trustTaxIdentifier: Either[Urn, Utr])(using
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] =
+    val url: URL =
+      trustTaxIdentifier match {
+        case Left(Urn(urn)) => url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/URN/$urn"
+        case Right(Utr(utr)) => url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/trustsandestates/agent-known-fact-check/UTR/$utr"
+      }
+
+    val correlationId: String = makeCorrelationId()
+    val headers = Seq(
+      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+      ("correlationId", correlationId),
+      ("X-Message-Type", "TaxpayerDisplay"),
+      ("X-Originating-System", "MDTP"),
+      (
+        "X-Receipt-Date",
+        DateTimeFormatter.ISO_INSTANT.format( // yyy-MM-ddTHH:mm:ssZ
+          Instant.now(clock).truncatedTo(ChronoUnit.SECONDS)
+        )
+      ),
+      ("X-Regime-Type", "ITSA"),
+      ("X-Transmitting-System", "HIP")
+    )
+
+    httpClient
+      .get(url)
+      .setHeader(headers*)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case 200 => Some((response.json \ "success" \ "trustDetails" \ "trustName").as[String])
+          case otherStatus =>
+            throw new RuntimeException(
+              s"Unexpected response from HIP API: [correlationId: $correlationId] [status: $otherStatus] [responseBody: ${response.body}]"
+            )
+        }
+      }
 
   protected def makeCorrelationId(): String = UUID.randomUUID().toString
 

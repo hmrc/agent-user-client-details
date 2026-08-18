@@ -17,16 +17,25 @@
 package uk.gov.hmrc.agentuserclientdetails.support
 
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Urn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Utr
 import uk.gov.hmrc.agentuserclientdetails.connectors.HipConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.TradingDetails
 import uk.gov.hmrc.http.HeaderCarrier
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 object FakeHipConnector
 extends HipConnector:
+
   def getTradingDetailsForMtdItId(mtdId: MtdItId)(using hc: HeaderCarrier): Future[Option[TradingDetails]] =
     FakeIfConnector.getTradingDetailsForMtdItId(mtdId)(using hc, null)
+
+  def getTrustName(trustTaxIdentifier: Either[Urn, Utr])(using
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = Future.successful(Some("Trust Client"))
 
 case class FailingHipConnector(status: Int)
 extends HipConnector {
@@ -36,9 +45,22 @@ extends HipConnector {
     mtdId: MtdItId
   )(using hc: HeaderCarrier): Future[Option[TradingDetails]] = delegate.getTradingDetailsForMtdItId(mtdId)(using hc, null)
 
+  def getTrustName(
+    trustTaxIdentifier: Either[Urn, Utr]
+  )(using
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = Future.failed(RuntimeException("A fake exception"))
+
 }
 
 object NotFoundHipConnector
 extends HipConnector:
+
   def getTradingDetailsForMtdItId(mtdId: MtdItId)(using hc: HeaderCarrier): Future[Option[TradingDetails]] =
     NotFoundIfConnector.getTradingDetailsForMtdItId(mtdId)(using hc, null)
+
+  def getTrustName(trustTaxIdentifier: Either[Urn, Utr])(using
+    hc: HeaderCarrier,
+    ec: ExecutionContext
+  ): Future[Option[String]] = Future.successful(None)

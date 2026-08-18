@@ -19,10 +19,12 @@ package uk.gov.hmrc.agentuserclientdetails.services
 import play.api.Logging
 import uk.gov.hmrc.agentuserclientdetails.model.Service.*
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.CgtRef
-import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.MtdItId
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.PptRef
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Urn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Utr
 import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Vrn
+import uk.gov.hmrc.agentuserclientdetails.model.accessgroups.EnrolmentKey
 import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 import uk.gov.hmrc.agentuserclientdetails.connectors.CitizenDetailsConnector
 import uk.gov.hmrc.agentuserclientdetails.connectors.DesConnector
@@ -76,8 +78,8 @@ with Logging {
           }
       case "HMRC-PT" => getCitizenName(Nino(clientId))
       case HMRCMTDVAT => getVatName(Vrn(clientId))
-      case HMRCTERSORG => getTrustName(clientId)
-      case HMRCTERSNTORG => getTrustName(clientId)
+      case HMRCTERSORG => getTrustName(Right(Utr(clientId)))
+      case HMRCTERSNTORG => getTrustName(Left(Urn(clientId)))
       case HMRCCGTPD => getCgtName(CgtRef(clientId))
       case HMRCPPTORG => getPptCustomerName(PptRef(clientId))
       case _ => Future.failed(ClientNameService.InvalidServiceIdException(service))
@@ -116,12 +118,14 @@ with Logging {
         .orElse(customerDetails.individual.map(_.name))
     }
 
-  def getTrustName(
-    trustTaxIdentifier: String
-  )(using
+  def getTrustName(trustTaxIdentifier: Either[Urn, Utr])(using
     hc: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[Option[String]] = ifConnector.getTrustName(trustTaxIdentifier)
+  ): Future[Option[String]] =
+    if (appConfig.hipEnabled)
+      hipConnector.getTrustName(trustTaxIdentifier)
+    else
+      ifConnector.getTrustName(trustTaxIdentifier.merge.value)
 
   def getCgtName(cgtRef: CgtRef)(using
     hc: HeaderCarrier,
