@@ -21,12 +21,10 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.test.Helpers.await
 import play.api.test.Helpers.defaultAwaitTimeout
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Urn
+import uk.gov.hmrc.agentuserclientdetails.model.clientidtypes.Utr
 import uk.gov.hmrc.agentuserclientdetails.services.ClientNameService.InvalidServiceIdException
-import uk.gov.hmrc.agentuserclientdetails.support.FakeCitizenDetailsConnector
-import uk.gov.hmrc.agentuserclientdetails.support.FakeDesConnector
-import uk.gov.hmrc.agentuserclientdetails.support.FakeHipConnector
-import uk.gov.hmrc.agentuserclientdetails.support.FakeIfConnector
-import uk.gov.hmrc.agentuserclientdetails.support.TestAppConfig
+import uk.gov.hmrc.agentuserclientdetails.support.*
 import uk.gov.hmrc.http.HeaderCarrier
 
 class ClientNameServiceSpec
@@ -86,6 +84,57 @@ with Matchers {
         await(cns.getClientName("potatoes~idType~someId"))
       }
       caught.shouldBe(InvalidServiceIdException("potatoes"))
+    }
+    "use hip for retrieving the trust name if enabled (UTR)" in {
+      val cnsWithFeatureEnabled =
+        new ClientNameService(
+          FakeCitizenDetailsConnector,
+          FakeDesConnector,
+          FailingIfConnector(500),
+          FakeHipConnector,
+          new TestAppConfig { override val hipEnabled: Boolean = true }
+        )
+
+      cnsWithFeatureEnabled.getTrustName(Right(Utr("2757091573"))).futureValue.shouldBe(Some("Trust Client"))
+    }
+
+    "use hip for retrieving the trust name if enabled (URN)" in {
+      val cnsWithFeatureEnabled =
+        new ClientNameService(
+          FakeCitizenDetailsConnector,
+          FakeDesConnector,
+          FailingIfConnector(500),
+          FakeHipConnector,
+          new TestAppConfig { override val hipEnabled: Boolean = true }
+        )
+
+      cnsWithFeatureEnabled.getTrustName(Left(Urn("BARN8339601"))).futureValue.shouldBe(Some("Trust Client"))
+    }
+
+    "use IF for retrieving the trust name if hip is disabled (UTR)" in {
+      val cnsWithFeatureDisabled =
+        new ClientNameService(
+          FakeCitizenDetailsConnector,
+          FakeDesConnector,
+          FakeIfConnector,
+          FailingHipConnector(500),
+          new TestAppConfig { override val hipEnabled: Boolean = false }
+        )
+
+      cnsWithFeatureDisabled.getTrustName(Right(Utr("2757091573"))).futureValue.shouldBe(Some("Trust Client"))
+    }
+
+    "use IF for retrieving the trust name if hip is disabled (URN)" in {
+      val cnsWithFeatureDisabled =
+        new ClientNameService(
+          FakeCitizenDetailsConnector,
+          FakeDesConnector,
+          FakeIfConnector,
+          FailingHipConnector(500),
+          new TestAppConfig { override val hipEnabled: Boolean = false }
+        )
+
+      cnsWithFeatureDisabled.getTrustName(Left(Urn("BARN8339601"))).futureValue.shouldBe(Some("Trust Client"))
     }
   }
 

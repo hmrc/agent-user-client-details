@@ -112,6 +112,7 @@ class AppConfigImpl @Inject() (
 extends AppConfig {
 
   val hipEnabled: Boolean = servicesConfig.getBoolean("features.hip-enabled")
+  val trustsUseHip: Boolean = servicesConfig.getBoolean("features.trusts-use-hip")
   val hipBaseUrl: String = servicesConfig.baseUrl("hip")
   val hipAuthToken: String = getConf("hip.authorization-token")
 
