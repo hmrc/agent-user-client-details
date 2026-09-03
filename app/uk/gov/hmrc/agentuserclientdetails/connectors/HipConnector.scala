@@ -71,20 +71,21 @@ with Logging {
     val url: URL = url"${appConfig.hipBaseUrl}/etmp/RESTAdapter/itsa/taxpayer/business-details?mtdReference=${mtdItId.value}"
 
     val correlationId: String = makeCorrelationId()
-    val headers = Seq(
-      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-      ("correlationId", correlationId),
-      ("X-Message-Type", "TaxpayerDisplay"),
-      ("X-Originating-System", "MDTP"),
-      (
-        "X-Receipt-Date",
-        DateTimeFormatter.ISO_INSTANT.format( // yyy-MM-ddTHH:mm:ssZ
-          Instant.now(clock).truncatedTo(ChronoUnit.SECONDS)
-        )
-      ),
-      ("X-Regime-Type", "ITSA"),
-      ("X-Transmitting-System", "HIP")
-    )
+    val headers =
+      CommonHeaders() ++ Seq(
+        (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+        ("correlationId", correlationId),
+        ("X-Message-Type", "TaxpayerDisplay"),
+        ("X-Originating-System", "MDTP"),
+        (
+          "X-Receipt-Date",
+          DateTimeFormatter.ISO_INSTANT.format( // yyy-MM-ddTHH:mm:ssZ
+            Instant.now(clock).truncatedTo(ChronoUnit.SECONDS)
+          )
+        ),
+        ("X-Regime-Type", "ITSA"),
+        ("X-Transmitting-System", "HIP")
+      )
 
     httpClient
       .get(url)
@@ -131,20 +132,21 @@ with Logging {
       }
 
     val correlationId: String = makeCorrelationId()
-    val headers = Seq(
-      (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
-      ("correlationId", correlationId),
-      ("X-Message-Type", "TaxpayerDisplay"),
-      ("X-Originating-System", "MDTP"),
-      (
-        "X-Receipt-Date",
-        DateTimeFormatter.ISO_INSTANT.format( // yyy-MM-ddTHH:mm:ssZ
-          Instant.now(clock).truncatedTo(ChronoUnit.SECONDS)
-        )
-      ),
-      ("X-Regime-Type", "ITSA"),
-      ("X-Transmitting-System", "HIP")
-    )
+    val headers =
+      CommonHeaders() ++ Seq(
+        (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
+        ("correlationId", correlationId),
+        ("X-Message-Type", "TaxpayerDisplay"),
+        ("X-Originating-System", "MDTP"),
+        (
+          "X-Receipt-Date",
+          DateTimeFormatter.ISO_INSTANT.format( // yyy-MM-ddTHH:mm:ssZ
+            Instant.now(clock).truncatedTo(ChronoUnit.SECONDS)
+          )
+        ),
+        ("X-Regime-Type", "ITSA"),
+        ("X-Transmitting-System", "HIP")
+      )
 
     httpClient
       .get(url)
