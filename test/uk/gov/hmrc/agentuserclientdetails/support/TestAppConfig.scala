@@ -74,6 +74,7 @@ extends AppConfig {
     "^localhost$"
   ).map(_.r)
   val hipEnabled: Boolean = true
+  val trustsUseHip: Boolean = true
   val hipBaseUrl: String = ""
   val hipAuthToken: String = "hipToken"
   val asaBaseUrl: String = ""

@@ -30,6 +30,7 @@ import scala.util.matching.Regex
 trait AppConfig {
 
   val hipEnabled: Boolean // Remove flag and the IF connector in June 2025 when it's live
+  val trustsUseHip: Boolean
   val hipBaseUrl: String
   val hipAuthToken: String
 
