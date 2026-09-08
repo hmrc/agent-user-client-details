@@ -92,7 +92,7 @@ with Matchers {
           FakeDesConnector,
           FailingIfConnector(500),
           FakeHipConnector,
-          new TestAppConfig { override val hipEnabled: Boolean = true }
+          new TestAppConfig { override val trustsUseHip: Boolean = true }
         )
 
       cnsWithFeatureEnabled.getTrustName(Right(Utr("2757091573"))).futureValue.shouldBe(Some("Trust Client"))
@@ -105,7 +105,7 @@ with Matchers {
           FakeDesConnector,
           FailingIfConnector(500),
           FakeHipConnector,
-          new TestAppConfig { override val hipEnabled: Boolean = true }
+          new TestAppConfig { override val trustsUseHip: Boolean = true }
         )
 
       cnsWithFeatureEnabled.getTrustName(Left(Urn("BARN8339601"))).futureValue.shouldBe(Some("Trust Client"))
@@ -118,7 +118,7 @@ with Matchers {
           FakeDesConnector,
           FakeIfConnector,
           FailingHipConnector(500),
-          new TestAppConfig { override val hipEnabled: Boolean = false }
+          new TestAppConfig { override val trustsUseHip: Boolean = false }
         )
 
       cnsWithFeatureDisabled.getTrustName(Right(Utr("2757091573"))).futureValue.shouldBe(Some("Trust Client"))
@@ -131,7 +131,7 @@ with Matchers {
           FakeDesConnector,
           FakeIfConnector,
           FailingHipConnector(500),
-          new TestAppConfig { override val hipEnabled: Boolean = false }
+          new TestAppConfig { override val trustsUseHip: Boolean = false }
         )
 
       cnsWithFeatureDisabled.getTrustName(Left(Urn("BARN8339601"))).futureValue.shouldBe(Some("Trust Client"))

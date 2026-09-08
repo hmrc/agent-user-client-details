@@ -122,7 +122,7 @@ with Logging {
     hc: HeaderCarrier,
     ec: ExecutionContext
   ): Future[Option[String]] =
-    if (appConfig.hipEnabled)
+    if (appConfig.trustsUseHip)
       hipConnector.getTrustName(trustTaxIdentifier)
     else
       ifConnector.getTrustName(trustTaxIdentifier.merge.value)
