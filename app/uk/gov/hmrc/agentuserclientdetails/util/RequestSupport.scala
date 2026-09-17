@@ -24,9 +24,9 @@ object RequestSupport:
 
   given hc(using request: RequestHeader): HeaderCarrier = HcProvider.headerCarrier
 
-  /**
-   * This is because we want to give responsibility of creation of HeaderCarrier to the platform code. If they refactor how hc is created our code will pick it
-   * up automatically.
-   */
-  private object HcProvider extends BackendHeaderCarrierProvider:
+  /** This is because we want to give responsibility of creation of HeaderCarrier to the platform code. If they refactor how hc is created our code will pick it
+    * up automatically.
+    */
+  private object HcProvider
+  extends BackendHeaderCarrierProvider:
     def headerCarrier(implicit request: RequestHeader): HeaderCarrier = this.hc(using request)

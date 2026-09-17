@@ -24,9 +24,10 @@ import play.api.mvc.request.RequestTarget
 import play.api.mvc.Headers
 import play.api.mvc.Request
 
-class NoRequest(requestHeaders: Map[String, String] = Map.empty) extends Request[Any] {
+class NoRequest(requestHeaders: Map[String, String] = Map.empty)
+extends Request[Any] {
 
-  override def body: Any      = ""
+  override def body: Any = ""
   override def method: String = ""
   override def version: String = ""
 
@@ -53,7 +54,7 @@ class NoRequest(requestHeaders: Map[String, String] = Map.empty) extends Request
 
 }
 
-object NoRequest extends NoRequest(Map.empty) {
+object NoRequest
+extends NoRequest(Map.empty) {
   def apply(requestHeaders: Map[String, String]): NoRequest = new NoRequest(requestHeaders)
 }
-
