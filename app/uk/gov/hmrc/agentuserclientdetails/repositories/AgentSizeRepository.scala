@@ -75,7 +75,7 @@ with RequestAwareLogging {
   // TODO maybe rework this repo to include a TTL instead of a refresh duration.
   override lazy val requiresTtlIndex = false
 
-  override def get(arn: Arn): Future[Option[AgentSize]] = collection.find(equal("arn", arn.value)).headOption()
+  override def get(arn: Arn): Future[Option[AgentSize]] = collection.find(equal("arn", arn.value)).toFuture().map(_.headOption)
 
   override def upsert(agentSize: AgentSize): Future[Option[UpsertType]] = collection
     .replaceOne(
@@ -83,7 +83,7 @@ with RequestAwareLogging {
       agentSize,
       upsertOptions
     )
-    .headOption()
+    .toFutureOption()
     .map(_.map(_.getModifiedCount match {
       case 0L => RecordInserted
       case 1L => RecordUpdated
