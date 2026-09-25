@@ -137,14 +137,13 @@ with RequestAwareLogging {
         (HeaderNames.AUTHORIZATION, s"Basic ${appConfig.hipAuthToken}"),
         ("correlationId", correlationId),
         ("X-Message-Type", "TaxpayerDisplay"),
-        ("X-Originating-System", "MDTP"),
+        ("X-Originating-System", "TRS"),
         (
           "X-Receipt-Date",
           DateTimeFormatter.ISO_INSTANT.format( // yyy-MM-ddTHH:mm:ssZ
             Instant.now(clock).truncatedTo(ChronoUnit.SECONDS)
           )
         ),
-        ("X-Regime-Type", "ITSA"),
         ("X-Transmitting-System", "HIP")
       )
 
