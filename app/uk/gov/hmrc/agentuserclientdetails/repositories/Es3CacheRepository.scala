@@ -29,7 +29,6 @@ import uk.gov.hmrc.agentuserclientdetails.repositories.storagemodel.SensitiveEnr
 import uk.gov.hmrc.agentuserclientdetails.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.TimestampSupport
@@ -85,12 +84,6 @@ with Es3CacheRepositoryTestDeleteTrait
 with RequestAwareLogging {
 
   override lazy val requiresTtlIndex = false
-
-  // Ensure that we are using a deterministic cryptographic algorithm, or we won't be able to search on encrypted fields
-  require(
-    crypto.encrypt(PlainText("foo")) == crypto.encrypt(PlainText("foo")),
-    s"Crypto algorithm provided is not deterministic."
-  )
 
   val COUNT_OF_CLIENTS_PER_DOCUMENT = 20000
 
