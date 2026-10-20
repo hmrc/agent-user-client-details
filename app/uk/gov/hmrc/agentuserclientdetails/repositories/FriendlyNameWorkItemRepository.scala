@@ -22,6 +22,7 @@ import uk.gov.hmrc.agentuserclientdetails.model.FriendlyNameWorkItem
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.workitem.ProcessingStatus.PermanentlyFailed
 import uk.gov.hmrc.mongo.workitem.WorkItemFields
 import uk.gov.hmrc.mongo.workitem.WorkItemRepository
 
@@ -53,5 +54,8 @@ extends WorkItemRepository[FriendlyNameWorkItem](
 
   // test-only to remove perf-test data.
   def deleteWorkItems(groupId: String): Future[Long] = collection.deleteMany(Filters.equal("item.groupId", groupId)).toFuture().map(_.getDeletedCount)
+
+  // temp deletion to be removed after deployment
+  collection.deleteMany(Filters.equal("status", PermanentlyFailed)).toFuture()
 
 }
