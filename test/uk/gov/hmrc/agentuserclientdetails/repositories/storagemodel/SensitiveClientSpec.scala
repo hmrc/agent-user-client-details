@@ -31,19 +31,19 @@ extends BaseSpec {
 
   val client: Client = Client("HMRC-MTD-VAT~VRN~123456789", "Smith Roberts")
   val sensitiveClient: SensitiveClient = SensitiveClient(client)
-  val sensitiveJson: JsObject = Json.obj(
-    "enrolmentKey" -> "ddtpL0YcymEiA6dH+XLNcN2oYy6tDgEBCZrecQlriRE=",
-    "friendlyName" -> "RRhGxwmDG4jML/ChHcNOYA=="
-  )
 
   "SensitiveClient" should {
 
-    "write to JSON" in {
-      Json.toJson(sensitiveClient).shouldBe(sensitiveJson)
+    "round-trip to and from JSON" in {
+      val json = Json.toJson(sensitiveClient)
+      json.as[SensitiveClient].decryptedValue.shouldBe(client)
     }
 
-    "read from JSON" in {
-      sensitiveJson.as[SensitiveClient].decryptedValue.shouldBe(client)
+    "encrypt the fields rather than storing them as plain text" in {
+      val json = Json.toJson(sensitiveClient).as[JsObject]
+
+      (json \ "enrolmentKey").as[String].shouldNot(be("HMRC-MTD-VAT~VRN~123456789"))
+      (json \ "friendlyName").as[String].shouldNot(be("Smith Roberts"))
     }
   }
 

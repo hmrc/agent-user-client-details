@@ -16,13 +16,14 @@
 
 package uk.gov.hmrc.agentuserclientdetails
 
+import com.typesafe.config.ConfigFactory
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.Configuration
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 abstract class BaseSpec
 extends AnyWordSpecLike
@@ -30,5 +31,15 @@ with Matchers
 with MockFactory
 with ScalaFutures:
 
+  def configuration(fieldLevelEncryptionEnabled: Boolean) = Configuration(
+    ConfigFactory.parseString(
+      s"""fieldLevelEncryption {
+         |  enable = $fieldLevelEncryptionEnabled
+         |  key = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x"
+         |}
+         |""".stripMargin
+    )
+  )
+
   val aesCrypto: Encrypter
-    & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
+    & Decrypter = new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = true))

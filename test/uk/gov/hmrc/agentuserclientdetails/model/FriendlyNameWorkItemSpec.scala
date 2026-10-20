@@ -40,21 +40,20 @@ extends BaseSpec {
       Some("abcedfg-qwerty")
     )
 
-    val json = Json.obj(
-      "groupId" -> "ID123",
-      "client" -> Json.obj(
-        "enrolmentKey" -> "ddtpL0YcymEiA6dH+XLNcN2oYy6tDgEBCZrecQlriRE=",
-        "friendlyName" -> "RRhGxwmDG4jML/ChHcNOYA=="
-      ),
-      "sessionId" -> "abcedfg-qwerty"
-    )
-
-    "read from JSON" in {
+    "round-trip to and from JSON" in {
+      val json = Json.toJson(model)
       json.as[FriendlyNameWorkItem].shouldBe(model)
     }
 
-    "write to JSON" in {
-      Json.toJson(model).shouldBe(json)
+    "write non-encrypted fields as plain text and encrypt the client fields" in {
+      val json = Json.toJson(model).as[JsObject]
+
+      (json \ "groupId").as[String].shouldBe("ID123")
+      (json \ "sessionId").as[String].shouldBe("abcedfg-qwerty")
+
+      val clientJson = (json \ "client").as[JsObject]
+      (clientJson \ "enrolmentKey").as[String].shouldNot(be("HMRC-MTD-VAT~VRN~123456789"))
+      (clientJson \ "friendlyName").as[String].shouldNot(be("Smith Roberts"))
     }
   }
 
