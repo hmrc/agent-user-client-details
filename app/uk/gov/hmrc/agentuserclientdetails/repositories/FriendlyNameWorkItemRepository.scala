@@ -57,4 +57,5 @@ extends WorkItemRepository[FriendlyNameWorkItem](
 
   // temp deletion to be removed after deployment
   collection.deleteMany(Filters.equal("status", PermanentlyFailed)).toFuture()
+
 }

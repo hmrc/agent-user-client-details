@@ -16,9 +16,8 @@
 
 package uk.gov.hmrc.agentuserclientdetails
 
-import com.typesafe.config.ConfigFactory
-import org.scalatestplus.play.PlaySpec
-import play.api.Configuration
+import org.scalatest.matchers.must.Matchers.must
+import org.scalatest.matchers.must.Matchers.mustBe
 import uk.gov.hmrc.crypto.Crypted
 import uk.gov.hmrc.crypto.PlainBytes
 import uk.gov.hmrc.crypto.PlainText
@@ -28,22 +27,14 @@ import java.nio.charset.StandardCharsets
 import java.util.Base64
 
 class CryptoProviderModuleSpec
-extends PlaySpec {
-
-  def configuration(fieldLevelEncryptionEnabled: Boolean) = Configuration(
-    ConfigFactory.parseString(s"""fieldLevelEncryption {
-                                 |  enable = $fieldLevelEncryptionEnabled
-                                 |  key = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x"
-                                 |}
-                                 |""".stripMargin)
-  )
+extends BaseSpec {
 
   "CryptoProviderModule" should {
     "provide a real crypto instance if field-level encryption is enabled in config" in {
       val x = new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = true))
       x must not be a[NoCrypto]
     }
-    "provide a no-op crypto instance if field-level encryption is enabled in config" in {
+    "provide a no-op crypto instance if field-level encryption is disabled in config" in {
       val x = new CryptoProviderModule().cryptoInstance(configuration(fieldLevelEncryptionEnabled = false))
       x mustBe a[NoCrypto]
     }
