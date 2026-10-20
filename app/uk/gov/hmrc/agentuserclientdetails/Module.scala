@@ -20,7 +20,6 @@ import javax.inject.Singleton
 import com.google.inject.AbstractModule
 import com.google.inject.Provides
 import play.api.Configuration
-import uk.gov.hmrc.agentuserclientdetails.repositories.FriendlyNameWorkItemRepository
 import uk.gov.hmrc.clusterworkthrottling.DefaultServiceInstances
 import uk.gov.hmrc.clusterworkthrottling.ServiceInstances
 import uk.gov.hmrc.mongo.MongoComponent
@@ -32,10 +31,7 @@ import scala.concurrent.ExecutionContext
 class Module
 extends AbstractModule {
 
-  override def configure(): Unit = {
-    bind(classOf[AgentUserClientDetailsMain]).asEagerSingleton()
-    bind(classOf[FriendlyNameWorkItemRepository]).asEagerSingleton()
-  }
+  override def configure(): Unit = bind(classOf[AgentUserClientDetailsMain]).asEagerSingleton()
 
   @Provides
   @Singleton
