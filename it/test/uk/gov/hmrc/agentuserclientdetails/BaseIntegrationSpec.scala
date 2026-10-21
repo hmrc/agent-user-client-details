@@ -48,7 +48,7 @@ with BeforeAndAfterEach {
   given Materializer = app.injector.instanceOf[Materializer]
 
   given crypto: Encrypter
-    & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
+    & Decrypter = SymmetricCryptoFactory.aesGcmCrypto(secretKey = "hWmZq3t6w9zrCeF5JiNcRfUjXn2r5u7x")
 
   /** Child classes can override per their requirements
     */
