@@ -32,10 +32,7 @@ import scala.concurrent.ExecutionContext
 class Module
 extends AbstractModule {
 
-  override def configure(): Unit = {
-    bind(classOf[AgentUserClientDetailsMain]).asEagerSingleton()
-    bind(classOf[FriendlyNameWorkItemRepository]).asEagerSingleton()
-  }
+  override def configure(): Unit = bind(classOf[AgentUserClientDetailsMain]).asEagerSingleton()
 
   @Provides
   @Singleton
