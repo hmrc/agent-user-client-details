@@ -41,20 +41,9 @@ extends Module {
 
   def cryptoInstance(configuration: Configuration): Encrypter & Decrypter =
     if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
-      aesGcmCryptoWithAesFallback(configuration)
+      SymmetricCryptoFactory.aesGcmCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
     else
       NoCrypto
-
-  private def aesGcmCryptoWithAesFallback(configuration: Configuration): Encrypter
-    & Decrypter = {
-    val config = configuration.underlying
-    val aesGcmKey = config.getString("fieldLevelEncryption.key")
-
-    SymmetricCryptoFactory.composeCrypto(
-      currentCrypto = SymmetricCryptoFactory.aesGcmCrypto(aesGcmKey),
-      previousDecrypters = Seq(SymmetricCryptoFactory.aesCrypto(aesGcmKey))
-    )
-  }
 
 }
 
