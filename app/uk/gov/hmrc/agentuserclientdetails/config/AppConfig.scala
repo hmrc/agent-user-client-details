@@ -62,6 +62,7 @@ trait AppConfig {
   val friendlyNameWorkItemRepoFailedBeforeSeconds: Int
   val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int
   val friendlyNameWorkItemRepoDeleteFinishedItemsAfter: Duration
+  val friendlyNameWorkItemRepoDeleteFailedItemsAfter: Duration
 
   val friendlyNameJobRestartRepoQueueInitialDelaySeconds: Int
   val friendlyNameJobRestartRepoQueueIntervalSeconds: Int
@@ -148,6 +149,9 @@ extends AppConfig {
   val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.friendly-name.give-up-after-minutes")
   val friendlyNameWorkItemRepoDeleteFinishedItemsAfter: Duration = servicesConfig.getDuration(
     "work-item-repository.friendly-name.delete-finished-items-after"
+  )
+  val friendlyNameWorkItemRepoDeleteFailedItemsAfter: Duration = servicesConfig.getDuration(
+    "work-item-repository.friendly-name.delete-failed-items-after"
   )
 
   val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.assignments.available-before-seconds")

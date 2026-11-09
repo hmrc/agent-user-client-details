@@ -35,6 +35,7 @@ import uk.gov.hmrc.mongo.workitem.ProcessingStatus
 import uk.gov.hmrc.mongo.workitem.WorkItem
 
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class FriendlyNameWorkItemRepositoryISpec
@@ -206,9 +207,12 @@ with MockFactory {
   "permanently failed work items" should:
     "be deleted after 30 days" in:
       wis.pushNew(
-        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient3)),
         Instant.now(),
         PermanentlyFailed
       ).futureValue
+
+      wis.cleanup(Instant.now().plus(31, ChronoUnit.DAYS)).futureValue
+      wis.query(testGroupId, Some(Seq(PermanentlyFailed))).futureValue shouldBe empty
 
 }

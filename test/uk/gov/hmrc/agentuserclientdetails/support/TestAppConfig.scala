@@ -46,6 +46,7 @@ extends AppConfig {
   val friendlyNameWorkItemRepoFailedBeforeSeconds: Int = 1
   val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int = 1440
   val friendlyNameWorkItemRepoDeleteFinishedItemsAfter: Duration = 15.minutes
+  val friendlyNameWorkItemRepoDeleteFailedItemsAfter: Duration = 30.days
   val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int = 0
   val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int = 1
   val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int = 1440
