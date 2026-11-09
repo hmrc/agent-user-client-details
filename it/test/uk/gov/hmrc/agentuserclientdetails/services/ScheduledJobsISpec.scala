@@ -71,7 +71,7 @@ with PlayRunners {
     dropDatabase()
   }
 
-  val configOverrides: Seq[(String, AnyVal)] = Seq( // override config values to reduce delays required to test scheduled jobs
+  val configOverrides: Seq[(String, Any)] = Seq( // override config values to reduce delays required to test scheduled jobs
     "job-scheduling.friendly-name.restart-repo-queue.initialDelaySeconds" -> 1,
     "job-scheduling.friendly-name.restart-repo-queue.intervalSeconds" -> 60,
     "job-scheduling.service-job.initialDelaySeconds" -> 1,
@@ -80,9 +80,9 @@ with PlayRunners {
     "job-scheduling.assign-enrolment.restart-repo-queue.intervalSeconds" -> 60,
     "job-scheduling.job-monitoring.initialDelaySeconds" -> 1,
     "job-scheduling.job-monitoring.intervalSeconds" -> 2,
-    "work-item-repository.friendly-name.delete-finished-items-after-seconds" -> 0,
-    "work-item-repository.assignments.delete-finished-items-after-seconds" -> 0,
-    "work-item-repository.job-monitoring.delete-finished-items-after-seconds" -> 0,
+    "work-item-repository.friendly-name.delete-finished-items-after" -> "0s",
+    "work-item-repository.assignments.delete-finished-items-after" -> "0s",
+    "work-item-repository.job-monitoring.delete-finished-items-after" -> "0s",
     "agent.cache.enabled" -> false
   )
 

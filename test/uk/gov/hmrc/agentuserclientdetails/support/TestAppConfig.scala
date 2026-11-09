@@ -20,6 +20,7 @@ import uk.gov.hmrc.agentuserclientdetails.config.AppConfig
 
 import scala.concurrent.duration.DAYS
 import scala.concurrent.duration.Duration
+import scala.concurrent.duration.DurationInt
 import scala.util.matching.Regex
 
 class TestAppConfig
@@ -44,11 +45,11 @@ extends AppConfig {
   val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int = 0
   val friendlyNameWorkItemRepoFailedBeforeSeconds: Int = 1
   val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int = 1440
-  val friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds: Int = 900
+  val friendlyNameWorkItemRepoDeleteFinishedItemsAfter: Duration = 15.minutes
   val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int = 0
   val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int = 1
   val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int = 1440
-  val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfterSeconds: Int = 900
+  val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter: Duration = 15.minutes
   val jobMonitoringAvailableBeforeSeconds: Int = 0
   val jobMonitoringFailedBeforeSeconds: Int = 1
   val jobMonitoringGiveUpAfterMinutes: Int = 1440
@@ -64,7 +65,7 @@ extends AppConfig {
   val emailBaseUrl: String = ""
   val jobMonitoringWorkerIntervalSeconds: Int = 60
   val jobMonitoringWorkerInitialDelaySeconds: Int = 10
-  val jobMonitoringDeleteFinishedItemsAfterSeconds: Int = 900
+  val jobMonitoringDeleteFinishedItemsAfter: Duration = 15.minutes
   val serviceJobIntervalSeconds: Int = 60
   val serviceJobInitialDelaySeconds: Int = 60
   val es3MaxRecordsFetchCount: Int = 1000

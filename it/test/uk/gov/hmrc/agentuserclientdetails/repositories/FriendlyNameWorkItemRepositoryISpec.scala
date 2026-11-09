@@ -203,4 +203,12 @@ with MockFactory {
     }
   }
 
+  "permanently failed work items" should:
+    "be deleted after 30 days" in:
+      wis.pushNew(
+        Seq(FriendlyNameWorkItem(testGroupId, sensitiveClient1)),
+        Instant.now(),
+        PermanentlyFailed
+      ).futureValue
+
 }

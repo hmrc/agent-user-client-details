@@ -116,7 +116,8 @@ with Logging {
   /** Removes any items that have been marked as successful or duplicated.
     */
   def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult] = {
-    val cutoff: Instant = now.minusSeconds(appConfig.friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds)
+    val cutoff = appConfig.friendlyNameWorkItemRepoDeleteFinishedItemsAfter
+    val cutoffDate: Instant = now.minus(cutoff.length, cutoff.unit.toChronoUnit)
     workItemRepo.collection
       .deleteMany(
         Filters.and(
@@ -125,7 +126,7 @@ with Logging {
             Succeeded.name,
             Duplicate.name
           ),
-          Filters.lte("updatedAt", cutoff)
+          Filters.lte("updatedAt", cutoffDate)
         )
       )
       .toFuture()

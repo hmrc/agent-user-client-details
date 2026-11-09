@@ -72,7 +72,8 @@ extends JobMonitoringService {
   def markAsNotFinished(objectId: ObjectId)(using ec: ExecutionContext): Future[Unit] = jobMonitoringRepository.markAs(objectId, Failed).map(_ => ())
 
   def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult] = {
-    val cutoff: Instant = now.minusSeconds(appConfig.jobMonitoringDeleteFinishedItemsAfterSeconds)
+    val cutoff = appConfig.jobMonitoringDeleteFinishedItemsAfter
+    val cutoffDate = now.minus(cutoff.length, cutoff.unit.toChronoUnit)
     jobMonitoringRepository.collection
       .deleteMany(
         Filters.and(
@@ -82,7 +83,7 @@ extends JobMonitoringService {
             Duplicate.name,
             PermanentlyFailed.name
           ),
-          Filters.lte("updatedAt", cutoff)
+          Filters.lte("updatedAt", cutoffDate)
         )
       )
       .toFuture()
