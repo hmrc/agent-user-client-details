@@ -63,7 +63,7 @@ with RequestAwareLogging {
       case HMRCMTDIT | HMRCMTDITSUPP =>
         getItsaTradingDetails(MtdItId(clientId))
           .flatMap { td =>
-//            TODO: 12548 Clean up and add unit tests
+//            TODO: 12548 Clean up
             td.map(_.nino) match {
               case Some(nino) => getCitizenName(nino)
               case None => Future.successful(None)
