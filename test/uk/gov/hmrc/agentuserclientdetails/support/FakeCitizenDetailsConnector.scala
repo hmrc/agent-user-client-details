@@ -30,7 +30,9 @@ extends CitizenDetailsConnector {
   def getCitizenDetails(nino: Nino)(using
     c: HeaderCarrier,
     ec: ExecutionContext
-  ): Future[Option[Citizen]] = Future.successful(Some(Citizen(Some("Tom"), Some("Client"))))
+  ): Future[Option[Citizen]] = nino match
+    case Nino("AA123456A") => Future.successful(Some(Citizen(Some("Fletch"), Some("Client-Name"))))
+    case _ => Future.successful(Some(Citizen(Some("Tom"), Some("Client"))))
 }
 
 case class FailingCitizenDetailsConnector(status: Int)
