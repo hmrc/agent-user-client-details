@@ -51,6 +51,7 @@ extends IfConnector {
     ec: ExecutionContext
   ): Future[Option[TradingDetails]] =
     mtdId match {
+      case MtdItId("fetchNinoId") => Future.successful(Some(TradingDetails(Nino("AA123456A"), None)))
       case MtdItId("GK873907D") => Future.successful(Some(TradingDetails(Nino("GK873908D"), None)))
       case MtdItId("GK873908D") => Future.successful(Some(TradingDetails(Nino("GK873908D"), Some(""))))
       case _ => Future.successful(Some(TradingDetails(Nino("GK873908D"), Some("IT Client"))))

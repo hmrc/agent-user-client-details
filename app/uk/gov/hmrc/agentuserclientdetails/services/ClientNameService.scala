@@ -63,18 +63,10 @@ with RequestAwareLogging {
       case HMRCMTDIT | HMRCMTDITSUPP =>
         getItsaTradingDetails(MtdItId(clientId))
           .flatMap { td =>
-            val tradingName: Option[String] = td.flatMap(_.tradingName)
-            val nino: Option[Nino] = td.map(_.nino)
-            if (
-              tradingName.isEmpty
-                | tradingName.contains("")
-            )
-              nino match {
-                case Some(nino) => getCitizenName(nino)
-                case None => Future.successful(None)
-              }
-            else
-              Future.successful(tradingName)
+            td.map(_.nino) match {
+              case Some(nino) => getCitizenName(nino)
+              case None => Future.successful(None)
+            }
           }
       case "HMRC-PT" => getCitizenName(Nino(clientId))
       case HMRCMTDVAT => getVatName(Vrn(clientId))
