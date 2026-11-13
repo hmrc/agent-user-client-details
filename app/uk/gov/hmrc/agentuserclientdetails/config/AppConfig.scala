@@ -18,11 +18,10 @@ package uk.gov.hmrc.agentuserclientdetails.config
 
 import com.google.inject.ImplementedBy
 import play.api.Configuration
-
-import javax.inject.Inject
-import javax.inject.Singleton
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
+import javax.inject.Singleton
+import javax.inject.Inject
 import scala.concurrent.duration.Duration
 import scala.util.matching.Regex
 
@@ -62,7 +61,8 @@ trait AppConfig {
   val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int
   val friendlyNameWorkItemRepoFailedBeforeSeconds: Int
   val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int
-  val friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds: Int
+  val friendlyNameWorkItemRepoDeleteFinishedItemsAfter: Duration
+  val friendlyNameWorkItemRepoDeleteFailedItemsAfter: Duration
 
   val friendlyNameJobRestartRepoQueueInitialDelaySeconds: Int
   val friendlyNameJobRestartRepoQueueIntervalSeconds: Int
@@ -70,7 +70,7 @@ trait AppConfig {
   val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int
   val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int
   val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int
-  val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfterSeconds: Int
+  val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter: Duration
 
   val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int
   val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int
@@ -82,7 +82,7 @@ trait AppConfig {
   val jobMonitoringFailedBeforeSeconds: Int
   val jobMonitoringGiveUpAfterMinutes: Int
 
-  val jobMonitoringDeleteFinishedItemsAfterSeconds: Int
+  val jobMonitoringDeleteFinishedItemsAfter: Duration
 
   val serviceJobIntervalSeconds: Int
   val serviceJobInitialDelaySeconds: Int
@@ -147,15 +147,18 @@ extends AppConfig {
   val friendlyNameWorkItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.friendly-name.available-before-seconds")
   val friendlyNameWorkItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.friendly-name.failed-before-seconds")
   val friendlyNameWorkItemRepoGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.friendly-name.give-up-after-minutes")
-  val friendlyNameWorkItemRepoDeleteFinishedItemsAfterSeconds: Int = servicesConfig.getInt(
-    "work-item-repository.friendly-name.delete-finished-items-after-seconds"
+  val friendlyNameWorkItemRepoDeleteFinishedItemsAfter: Duration = servicesConfig.getDuration(
+    "work-item-repository.friendly-name.delete-finished-items-after"
+  )
+  val friendlyNameWorkItemRepoDeleteFailedItemsAfter: Duration = servicesConfig.getDuration(
+    "work-item-repository.friendly-name.delete-failed-items-after"
   )
 
   val assignEnrolmentWorkItemRepoAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.assignments.available-before-seconds")
   val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.assignments.failed-before-seconds")
   val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.assignments.give-up-after-minutes")
-  val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfterSeconds: Int = servicesConfig.getInt(
-    "work-item-repository.assignments.delete-finished-items-after-seconds"
+  val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter: Duration = servicesConfig.getDuration(
+    "work-item-repository.assignments.delete-finished-items-after"
   )
 
   val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")
@@ -177,7 +180,7 @@ extends AppConfig {
   val jobMonitoringAvailableBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.job-monitoring.available-before-seconds")
   val jobMonitoringFailedBeforeSeconds: Int = servicesConfig.getInt("work-item-repository.job-monitoring.failed-before-seconds")
   val jobMonitoringGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.job-monitoring.give-up-after-minutes")
-  val jobMonitoringDeleteFinishedItemsAfterSeconds: Int = servicesConfig.getInt("work-item-repository.job-monitoring.delete-finished-items-after-seconds")
+  val jobMonitoringDeleteFinishedItemsAfter: Duration = servicesConfig.getDuration("work-item-repository.job-monitoring.delete-finished-items-after")
 
   val maxFriendlyNameUpdateBatchSize: Int = servicesConfig.getInt("max-friendly-name-update-batch-size")
 

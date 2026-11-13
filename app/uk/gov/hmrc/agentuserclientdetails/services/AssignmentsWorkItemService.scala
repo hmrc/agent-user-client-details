@@ -108,7 +108,8 @@ extends AssignmentsWorkItemService {
   /** Removes any items that have been marked as successful or duplicated.
     */
   def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult] = {
-    val cutoff: Instant = now.minusSeconds(appConfig.assignEnrolmentWorkItemRepoDeleteFinishedItemsAfterSeconds)
+    val cutoff = appConfig.assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter
+    val cutoffDate: Instant = now.minus(cutoff.length, cutoff.unit.toChronoUnit)
     workItemRepo.collection
       .deleteMany(
         Filters.and(
@@ -117,7 +118,7 @@ extends AssignmentsWorkItemService {
             Succeeded.name,
             Duplicate.name
           ),
-          Filters.lte("updatedAt", cutoff)
+          Filters.lte("updatedAt", cutoffDate)
         )
       )
       .toFuture()
