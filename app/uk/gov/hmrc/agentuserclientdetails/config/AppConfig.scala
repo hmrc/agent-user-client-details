@@ -71,6 +71,7 @@ trait AppConfig {
   val assignEnrolmentWorkItemRepoFailedBeforeSeconds: Int
   val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int
   val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter: Duration
+  val assignEnrolmentWorkItemRepoDeleteFailedItemsAfter: Duration
 
   val assignEnrolmentJobRestartRepoQueueInitialDelaySeconds: Int
   val assignEnrolmentJobRestartRepoQueueIntervalSeconds: Int
@@ -159,6 +160,9 @@ extends AppConfig {
   val assignEnrolmentWorkItemRepoGiveUpAfterMinutes: Int = servicesConfig.getInt("work-item-repository.assignments.give-up-after-minutes")
   val assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter: Duration = servicesConfig.getDuration(
     "work-item-repository.assignments.delete-finished-items-after"
+  )
+  val assignEnrolmentWorkItemRepoDeleteFailedItemsAfter: Duration = servicesConfig.getDuration(
+    "work-item-repository.assignments.delete-failed-items-after"
   )
 
   val stubsCompatibilityMode: Boolean = servicesConfig.getBoolean("stubs-compatibility-mode")

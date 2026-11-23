@@ -241,7 +241,7 @@ with MockFactory {
   }
 
   "cleanup" should {
-    "remove any items that are either succeeded or duplicate (if they were last updated earlier than the given cutoff)" in {
+    "remove succeeded or duplicate items past the finished cutoff and permanently failed items past the failed cutoff" in {
       wis
         .pushNew(
           Seq(AssignmentWorkItem(
@@ -293,8 +293,25 @@ with MockFactory {
       wis.cleanup(Instant.now().plusSeconds(24 * 3600 /* 1 day */ )).futureValue
       wis.query(Seq(Succeeded)).futureValue.length.shouldBe(0)
       wis.query(Seq(Duplicate)).futureValue.length.shouldBe(0)
-      wis.query(Seq(PermanentlyFailed)).futureValue.length.shouldBe(1)
+      wis.query(Seq(PermanentlyFailed)).futureValue.length.shouldBe(0)
       wis.query(Seq(Failed)).futureValue.length.shouldBe(1)
+    }
+    "not remove recently permanently failed items" in {
+      wis
+        .pushNew(
+          Seq(AssignmentWorkItem(
+            Assign,
+            testUserId,
+            enrolmentKey3,
+            testArn.value
+          )),
+          Instant.now(),
+          PermanentlyFailed
+        )
+        .futureValue
+
+      wis.cleanup(Instant.now()).futureValue
+      wis.query(Seq(PermanentlyFailed)).futureValue.length.shouldBe(1)
     }
     "not remove an item that was recently updated" in {
       wis

@@ -49,7 +49,7 @@ trait AssignmentsWorkItemService {
     */
   def queryBy(arn: Arn)(using ec: ExecutionContext): Future[Seq[WorkItem[AssignmentWorkItem]]]
 
-  /** Removes any items that have been marked as successful or duplicated.
+  /** Removes any items that have been marked as successful, duplicated, or permanently failed past their cutoff.
     */
   def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult]
 
@@ -105,22 +105,33 @@ extends AssignmentsWorkItemService {
     .collect()
     .toFuture()
 
-  /** Removes any items that have been marked as successful or duplicated.
+  /** Removes any items that have been marked as successful, duplicated, or permanently failed past their cutoff.
     */
   def cleanup(now: Instant)(using ec: ExecutionContext): Future[DeleteResult] = {
-    val cutoff = appConfig.assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter
-    val cutoffDate: Instant = now.minus(cutoff.length, cutoff.unit.toChronoUnit)
-    workItemRepo.collection
-      .deleteMany(
-        Filters.and(
-          Filters.in(
-            "status",
-            Succeeded.name,
-            Duplicate.name
-          ),
-          Filters.lte("updatedAt", cutoffDate)
-        )
+    val isFinishedBeforeCutoff =
+      val cutoff = appConfig.assignEnrolmentWorkItemRepoDeleteFinishedItemsAfter
+      val cutoffDate: Instant = now.minus(cutoff.length, cutoff.unit.toChronoUnit)
+
+      Filters.and(
+        Filters.in(
+          "status",
+          Succeeded.name,
+          Duplicate.name
+        ),
+        Filters.lte("updatedAt", cutoffDate)
       )
+
+    val isPermanentlyFailedBeforeCutoff =
+      val cutoff = appConfig.assignEnrolmentWorkItemRepoDeleteFailedItemsAfter
+      val cutoffDate: Instant = now.minus(cutoff.length, cutoff.unit.toChronoUnit)
+
+      Filters.and(
+        Filters.equal("status", ProcessingStatus.PermanentlyFailed.name),
+        Filters.lte("updatedAt", cutoffDate)
+      )
+
+    workItemRepo.collection
+      .deleteMany(Filters.or(isFinishedBeforeCutoff, isPermanentlyFailedBeforeCutoff))
       .toFuture()
   }
 
